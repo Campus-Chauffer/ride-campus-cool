@@ -6,7 +6,7 @@ import {
   Keyboard
 } from 'react-native';
 import * as Location from 'expo-location';
-import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE, Region } from 'react-native-maps';
+import RNMapView, { Marker, Polyline, Polygon, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { MapPin, Navigation, Menu, X, Crosshair, LocateFixed } from 'lucide-react-native';
 import Constants from 'expo-constants';
 import SideMenu from '../../components/SideMenu';
@@ -49,6 +49,40 @@ const getDistanceKm = (lat1: number, lng1: number, lat2: number, lng2: number): 
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
+
+const UG_LEGON_BOUNDARY = [
+  // North — along Atomic Road
+  { latitude: 5.6620, longitude: -0.1920 },
+  { latitude: 5.6622, longitude: -0.1860 },
+  { latitude: 5.6620, longitude: -0.1800 },
+  { latitude: 5.6615, longitude: -0.1760 }, // NE corner near N4
+
+  // East — down N4 (J.J. Rawlings Ave)
+  { latitude: 5.6580, longitude: -0.1752 },
+  { latitude: 5.6540, longitude: -0.1748 },
+  { latitude: 5.6500, longitude: -0.1745 },
+  { latitude: 5.6460, longitude: -0.1748 },
+  { latitude: 5.6430, longitude: -0.1758 }, // SE turn
+
+  // South boundary
+  { latitude: 5.6410, longitude: -0.1800 },
+  { latitude: 5.6400, longitude: -0.1840 },
+  { latitude: 5.6398, longitude: -0.1880 },
+  { latitude: 5.6405, longitude: -0.1930 }, // SW corner
+
+  // West — irregular boundary going north
+  { latitude: 5.6420, longitude: -0.1960 },
+  { latitude: 5.6445, longitude: -0.1975 },
+  { latitude: 5.6465, longitude: -0.1968 },
+  { latitude: 5.6485, longitude: -0.1980 }, // bump out west
+  { latitude: 5.6510, longitude: -0.1972 },
+  { latitude: 5.6535, longitude: -0.1965 },
+  { latitude: 5.6555, longitude: -0.1970 },
+  { latitude: 5.6575, longitude: -0.1958 },
+  { latitude: 5.6595, longitude: -0.1945 },
+  { latitude: 5.6610, longitude: -0.1932 },
+  { latitude: 5.6620, longitude: -0.1920 }, // back to start
+];
 
 export default function StudentHomeScreen({ navigation }: any) {
   const { user } = useAuthStore();
@@ -417,6 +451,12 @@ export default function StudentHomeScreen({ navigation }: any) {
         showsMyLocationButton={false}
         onRegionChange={(region) => { if (pinMode) setPinRegion(region); }}
       >
+        <Polygon
+          coordinates={UG_LEGON_BOUNDARY}
+          strokeColor="rgba(255, 184, 0, 0.8)"
+          strokeWidth={2}
+          fillColor="rgba(255, 184, 0, 0.07)"
+        />
         {selectedPickup && (
           <Marker coordinate={{ latitude: selectedPickup.lat, longitude: selectedPickup.lng }} title="Pickup">
             <View style={styles.pickupMarker}>
