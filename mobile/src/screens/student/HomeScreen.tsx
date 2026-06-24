@@ -51,37 +51,47 @@ const getDistanceKm = (lat1: number, lng1: number, lat2: number, lng2: number): 
 };
 
 const UG_LEGON_BOUNDARY = [
-  // North — along Atomic Road
-  { latitude: 5.6620, longitude: -0.1920 },
-  { latitude: 5.6622, longitude: -0.1860 },
-  { latitude: 5.6620, longitude: -0.1800 },
-  { latitude: 5.6615, longitude: -0.1760 }, // NE corner near N4
+  // North — Atomic Road
+  { latitude: 5.6720, longitude: -0.1895 }, // NW on Atomic Road
+  { latitude: 5.6722, longitude: -0.1850 },
+  { latitude: 5.6720, longitude: -0.1800 },
+  { latitude: 5.6718, longitude: -0.1755 }, // NE corner at N4
 
-  // East — down N4 (J.J. Rawlings Ave)
-  { latitude: 5.6580, longitude: -0.1752 },
-  { latitude: 5.6540, longitude: -0.1748 },
-  { latitude: 5.6500, longitude: -0.1745 },
-  { latitude: 5.6460, longitude: -0.1748 },
-  { latitude: 5.6430, longitude: -0.1758 }, // SE turn
+  // East — down N4
+  { latitude: 5.6680, longitude: -0.1748 },
+  { latitude: 5.6640, longitude: -0.1745 },
+  { latitude: 5.6600, longitude: -0.1743 },
+  { latitude: 5.6560, longitude: -0.1743 },
+  { latitude: 5.6520, longitude: -0.1745 },
+  { latitude: 5.6480, longitude: -0.1748 },
+  { latitude: 5.6450, longitude: -0.1755 }, // SE turn
 
-  // South boundary
-  { latitude: 5.6410, longitude: -0.1800 },
-  { latitude: 5.6400, longitude: -0.1840 },
-  { latitude: 5.6398, longitude: -0.1880 },
-  { latitude: 5.6405, longitude: -0.1930 }, // SW corner
+  // South — past hospital
+  { latitude: 5.6420, longitude: -0.1780 },
+  { latitude: 5.6400, longitude: -0.1820 },
+  { latitude: 5.6388, longitude: -0.1870 },
+  { latitude: 5.6385, longitude: -0.1920 }, // South bottom
+  { latitude: 5.6395, longitude: -0.1960 }, // SW corner
 
-  // West — irregular boundary going north
-  { latitude: 5.6420, longitude: -0.1960 },
-  { latitude: 5.6445, longitude: -0.1975 },
-  { latitude: 5.6465, longitude: -0.1968 },
-  { latitude: 5.6485, longitude: -0.1980 }, // bump out west
-  { latitude: 5.6510, longitude: -0.1972 },
-  { latitude: 5.6535, longitude: -0.1965 },
-  { latitude: 5.6555, longitude: -0.1970 },
-  { latitude: 5.6575, longitude: -0.1958 },
-  { latitude: 5.6595, longitude: -0.1945 },
-  { latitude: 5.6610, longitude: -0.1932 },
-  { latitude: 5.6620, longitude: -0.1920 }, // back to start
+  // West — irregular boundary
+  { latitude: 5.6418, longitude: -0.1988 },
+  { latitude: 5.6440, longitude: -0.2005 }, // bump out
+  { latitude: 5.6455, longitude: -0.1995 },
+  { latitude: 5.6468, longitude: -0.2008 }, // notch
+  { latitude: 5.6480, longitude: -0.2000 },
+  { latitude: 5.6495, longitude: -0.1998 },
+  { latitude: 5.6510, longitude: -0.2005 }, // bump
+  { latitude: 5.6525, longitude: -0.1995 },
+  { latitude: 5.6540, longitude: -0.1985 },
+  { latitude: 5.6552, longitude: -0.1992 }, // small notch
+  { latitude: 5.6565, longitude: -0.1980 },
+  { latitude: 5.6578, longitude: -0.1968 },
+  { latitude: 5.6592, longitude: -0.1958 },
+  { latitude: 5.6610, longitude: -0.1945 },
+  { latitude: 5.6630, longitude: -0.1930 },
+  { latitude: 5.6650, longitude: -0.1918 },
+  { latitude: 5.6670, longitude: -0.1908 },
+  { latitude: 5.6720, longitude: -0.1895 }, // back to start
 ];
 
 export default function StudentHomeScreen({ navigation }: any) {
