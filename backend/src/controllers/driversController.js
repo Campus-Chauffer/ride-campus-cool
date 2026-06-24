@@ -1,0 +1,281 @@
+const pool = require('../db/pool');
+const { sendPushNotification } = require('../utils/notifications');
+const { sendRatingReminder, sendRideReceipt } = require('../utils/email');
+
+// Driver goes online
+const goOnline = async (req, res) => {
+  const { lat, lng } = req.body;
+  const user_id = req.user.id;
+
+  if (!lat || !lng) {
+    return res.status(400).json({ error: 'Location required' });
+  }
+
+  try {
+    const driverResult = await pool.query(
+      'SELECT * FROM drivers WHERE user_id = $1',
+      [user_id]
+    );
+
+    if (driverResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Driver profile not found' });
+    }
+
+    const driver = driverResult.rows[0];
+
+    if (driver.approval_status !== 'approved') {
+      return res.status(403).json({ error: 'Driver not approved yet' });
+    }
+
+    const walletResult = await pool.query(
+      'SELECT * FROM wallets WHERE driver_id = $1',
+      [driver.id]
+    );
+
+    if (walletResult.rows[0]?.is_locked) {
+      return res.status(403).json({ error: 'Wallet locked. Please clear outstanding balance.' });
+    }
+
+    await pool.query(
+      `UPDATE drivers SET is_online = TRUE, current_lat = $1, current_lng = $2 
+       WHERE user_id = $3`,
+      [lat, lng, user_id]
+    );
+
+    res.json({ message: 'You are now online' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Driver goes offline
+const goOffline = async (req, res) => {
+  const user_id = req.user.id;
+  try {
+    await pool.query(
+      'UPDATE drivers SET is_online = FALSE WHERE user_id = $1',
+      [user_id]
+    );
+    res.json({ message: 'You are now offline' });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Update driver location
+const updateLocation = async (req, res) => {
+  const { lat, lng } = req.body;
+  const user_id = req.user.id;
+  try {
+    await pool.query(
+      'UPDATE drivers SET current_lat = $1, current_lng = $2 WHERE user_id = $3',
+      [lat, lng, user_id]
+    );
+    res.json({ message: 'Location updated' });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Check for pending ride offers
+const checkOffers = async (req, res) => {
+  const user_id = req.user.id;
+  try {
+    const driverResult = await pool.query(
+      'SELECT * FROM drivers WHERE user_id = $1',
+      [user_id]
+    );
+
+    if (driverResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Driver not found' });
+    }
+
+    const driver = driverResult.rows[0];
+
+    const tripResult = await pool.query(
+      `SELECT * FROM trips 
+       WHERE driver_id = $1 AND status = 'offered'
+       ORDER BY created_at DESC LIMIT 1`,
+      [driver.id]
+    );
+
+    if (tripResult.rows.length === 0) {
+      return res.json({ offer: null });
+    }
+
+    res.json({ offer: tripResult.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Accept a ride offer
+const acceptOffer = async (req, res) => {
+  const { trip_id } = req.params;
+  const user_id = req.user.id;
+
+  try {
+    const driverResult = await pool.query(
+      `SELECT d.*, u.phone_number as driver_phone, u.profile_photo as driver_photo,
+              u.first_name as driver_first_name, u.last_name as driver_last_name
+       FROM drivers d JOIN users u ON d.user_id = u.id
+       WHERE d.user_id = $1`,
+      [user_id]
+    );
+    const driver = driverResult.rows[0];
+
+    const result = await pool.query(
+      `UPDATE trips SET status = 'accepted', accepted_at = NOW()
+      WHERE id = $1 AND driver_id = $2 AND status = 'offered' RETURNING *`,
+      [trip_id, driver.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Offer not found or already expired' });
+    }
+
+    const trip = result.rows[0];
+
+    const passengerResult = await pool.query(
+      `SELECT first_name, last_name, phone_number FROM users WHERE id = $1`,
+      [trip.passenger_id]
+    );
+    const passenger = passengerResult.rows[0];
+
+    res.json({
+      ...trip,
+      passenger_first_name: passenger?.first_name,
+      passenger_last_name: passenger?.last_name,
+      passenger_phone: passenger?.phone_number,
+      driver_first_name: driver.driver_first_name,
+      driver_last_name: driver.driver_last_name,
+      driver_phone: driver.driver_phone,
+      driver_photo: driver.driver_photo,
+      vehicle_make: driver.vehicle_make,
+      vehicle_model: driver.vehicle_model,
+      vehicle_color: driver.vehicle_color,
+      plate_number: driver.plate_number,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Start a trip
+const startTrip = async (req, res) => {
+  const { trip_id } = req.params;
+  const user_id = req.user.id;
+
+  try {
+    const driverResult = await pool.query(
+      'SELECT * FROM drivers WHERE user_id = $1',
+      [user_id]
+    );
+    const driver = driverResult.rows[0];
+
+    const result = await pool.query(
+      `UPDATE trips SET status = 'in_progress', started_at = NOW()
+      WHERE id = $1 AND driver_id = $2 AND status = 'accepted' RETURNING *`,
+      [trip_id, driver.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Trip not found or not accepted yet' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Complete a trip
+const completeTrip = async (req, res) => {
+  const { trip_id } = req.params;
+  const user_id = req.user.id;
+
+  try {
+    const driverResult = await pool.query(
+      'SELECT * FROM drivers WHERE user_id = $1',
+      [user_id]
+    );
+    const driver = driverResult.rows[0];
+
+    // If already completed return success silently — handles double tap race condition
+    const existing = await pool.query(
+      `SELECT * FROM trips WHERE id = $1 AND driver_id = $2`,
+      [trip_id, driver.id]
+    );
+    if (existing.rows[0]?.status === 'completed') {
+      return res.json({ trip: existing.rows[0], message: 'Trip completed successfully' });
+    }
+
+    const result = await pool.query(
+      `UPDATE trips SET status = 'completed', completed_at = NOW()
+       WHERE id = $1 AND driver_id = $2 AND status = 'in_progress' RETURNING *`,
+      [trip_id, driver.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Trip not found or not in progress' });
+    }
+
+    const trip = result.rows[0];
+
+    // Record commission in ledger
+    await pool.query(
+      `INSERT INTO ledger (driver_id, trip_id, amount, type, description)
+       VALUES ($1, $2, $3, 'commission', $4)`,
+      [driver.id, trip.id, trip.commission, `Commission for trip #${trip.id}`]
+    );
+
+    // Update wallet
+    await pool.query(
+      `UPDATE wallets 
+       SET total_commission_owed = total_commission_owed + $1
+       WHERE driver_id = $2`,
+      [trip.commission, driver.id]
+    );
+
+    // Notify passenger
+    const passengerUser = await pool.query(
+      'SELECT push_token FROM users WHERE id = $1',
+      [trip.passenger_id]
+    );
+    await sendPushNotification(
+      passengerUser.rows[0]?.push_token,
+      'Trip Completed!',
+      `Your trip to ${trip.dropoff_address} is complete. Fare: GH₵${trip.fare}`,
+      { trip_id: trip.id }
+    );
+
+    // Send receipt and rating reminders
+    const passengerData = await pool.query(
+      'SELECT email, first_name FROM users WHERE id = $1',
+      [trip.passenger_id]
+    );
+    const driverData = await pool.query(
+      'SELECT u.email, u.first_name FROM users u WHERE u.id = $1',
+      [req.user.id]
+    );
+
+    const passenger = passengerData.rows[0];
+    const driverUser = driverData.rows[0];
+
+    if (passenger) {
+      await sendRideReceipt(passenger.email, passenger.first_name, trip);
+      await sendRatingReminder(passenger.email, passenger.first_name, trip.id, 'passenger');
+    }
+    if (driverUser) {
+      await sendRatingReminder(driverUser.email, driverUser.first_name, trip.id, 'driver');
+    }
+
+    res.json({ trip, message: 'Trip completed successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+module.exports = { goOnline, goOffline, updateLocation, checkOffers, acceptOffer, startTrip, completeTrip };
