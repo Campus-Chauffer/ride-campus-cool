@@ -6,7 +6,7 @@ import {
 import { MapPin, Navigation, Clock } from 'lucide-react-native';
 import { driverAPI } from '../../services/api';
 import { useRideStore } from '../../store/rideStore';
-import { colors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { colors, spacing, fontSizes, radius, shadows, androidTopPadding } from '../../utils/theme';
 
 const { width } = Dimensions.get('window');
 const SLIDER_WIDTH = width - spacing.lg * 2 - 32;
@@ -149,7 +149,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.white,
     padding: spacing.lg,
+    paddingTop: androidTopPadding || spacing.lg,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   timerContainer: {
     marginTop: spacing.xl,

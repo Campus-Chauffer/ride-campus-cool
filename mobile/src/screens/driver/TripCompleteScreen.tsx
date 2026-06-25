@@ -4,7 +4,7 @@ import {
   SafeAreaView, StatusBar, ScrollView, TextInput, Alert, Dimensions
 } from 'react-native';
 import { Flag, CheckCircle } from 'lucide-react-native';
-import { colors, spacing, fontSizes, radius, shadows, bottomPadding } from '../../utils/theme';
+import { colors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding } from '../../utils/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -20,9 +20,9 @@ export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: P
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
-  const fare = parseFloat(trip.fare) || 0;
+ const fare = parseFloat(trip.fare) || 0;
   const commission = parseFloat(trip.commission) || 0;
-  const earned = Math.round(fare - commission);
+  const earned = (fare - commission).toFixed(2);
 
   const submitRating = () => {
     if (rating === 0) return Alert.alert('Rate passenger', 'Please select a star rating');
@@ -54,13 +54,13 @@ export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: P
           <View style={styles.earningsRow}>
             <View style={styles.earningsItem}>
               <Text style={styles.earningsLabel}>Fare</Text>
-              <Text style={styles.earningsValue}>GH₵{Math.round(fare)}</Text>
+              <Text style={styles.earningsValue}>GH₵{fare.toFixed(2)}</Text>
             </View>
             <View style={styles.earningsDivider} />
             <View style={styles.earningsItem}>
               <Text style={styles.earningsLabel}>Commission</Text>
               <Text style={[styles.earningsValue, { color: colors.error }]}>
-                -GH₵{Math.round(commission)}
+                -GH₵{commission.toFixed(2)}
               </Text>
             </View>
             <View style={styles.earningsDivider} />
@@ -124,8 +124,8 @@ export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: P
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.dark },
-  scroll: { padding: spacing.md, paddingBottom: bottomPadding },
+  container: { flex: 1, backgroundColor: colors.dark, paddingTop: androidTopPadding },
+  scroll: { padding: spacing.md, paddingBottom: bottomPadding, flexGrow: 1, justifyContent: 'center' },
   header: {
     alignItems: 'center',
     marginBottom: spacing.sm,
