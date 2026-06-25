@@ -1,5 +1,4 @@
-import { Platform } from "react-native";
-import { Platform, StatusBar } from 'react-native';
+import { Platform, StatusBar } from "react-native";
 
 export const colors = {
   primary: '#FFB800',
