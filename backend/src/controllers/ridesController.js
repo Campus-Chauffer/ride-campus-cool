@@ -44,6 +44,9 @@ const requestRide = async (req, res) => {
     if (!isWithinCampus(pickup_lat, pickup_lng)) {
       return res.status(400).json({ error: 'Pickup must be within University of Ghana, Legon campus area' });
     }
+    if (!isWithinCampus(dropoff_lat, dropoff_lng)) {
+      return res.status(400).json({ error: 'Dropoff must be within University of Ghana, Legon campus area' });
+    }
 
     // Create trip
     const result = await pool.query(
