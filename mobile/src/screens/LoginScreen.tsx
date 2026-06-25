@@ -48,7 +48,7 @@ export default function LoginScreen({ route, navigation }: any) {
         <View style={styles.content}>
           <View style={styles.logoContainer}>
             <Image
-              source={require('../assets/cc-logo.jpg')}
+              source={require('../../assets/cc-logo.jpg')}
               style={{ width: 70, height: 70, borderRadius: 16 }}
             />
           </View>
