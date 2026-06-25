@@ -51,47 +51,45 @@ const getDistanceKm = (lat1: number, lng1: number, lat2: number, lng2: number): 
 };
 
 const UG_LEGON_BOUNDARY = [
-  // North — Atomic Road
-  { latitude: 5.6720, longitude: -0.1895 }, // NW on Atomic Road
-  { latitude: 5.6722, longitude: -0.1850 },
-  { latitude: 5.6720, longitude: -0.1800 },
-  { latitude: 5.6718, longitude: -0.1755 }, // NE corner at N4
-
-  // East — down N4
-  { latitude: 5.6680, longitude: -0.1748 },
-  { latitude: 5.6640, longitude: -0.1745 },
-  { latitude: 5.6600, longitude: -0.1743 },
-  { latitude: 5.6560, longitude: -0.1743 },
-  { latitude: 5.6520, longitude: -0.1745 },
-  { latitude: 5.6480, longitude: -0.1748 },
-  { latitude: 5.6450, longitude: -0.1755 }, // SE turn
-
-  // South — past hospital
-  { latitude: 5.6420, longitude: -0.1780 },
-  { latitude: 5.6400, longitude: -0.1820 },
-  { latitude: 5.6388, longitude: -0.1870 },
-  { latitude: 5.6385, longitude: -0.1920 }, // South bottom
-  { latitude: 5.6395, longitude: -0.1960 }, // SW corner
-
-  // West — irregular boundary
-  { latitude: 5.6418, longitude: -0.1988 },
-  { latitude: 5.6440, longitude: -0.2005 }, // bump out
-  { latitude: 5.6455, longitude: -0.1995 },
-  { latitude: 5.6468, longitude: -0.2008 }, // notch
-  { latitude: 5.6480, longitude: -0.2000 },
-  { latitude: 5.6495, longitude: -0.1998 },
-  { latitude: 5.6510, longitude: -0.2005 }, // bump
-  { latitude: 5.6525, longitude: -0.1995 },
-  { latitude: 5.6540, longitude: -0.1985 },
-  { latitude: 5.6552, longitude: -0.1992 }, // small notch
-  { latitude: 5.6565, longitude: -0.1980 },
-  { latitude: 5.6578, longitude: -0.1968 },
-  { latitude: 5.6592, longitude: -0.1958 },
-  { latitude: 5.6610, longitude: -0.1945 },
-  { latitude: 5.6630, longitude: -0.1930 },
-  { latitude: 5.6650, longitude: -0.1918 },
-  { latitude: 5.6670, longitude: -0.1908 },
-  { latitude: 5.6720, longitude: -0.1895 }, // back to start
+  { latitude: 5.6672053, longitude: -0.1831126 },
+  { latitude: 5.6571712, longitude: -0.1830943 },
+  { latitude: 5.6572139, longitude: -0.1913126 },
+  { latitude: 5.6536266, longitude: -0.1913126 },
+  { latitude: 5.6536479, longitude: -0.1974709 },
+  { latitude: 5.6478612, longitude: -0.197664 },
+  { latitude: 5.6478185, longitude: -0.1895745 },
+  { latitude: 5.6429925, longitude: -0.1898749 },
+  { latitude: 5.6414551, longitude: -0.1872571 },
+  { latitude: 5.6382093, longitude: -0.1858409 },
+  { latitude: 5.6359013, longitude: -0.1900219 },
+  { latitude: 5.632869, longitude: -0.1886057 },
+  { latitude: 5.6298367, longitude: -0.1867604 },
+  { latitude: 5.6315023, longitude: -0.1836276 },
+  { latitude: 5.6342784, longitude: -0.1849579 },
+  { latitude: 5.6374387, longitude: -0.1777482 },
+  { latitude: 5.6406845, longitude: -0.1782631 },
+  { latitude: 5.6467063, longitude: -0.1796793 },
+  { latitude: 5.6467383, longitude: -0.1805269 },
+  { latitude: 5.648895, longitude: -0.1805591 },
+  { latitude: 5.6508702, longitude: -0.1807415 },
+  { latitude: 5.6525358, longitude: -0.1807522 },
+  { latitude: 5.6540839, longitude: -0.1807522 },
+  { latitude: 5.6541052, longitude: -0.1821899 },
+  { latitude: 5.6561765, longitude: -0.1822006 },
+  { latitude: 5.6562512, longitude: -0.1802372 },
+  { latitude: 5.6570306, longitude: -0.1800441 },
+  { latitude: 5.6570199, longitude: -0.1808381 },
+  { latitude: 5.6575751, longitude: -0.1808702 },
+  { latitude: 5.6575965, longitude: -0.180087 },
+  { latitude: 5.6594862, longitude: -0.1800119 },
+  { latitude: 5.6594649, longitude: -0.1821577 },
+  { latitude: 5.6618671, longitude: -0.1821792 },
+  { latitude: 5.6618991, longitude: -0.1790571 },
+  { latitude: 5.6638529, longitude: -0.1790463 },
+  { latitude: 5.6638636, longitude: -0.1808273 },
+  { latitude: 5.6672267, longitude: -0.1808273 },
+  { latitude: 5.6672267, longitude: -0.1817822 },
+  { latitude: 5.6672053, longitude: -0.1831126 },
 ];
 
 export default function StudentHomeScreen({ navigation }: any) {
