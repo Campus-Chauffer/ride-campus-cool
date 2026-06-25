@@ -24,7 +24,7 @@ export default function LandingScreen({ navigation }: any) {
       >
         <View style={styles.logoContainer}>
           <Image
-            source={require('../assets/cc-logo.jpg')}
+            source={require('../../assets/cc-logo.jpg')}
             style={{ width: 80, height: 80, borderRadius: 20 }}
           />
           <Text style={styles.appName}>Campus Chauffeur</Text>
