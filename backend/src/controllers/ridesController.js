@@ -40,15 +40,10 @@ const requestRide = async (req, res) => {
 
     const commission = Math.round(fare * config.commission_rate * 100) / 100;
 
-    // Check if passenger is within UG LEGON geofence
-    const ug_lat = 5.6502;
-    const ug_lng = -0.1870;
-    const radius_km = 5;
-
-    const distance = getDistanceKm(pickup_lat, pickup_lng, ug_lat, ug_lng);
-    if (distance > radius_km) {
+   // Check if passenger is within UG LEGON geofence (polygon)
+    if (!isWithinCampus(pickup_lat, pickup_lng)) {
       return res.status(400).json({ error: 'Pickup must be within University of Ghana, Legon campus area' });
-   }
+    }
 
     // Create trip
     const result = await pool.query(
@@ -130,5 +125,60 @@ const getDistanceKm = (lat1, lng1, lat2, lng2) => {
 };
 
 const toRad = (deg) => deg * (Math.PI / 180);
+
+// UG Legon campus boundary (matches mobile app polygon)
+const UG_LEGON_BOUNDARY = [
+  { lat: 5.6672053, lng: -0.1831126 },
+  { lat: 5.6571712, lng: -0.1830943 },
+  { lat: 5.6572139, lng: -0.1913126 },
+  { lat: 5.6536266, lng: -0.1913126 },
+  { lat: 5.6536479, lng: -0.1974709 },
+  { lat: 5.6478612, lng: -0.197664 },
+  { lat: 5.6478185, lng: -0.1895745 },
+  { lat: 5.6429925, lng: -0.1898749 },
+  { lat: 5.6414551, lng: -0.1872571 },
+  { lat: 5.6382093, lng: -0.1858409 },
+  { lat: 5.6359013, lng: -0.1900219 },
+  { lat: 5.632869,  lng: -0.1886057 },
+  { lat: 5.6298367, lng: -0.1867604 },
+  { lat: 5.6315023, lng: -0.1836276 },
+  { lat: 5.6342784, lng: -0.1849579 },
+  { lat: 5.6374387, lng: -0.1777482 },
+  { lat: 5.6406845, lng: -0.1782631 },
+  { lat: 5.6467063, lng: -0.1796793 },
+  { lat: 5.6467383, lng: -0.1805269 },
+  { lat: 5.648895,  lng: -0.1805591 },
+  { lat: 5.6508702, lng: -0.1807415 },
+  { lat: 5.6525358, lng: -0.1807522 },
+  { lat: 5.6540839, lng: -0.1807522 },
+  { lat: 5.6541052, lng: -0.1821899 },
+  { lat: 5.6561765, lng: -0.1822006 },
+  { lat: 5.6562512, lng: -0.1802372 },
+  { lat: 5.6570306, lng: -0.1800441 },
+  { lat: 5.6570199, lng: -0.1808381 },
+  { lat: 5.6575751, lng: -0.1808702 },
+  { lat: 5.6575965, lng: -0.180087 },
+  { lat: 5.6594862, lng: -0.1800119 },
+  { lat: 5.6594649, lng: -0.1821577 },
+  { lat: 5.6618671, lng: -0.1821792 },
+  { lat: 5.6618991, lng: -0.1790571 },
+  { lat: 5.6638529, lng: -0.1790463 },
+  { lat: 5.6638636, lng: -0.1808273 },
+  { lat: 5.6672267, lng: -0.1808273 },
+  { lat: 5.6672267, lng: -0.1817822 },
+  { lat: 5.6672053, lng: -0.1831126 },
+];
+
+// Ray casting point-in-polygon algorithm
+const isWithinCampus = (lat, lng) => {
+  let inside = false;
+  for (let i = 0, j = UG_LEGON_BOUNDARY.length - 1; i < UG_LEGON_BOUNDARY.length; j = i++) {
+    const xi = UG_LEGON_BOUNDARY[i].lng, yi = UG_LEGON_BOUNDARY[i].lat;
+    const xj = UG_LEGON_BOUNDARY[j].lng, yj = UG_LEGON_BOUNDARY[j].lat;
+    const intersect = ((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+};
 
 module.exports = { requestRide, getRideHistory, cancelRide };

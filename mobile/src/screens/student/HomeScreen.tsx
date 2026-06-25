@@ -407,13 +407,17 @@ export default function StudentHomeScreen({ navigation }: any) {
     }
   };
 
-  const UG_LAT = 5.6502;
-  const UG_LNG = -0.1870;
-  const CAMPUS_RADIUS_KM = 5;
-
   const isWithinCampus = (lat: number, lng: number): boolean => {
-    const dist = getDistanceKm(lat, lng, UG_LAT, UG_LNG);
-    return dist <= CAMPUS_RADIUS_KM;
+    // Point-in-polygon ray casting algorithm
+    let inside = false;
+    const x = lng, y = lat;
+    for (let i = 0, j = UG_LEGON_BOUNDARY.length - 1; i < UG_LEGON_BOUNDARY.length; j = i++) {
+      const xi = UG_LEGON_BOUNDARY[i].longitude, yi = UG_LEGON_BOUNDARY[i].latitude;
+      const xj = UG_LEGON_BOUNDARY[j].longitude, yj = UG_LEGON_BOUNDARY[j].latitude;
+      const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
   };
   const requestRide = async () => {
     if (!selectedDest) return Alert.alert('Select destination', 'Please select a destination');
