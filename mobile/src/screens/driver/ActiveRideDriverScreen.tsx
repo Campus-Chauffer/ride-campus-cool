@@ -213,7 +213,7 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
-  carIcon: { width: 48, height: 48 },
+  carIcon: { width: 30, height: 30 },
   dropoffMarker: { width: 32, height: 32, borderRadius: radius.full, backgroundColor: colors.error, justifyContent: 'center', alignItems: 'center', ...shadows.md },
   bottomCard: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, paddingBottom: bottomPadding, ...shadows.lg },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },

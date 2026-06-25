@@ -401,7 +401,7 @@ export default function DriverHomeScreen({ navigation }: any) {
       )}
 
       {tripPhase === 'complete' && activeTrip && (
-        <View style={StyleSheet.absoluteFillObject}>
+        <View style={[StyleSheet.absoluteFillObject, { zIndex: 100, backgroundColor: colors.dark }]}>
           <TripCompleteScreen trip={activeTrip} onDone={handleDone} onRate={handleRate} onReport={handleReport} />
         </View>
       )}
@@ -418,11 +418,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.08)',
     zIndex: 10,
+    backgroundColor: colors.dark,
   },
+
   greeting: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.white, letterSpacing: -0.5 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 2 },
   statusDot: { width: 6, height: 6, borderRadius: radius.full, backgroundColor: colors.gray3 },
@@ -432,7 +434,7 @@ const styles = StyleSheet.create({
   toggleContainer: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: radius.full, padding: 4 },
   menuBtn: { width: 36, height: 36, borderRadius: radius.md, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center' },
   mapContainer: { flex: 1, position: 'relative' },
-  carIcon: { width: 36, height: 36 },
+  carIcon: { width: 30, height: 30 },
   statusOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: spacing.lg, paddingBottom: spacing.xxl },
   onlineCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.dark, borderRadius: radius.xl, padding: spacing.md, borderWidth: 1, borderColor: 'rgba(255,184,0,0.3)', ...shadows.lg },
   offlineCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.dark, borderRadius: radius.xl, padding: spacing.md, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', ...shadows.lg },

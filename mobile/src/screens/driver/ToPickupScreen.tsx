@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.md, backgroundColor: colors.white },
   loadingText: { fontSize: fontSizes.sm, color: colors.textMuted },
   map: { flex: 1 },
-  carIcon: { width: 36, height: 36 },
+  carIcon: { width: 30, height: 30 },
   pickupMarker: { width: 32, height: 32, borderRadius: radius.full, backgroundColor: colors.success, justifyContent: 'center', alignItems: 'center', ...shadows.md },
   bottomCard: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, paddingBottom: bottomPadding, ...shadows.lg },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
