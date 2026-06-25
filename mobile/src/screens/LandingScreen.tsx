@@ -4,6 +4,7 @@ import {
   StatusBar, Dimensions, ScrollView
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'react-native';
 import { Car, GraduationCap } from 'lucide-react-native';
 import { colors, spacing, fontSizes, radius, shadows } from '../utils/theme';
 
@@ -18,13 +19,14 @@ export default function LandingScreen({ navigation }: any) {
 
       {/* Top dark section */}
       <LinearGradient
-        colors={[colors.dark, colors.darkSecondary]}
+        colors={['#000000', '#000000']}
         style={styles.topSection}
       >
         <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <Car size={40} color={colors.primary} strokeWidth={2} />
-          </View>
+          <Image
+            source={require('../assets/cc-logo.jpg')}
+            style={{ width: 80, height: 80, borderRadius: 20 }}
+          />
           <Text style={styles.appName}>Campus Chauffeur</Text>
           <Text style={styles.tagline}>Safe rides around UG Legon</Text>
         </View>

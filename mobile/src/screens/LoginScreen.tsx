@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, SafeAreaView, ActivityIndicator,
-  Alert, StatusBar, KeyboardAvoidingView, Platform
+  Alert, StatusBar, KeyboardAvoidingView, Platform, Image
 } from 'react-native';
 import { ArrowLeft, Phone, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { authAPI } from '../services/api';
@@ -47,7 +47,10 @@ export default function LoginScreen({ route, navigation }: any) {
 
         <View style={styles.content}>
           <View style={styles.logoContainer}>
-            <Text style={styles.logoText}>🚗</Text>
+            <Image
+              source={require('../assets/cc-logo.jpg')}
+              style={{ width: 70, height: 70, borderRadius: 16 }}
+            />
           </View>
           <Text style={styles.title}>Welcome back</Text>
           <Text style={styles.subtitle}>Sign in to your account</Text>
