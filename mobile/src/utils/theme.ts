@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import { Platform, StatusBar } from 'react-native';
 
 export const colors = {
   primary: '#FFB800',
@@ -47,7 +48,8 @@ export const spacing = {
   xxl: 48,
 };
 
-export const bottomPadding = 'android' ? 24 : 48;
+export const bottomPadding = Platform.OS === 'android' ? 80 : 48;
+export const androidTopPadding = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 0;
 
 export const fontSizes = {
   xs: 11,

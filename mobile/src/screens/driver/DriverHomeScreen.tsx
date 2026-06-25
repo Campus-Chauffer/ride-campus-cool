@@ -15,7 +15,7 @@ import TripCompleteScreen from './TripCompleteScreen';
 import { driverAPI, ratingsAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useRideStore } from '../../store/rideStore';
-import { colors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { colors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding } from '../../utils/theme';
 import socketService from '../../services/socket';
 import { AppState } from 'react-native';
 
@@ -412,7 +412,7 @@ export default function DriverHomeScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.dark },
+  container: { flex: 1, backgroundColor: colors.dark, paddingTop: androidTopPadding },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   toggleContainer: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: radius.full, padding: 4 },
   menuBtn: { width: 36, height: 36, borderRadius: radius.md, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center' },
   mapContainer: { flex: 1, position: 'relative' },
-  carIcon: { width: 48, height: 48 },
+  carIcon: { width: 36, height: 36 },
   statusOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: spacing.lg, paddingBottom: spacing.xxl },
   onlineCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.dark, borderRadius: radius.xl, padding: spacing.md, borderWidth: 1, borderColor: 'rgba(255,184,0,0.3)', ...shadows.lg },
   offlineCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.dark, borderRadius: radius.xl, padding: spacing.md, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', ...shadows.lg },
