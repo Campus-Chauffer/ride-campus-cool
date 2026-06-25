@@ -40,6 +40,7 @@ export default function DriverHomeScreen({ navigation }: any) {
   const headingSubscription = useRef<any>(null);
   const tripPhaseRef = useRef<string>('idle');
   const activeTripRef = useRef<any>(null);
+  const isCompleting = useRef(false);
   const cancelPollInterval = useRef<any>(null);
 
   const setTripPhaseSync = (phase: string) => {
@@ -246,16 +247,20 @@ export default function DriverHomeScreen({ navigation }: any) {
 
   const completeTrip = async () => {
     if (!activeTripRef.current) return;
-    try {
-      const res = await driverAPI.completeTrip(activeTripRef.current.id);
+    if (isCompleting.current) return;
+    isCompleting.current = true;
+    clearInterval(cancelPollInterval.current);
+    // Fire API in background
+    driverAPI.completeTrip(activeTripRef.current.id).then((res) => {
       const completedTrip = res.data?.trip || res.data;
-      if (completedTrip) setActiveTripSync(completedTrip);
-    } catch (err: any) {
+      if (completedTrip?.id) setActiveTripSync(completedTrip);
+    }).catch((err: any) => {
       console.log('Complete trip error (ignored):', err.response?.data?.error);
-    } finally {
-      clearInterval(cancelPollInterval.current);
-      setTripPhaseSync('complete');
-    }
+    }).finally(() => {
+      isCompleting.current = false;
+    });
+    // Transition after 1 second regardless of API response
+    setTimeout(() => setTripPhaseSync('complete'), 1000);
   };
 
   const handleRate = async (rating: number, comment: string) => {

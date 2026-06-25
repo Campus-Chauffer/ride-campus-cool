@@ -53,9 +53,23 @@ const goOnline = async (req, res) => {
 const goOffline = async (req, res) => {
   const user_id = req.user.id;
   try {
+    // Get driver id
+    const driverResult = await pool.query(
+      'SELECT id FROM drivers WHERE user_id = $1', [user_id]
+    );
+    const driver_id = driverResult.rows[0]?.id;
+
+    // Auto-complete any stuck in_progress trip for this driver
+    if (driver_id) {
+      await pool.query(
+        `UPDATE trips SET status = 'completed'
+         WHERE driver_id = $1 AND status = 'in_progress'`,
+        [driver_id]
+      );
+    }
+
     await pool.query(
-      'UPDATE drivers SET is_online = FALSE WHERE user_id = $1',
-      [user_id]
+      'UPDATE drivers SET is_online = FALSE WHERE user_id = $1', [user_id]
     );
     res.json({ message: 'You are now offline' });
   } catch (err) {
