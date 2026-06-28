@@ -27,16 +27,17 @@ const dispatchRide = async (trip_id) => {
     const trip = tripResult.rows[0];
 
     const driversResult = await pool.query(
-      `SELECT d.*, COALESCE(w.is_locked, FALSE) as is_locked FROM drivers d
-      LEFT JOIN wallets w ON w.driver_id = d.id
-      WHERE d.is_online = TRUE
-      AND COALESCE(w.is_locked, FALSE) = FALSE
-      AND d.approval_status = 'approved'
-      AND d.id NOT IN (
-        SELECT driver_id FROM trips
-        WHERE status IN ('offered', 'accepted', 'in_progress')
-        AND driver_id IS NOT NULL
-      )`
+      `SELECT d.*, COALESCE(w.is_locked, FALSE) as is_locked 
+       FROM drivers d
+       LEFT JOIN wallets w ON w.driver_id = d.id
+       WHERE d.is_online = TRUE
+       AND COALESCE(w.is_locked, FALSE) = FALSE
+       AND d.approval_status = 'approved'
+       AND d.id NOT IN (
+         SELECT driver_id FROM trips
+         WHERE status IN ('offered', 'accepted', 'in_progress')
+         AND driver_id IS NOT NULL
+       )`
     );
 
     const nearbyDrivers = driversResult.rows
@@ -61,17 +62,60 @@ const dispatchRide = async (trip_id) => {
     }
 
     for (const driver of nearbyDrivers) {
+      // Check trip is still waiting
       const currentTrip = await pool.query(
         'SELECT status FROM trips WHERE id = $1',
         [trip_id]
       );
       if (currentTrip.rows[0].status !== 'requested') return;
 
-      await pool.query(
-        "UPDATE trips SET driver_id = $1, status = 'offered', matched_at = NOW() WHERE id = $2",
-        [driver.id, trip_id]
-      );
+      // ATOMIC LOCK — use a transaction with SELECT FOR UPDATE SKIP LOCKED
+      // This prevents two dispatch loops from grabbing the same driver simultaneously
+      const client = await pool.connect();
+      let assigned = false;
 
+      try {
+        await client.query('BEGIN');
+
+        // Lock this driver row — if another dispatch already locked it, skip instantly
+        const lockResult = await client.query(
+          `SELECT id FROM drivers 
+           WHERE id = $1
+           AND is_online = TRUE
+           AND id NOT IN (
+             SELECT driver_id FROM trips
+             WHERE status IN ('offered', 'accepted', 'in_progress')
+             AND driver_id IS NOT NULL
+           )
+           FOR UPDATE SKIP LOCKED`,
+          [driver.id]
+        );
+
+        if (lockResult.rows.length === 0) {
+          // Driver was grabbed by another dispatch — skip to next
+          await client.query('ROLLBACK');
+          continue;
+        }
+
+        // Driver is ours — assign the trip
+        await client.query(
+          "UPDATE trips SET driver_id = $1, status = 'offered', matched_at = NOW() WHERE id = $2",
+          [driver.id, trip_id]
+        );
+
+        await client.query('COMMIT');
+        assigned = true;
+
+      } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Dispatch lock error:', err);
+      } finally {
+        client.release();
+      }
+
+      if (!assigned) continue;
+
+      // Notify driver
       const driverUser = await pool.query(
         'SELECT push_token FROM users WHERE id = $1',
         [driver.user_id]
@@ -79,10 +123,11 @@ const dispatchRide = async (trip_id) => {
       await sendPushNotification(
         driverUser.rows[0]?.push_token,
         'New Ride Request!',
-        `Pickup: ${trip.pickup_address} → ${trip.dropoff_address}`,
+        `Pickup: ${trip.pickup_address} \u2192 ${trip.dropoff_address}`,
         { trip_id: trip.id }
       );
 
+      // Wait for driver to accept or timeout
       await new Promise(resolve => setTimeout(resolve, OFFER_TIMEOUT_SECONDS * 1000));
 
       const updatedTrip = await pool.query(
@@ -91,6 +136,7 @@ const dispatchRide = async (trip_id) => {
       );
 
       if (updatedTrip.rows[0].status === 'accepted') {
+        // Notify passenger
         const passengerUser = await pool.query(
           'SELECT push_token FROM users WHERE id = $1',
           [trip.passenger_id]
@@ -104,6 +150,7 @@ const dispatchRide = async (trip_id) => {
         return;
       }
 
+      // Driver didn't accept — reset and try next
       await pool.query(
         "UPDATE trips SET driver_id = NULL, status = 'requested' WHERE id = $1",
         [trip_id]
