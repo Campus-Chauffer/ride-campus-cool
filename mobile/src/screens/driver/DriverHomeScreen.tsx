@@ -146,6 +146,20 @@ export default function DriverHomeScreen({ navigation }: any) {
     }, 5000);
   };
 
+  const startLocationUpdates = () => {
+    clearInterval(locationInterval.current);
+    locationInterval.current = setInterval(async () => {
+      try {
+        const loc = await Location.getCurrentPositionAsync({});
+        const { latitude, longitude } = loc.coords;
+        setDriverLocation({ lat: latitude, lng: longitude });
+        await driverAPI.updateLocation(latitude, longitude);
+      } catch (err) {
+        console.log('Location update error:', err);
+      }
+    }, 2 * 60 * 1000); // every 5 minutes
+  };
+
   const goOnline = async () => {
     setLoading(true);
       try {
@@ -176,6 +190,7 @@ export default function DriverHomeScreen({ navigation }: any) {
       setIsOnline(true);
       socketService.connect();
       startOfferPolling();
+      startLocationUpdates();
 
       clearInterval(locationInterval.current);
       locationInterval.current = setInterval(async () => {
@@ -205,6 +220,7 @@ export default function DriverHomeScreen({ navigation }: any) {
     clearInterval(timerInterval.current);
     clearInterval(cancelPollInterval.current);
     await driverAPI.goOffline();
+    clearInterval(locationInterval.current);
     setIsOnline(false);
     setTripPhaseSync('idle');
   };
