@@ -10,10 +10,20 @@ class SocketService {
     this.socket = io(SOCKET_URL, {
       transports: ['websocket'],
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: Infinity, // keep trying forever
+      reconnectionDelay: 2000,        // wait 2s before retrying
+      reconnectionDelayMax: 10000,    // max 10s between retries
+      timeout: 10000,
     });
-    this.socket.on('connect', () => {});
-    this.socket.on('disconnect', () => {});
+    this.socket.on('connect', () => {
+      console.log('Socket connected');
+    });
+    this.socket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+    });
+    this.socket.on('reconnect', (attempt) => {
+      console.log('Socket reconnected after', attempt, 'attempts');
+    });
   }
 
   disconnect() {

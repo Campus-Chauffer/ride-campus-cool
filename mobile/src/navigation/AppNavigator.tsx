@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { driverRegistrationAPI } from '../services/api';
 import { colors } from '../utils/theme';
+import NetInfo from '@react-native-community/netinfo';
+
 
 import LandingScreen from '../screens/LandingScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -75,6 +77,7 @@ function AppScreens() {
   const { isAuthenticated, user } = useAuthStore();
   const [driverInitialRoute, setDriverInitialRoute] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -84,6 +87,13 @@ function AppScreens() {
       checkDriverStatus();
     }
   }, [isAuthenticated, user]);
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsOffline(!state.isConnected);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const checkDriverStatus = async () => {
     setChecking(true);
@@ -104,17 +114,35 @@ function AppScreens() {
     }
   };
 
-  if (checking || (isAuthenticated && user?.role === 'driver' && !driverInitialRoute)) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.dark }}>
-        <ActivityIndicator color={colors.primary} size="large" />
-      </View>
-    );
-  }
+  const renderScreens = () => {
+    if (checking || (isAuthenticated && user?.role === 'driver' && !driverInitialRoute)) {
+      return (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.dark }}>
+          <ActivityIndicator color={colors.primary} size="large" />
+        </View>
+      );
+    }
+    if (!isAuthenticated) return <AuthScreens />;
+    if (user?.role === 'driver') return <DriverScreens initialRoute={driverInitialRoute!} />;
+    return <StudentScreens />;
+  };
 
-  if (!isAuthenticated) return <AuthScreens />;
-  if (user?.role === 'driver') return <DriverScreens initialRoute={driverInitialRoute!} />;
-  return <StudentScreens />;
+  return (
+    <View style={{ flex: 1 }}>
+      {isOffline && (
+        <View style={{
+          position: 'absolute', top: 0, left: 0, right: 0,
+          backgroundColor: '#C0392B', paddingVertical: 8,
+          alignItems: 'center', zIndex: 9999,
+        }}>
+          <Text style={{ color: 'white', fontSize: 13, fontWeight: '600' }}>
+            No internet connection — reconnecting...
+          </Text>
+        </View>
+      )}
+      {renderScreens()}
+    </View>
+  );
 }
 
 export default function AppNavigator() {

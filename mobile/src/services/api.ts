@@ -5,7 +5,7 @@ const BASE_URL = 'https://ride-campus-cool-production.up.railway.app/api';
 
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 60000,
+  timeout: 15000,
 });
 
 // Request interceptor — attach token
@@ -35,6 +35,21 @@ api.interceptors.response.use(
       // Import dynamically to avoid circular dependency
       const { useAuthStore } = require('../store/authStore');
       useAuthStore.getState().logout();
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Retry interceptor — retry once on network errors
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const config = error.config;
+    if (!error.response && !config._retry) {
+      // Network error — wait 2s and retry once
+      config._retry = true;
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      return api(config);
     }
     return Promise.reject(error);
   }
