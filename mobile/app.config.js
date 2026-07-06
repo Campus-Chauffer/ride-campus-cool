@@ -34,7 +34,10 @@ export default {
       },
       permissions: [
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
       ]
     },
     web: {
@@ -46,10 +49,15 @@ export default {
       [
         "expo-location",
         {
-          locationAlwaysAndWhenInUsePermission: "Campus Chauffeur needs your location to find nearby drivers.",
-          locationWhenInUsePermission: "Campus Chauffeur needs your location to find nearby drivers."
+          locationAlwaysAndWhenInUsePermission: "Campus Chauffeur needs your location to find nearby drivers and update your position while online.",
+          locationWhenInUsePermission: "Campus Chauffeur needs your location to find nearby drivers.",
+          locationAlwaysPermission: "Campus Chauffeur needs background location to keep you online and receive ride requests.",
+          isAndroidBackgroundLocationEnabled: true,
+          isAndroidForegroundServiceEnabled: true
         }
       ],
+      "expo-task-manager",
+      "expo-notifications",
       [
         "expo-build-properties",
         {

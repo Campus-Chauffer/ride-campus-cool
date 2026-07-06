@@ -18,7 +18,7 @@ import { useRideStore } from '../../store/rideStore';
 import { colors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding } from '../../utils/theme';
 import socketService from '../../services/socket';
 import { AppState } from 'react-native';
-
+import { startBackgroundLocation, stopBackgroundLocation } from '../../utils/backgroundLocation';
 const CAR_ICON = require('../../../assets/car-top.png');
 
 export default function DriverHomeScreen({ navigation }: any) {
@@ -157,7 +157,7 @@ export default function DriverHomeScreen({ navigation }: any) {
       } catch (err) {
         console.log('Location update error:', err);
       }
-    }, 2 * 60 * 1000); // every 5 minutes
+    }, 2 * 60 * 1000); // every 2 minutes
   };
 
   const goOnline = async () => {
@@ -191,21 +191,8 @@ export default function DriverHomeScreen({ navigation }: any) {
       socketService.connect();
       startOfferPolling();
       startLocationUpdates();
+      startBackgroundLocation(); // start background task too
 
-      clearInterval(locationInterval.current);
-      locationInterval.current = setInterval(async () => {
-        try {
-          const loc = await Location.getCurrentPositionAsync({});
-          const { latitude, longitude } = loc.coords;
-          setDriverLocation({ lat: latitude, lng: longitude });
-          await driverAPI.updateLocation(latitude, longitude);
-          if (activeTripRef.current?.id) {
-            socketService.sendLocation(activeTripRef.current.id, latitude, longitude, heading);
-          }
-        } catch (err) {
-          console.log('Location update error:', err);
-        }
-      }, 5000);
 
     } catch (err: any) {
       Alert.alert('Error', err.response?.data?.error || 'Could not go online');
@@ -216,6 +203,7 @@ export default function DriverHomeScreen({ navigation }: any) {
 
   const goOffline = async () => {
     clearInterval(locationInterval.current);
+    stopBackgroundLocation();
     clearInterval(offerInterval.current);
     clearInterval(timerInterval.current);
     clearInterval(cancelPollInterval.current);
