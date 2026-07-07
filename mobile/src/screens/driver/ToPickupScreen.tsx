@@ -21,11 +21,11 @@ const CAR_ICON = require('../../../assets/car-top.png');
 
 interface Props {
   trip: any;
-  onStartTrip: () => void;
+  onArrived: () => void;
   onCancelled: () => void;
 }
 
-export default function ToPickupScreen({ trip, onStartTrip, onCancelled }: Props) {
+export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) {
   const mapRef = useRef<RNMapView>(null);
   const [driverLocation, setDriverLocation] = useState<any>(null);
   const [routeCoords, setRouteCoords] = useState<any[]>([]);
@@ -219,9 +219,9 @@ export default function ToPickupScreen({ trip, onStartTrip, onCancelled }: Props
               <Text style={styles.fareText}>GH₵{trip.fare}</Text>
             </View>
 
-            <TouchableOpacity style={styles.arrivedBtn} onPress={onStartTrip}>
+            <TouchableOpacity style={styles.arrivedBtn} onPress={onArrived}>
               <CheckCircle size={20} color={colors.dark} />
-              <Text style={styles.arrivedBtnText}>Passenger Onboard — Start Trip</Text>
+              <Text style={styles.arrivedBtnText}>I've Arrived at Pickup</Text>
             </TouchableOpacity>
           </View>
         </>

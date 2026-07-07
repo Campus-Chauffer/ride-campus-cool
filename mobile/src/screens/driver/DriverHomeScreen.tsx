@@ -17,6 +17,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useRideStore } from '../../store/rideStore';
 import { colors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding } from '../../utils/theme';
 import socketService from '../../services/socket';
+import ArrivedAtPickupScreen from './ArrivedAtPickupScreen';
 import { AppState } from 'react-native';
 import { startBackgroundLocation, stopBackgroundLocation } from '../../utils/backgroundLocation';
 const CAR_ICON = require('../../../assets/car-top.png');
@@ -28,7 +29,7 @@ export default function DriverHomeScreen({ navigation }: any) {
   const [isOnline, setIsOnline] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [tripPhase, setTripPhase] = useState<'idle' | 'offer' | 'topickup' | 'inprogress' | 'complete'>('idle');
+  const [tripPhase, setTripPhase] = useState<'idle' | 'offer' | 'topickup' | 'arrived' | 'inprogress' | 'complete'>('idle');
   const [activeTrip, setActiveTrip] = useState<any>(null);
   const [offerTimer, setOfferTimer] = useState(15);
   const [driverLocation, setDriverLocation] = useState<any>(null);
@@ -238,6 +239,15 @@ export default function DriverHomeScreen({ navigation }: any) {
     setTripPhaseSync('idle');
     startOfferPolling();
   };
+  const arrivedAtPickup = async () => {
+    if (!activeTripRef.current) return;
+    try {
+      await driverAPI.arrivedAtPickup(activeTripRef.current.id);
+      setTripPhaseSync('arrived');
+    } catch (err: any) {
+      Alert.alert('Error', err.response?.data?.error || 'Could not update arrival status');
+    }
+  };
 
   const startTrip = async () => {
     if (!activeTripRef.current) return;
@@ -387,6 +397,19 @@ export default function DriverHomeScreen({ navigation }: any) {
       {tripPhase === 'topickup' && activeTrip && (
         <View style={StyleSheet.absoluteFillObject}>
           <ToPickupScreen
+            trip={activeTrip}
+            onArrived={arrivedAtPickup}
+            onCancelled={() => {
+              setActiveTripSync(null);
+              setTripPhaseSync('idle');
+              startOfferPolling();
+            }}
+          />
+        </View>
+      )}
+      {tripPhase === 'arrived' && activeTrip && (
+        <View style={StyleSheet.absoluteFillObject}>
+          <ArrivedAtPickupScreen
             trip={activeTrip}
             onStartTrip={startTrip}
             onCancelled={() => {

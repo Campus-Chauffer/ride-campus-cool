@@ -2,6 +2,7 @@ const pool = require('../db/pool');
 const { sendPushNotification } = require('../utils/notifications');
 const { sendRatingReminder, sendRideReceipt } = require('../utils/email');
 
+
 // Driver goes online
 const goOnline = async (req, res) => {
   const { lat, lng } = req.body;
@@ -183,23 +184,73 @@ const startTrip = async (req, res) => {
 
   try {
     const driverResult = await pool.query(
-      'SELECT * FROM drivers WHERE user_id = $1',
-      [user_id]
+      'SELECT id FROM drivers WHERE user_id = $1', [user_id]
     );
-    const driver = driverResult.rows[0];
+    const driver_id = driverResult.rows[0]?.id;
+    if (!driver_id) return res.status(404).json({ error: 'Driver not found' });
 
-    const result = await pool.query(
-      `UPDATE trips SET status = 'in_progress', started_at = NOW()
-      WHERE id = $1 AND driver_id = $2 AND status = 'accepted' RETURNING *`,
-      [trip_id, driver.id]
+    // Get trip with arrived_at timestamp
+    const tripResult = await pool.query(
+      'SELECT * FROM trips WHERE id = $1 AND driver_id = $2',
+      [trip_id, driver_id]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(400).json({ error: 'Trip not found or not accepted yet' });
+    if (tripResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Trip not found' });
     }
 
-    res.json(result.rows[0]);
+    const trip = tripResult.rows[0];
+
+    // Calculate wait penalty
+    let waitPenalty = 0;
+    if (trip.arrived_at) {
+      const arrivedAt = new Date(trip.arrived_at);
+      const now = new Date();
+      const waitSeconds = Math.floor((now - arrivedAt) / 1000);
+      const freeWaitSeconds = 300; // 5 minutes free
+
+      if (waitSeconds > freeWaitSeconds) {
+        const extraSeconds = waitSeconds - freeWaitSeconds;
+        const extraPeriods = Math.floor(extraSeconds / 120); // every 2 minutes
+        waitPenalty = extraPeriods * 1; // GH₵1 per 2 minute period
+      }
+    }
+
+    const newFare = parseFloat(trip.fare) + waitPenalty;
+    const configResult = await pool.query("SELECT value FROM config WHERE key = 'commission_rate'");
+    const commissionRate = parseFloat(configResult.rows[0]?.value) || 0.15;
+    const newCommission = Math.round(newFare * commissionRate * 100) / 100;
+
+    const result = await pool.query(
+      `UPDATE trips 
+       SET status = 'in_progress', fare = $1, commission = $2, wait_penalty = $3
+       WHERE id = $4 AND driver_id = $5
+       RETURNING *`,
+      [newFare, newCommission, waitPenalty, trip_id, driver_id]
+    );
+
+    const updatedTrip = result.rows[0];
+
+    // Notify passenger trip has started
+    const passengerResult = await pool.query(
+      'SELECT push_token FROM users WHERE id = $1',
+      [trip.passenger_id]
+    );
+
+    const message = waitPenalty > 0
+      ? `Your trip has started! A wait fee of GH₵${waitPenalty} was added. Total fare: GH₵${newFare.toFixed(2)}`
+      : `Your trip has started! You're on your way to ${trip.dropoff_address}.`;
+
+    await sendPushNotification(
+      passengerResult.rows[0]?.push_token,
+      '🚀 Trip started!',
+      message,
+      { type: 'trip_started', trip_id: trip.id }
+    );
+
+    res.json(updatedTrip);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -292,4 +343,84 @@ const completeTrip = async (req, res) => {
   }
 };
 
-module.exports = { goOnline, goOffline, updateLocation, checkOffers, acceptOffer, startTrip, completeTrip };
+const arrivedAtPickup = async (req, res) => {
+  const { trip_id } = req.params;
+  const user_id = req.user.id;
+
+  try {
+    const driverResult = await pool.query(
+      'SELECT id FROM drivers WHERE user_id = $1', [user_id]
+    );
+    const driver_id = driverResult.rows[0]?.id;
+    if (!driver_id) return res.status(404).json({ error: 'Driver not found' });
+
+    const result = await pool.query(
+      `UPDATE trips SET status = 'arrived', arrived_at = NOW()
+       WHERE id = $1 AND driver_id = $2 AND status = 'accepted'
+       RETURNING *`,
+      [trip_id, driver_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Trip not found or already updated' });
+    }
+
+    const trip = result.rows[0];
+
+    // Get passenger push token
+    const passengerResult = await pool.query(
+      'SELECT push_token, first_name FROM users WHERE id = $1',
+      [trip.passenger_id]
+    );
+    const passenger = passengerResult.rows[0];
+
+    // Notify passenger
+    await sendPushNotification(
+      passenger?.push_token,
+      '🚗 Your driver has arrived!',
+      `Your driver is waiting at ${trip.pickup_address}. You have 5 free minutes before a wait fee applies.`,
+      { type: 'driver_arrived', trip_id: trip.id }
+    );
+
+    res.json(trip);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+const getWaitFare = async (req, res) => {
+  const { trip_id } = req.params;
+  try {
+    const result = await pool.query(
+      'SELECT fare, arrived_at FROM trips WHERE id = $1',
+      [trip_id]
+    );
+    const trip = result.rows[0];
+    if (!trip) return res.status(404).json({ error: 'Trip not found' });
+
+    let waitPenalty = 0;
+    let waitSeconds = 0;
+
+    if (trip.arrived_at) {
+      const arrivedAt = new Date(trip.arrived_at);
+      waitSeconds = Math.floor((new Date() - arrivedAt) / 1000);
+      const freeWaitSeconds = 300;
+      if (waitSeconds > freeWaitSeconds) {
+        const extraPeriods = Math.floor((waitSeconds - freeWaitSeconds) / 120);
+        waitPenalty = extraPeriods * 1;
+      }
+    }
+
+    res.json({
+      original_fare: parseFloat(trip.fare),
+      wait_penalty: waitPenalty,
+      current_fare: parseFloat(trip.fare) + waitPenalty,
+      wait_seconds: waitSeconds,
+      free_wait_seconds: 300,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+module.exports = { goOnline, goOffline, updateLocation, checkOffers, acceptOffer, startTrip, arrivedAtPickup,getWaitFare,  completeTrip };

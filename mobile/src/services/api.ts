@@ -116,6 +116,12 @@ export const driverAPI = {
   acceptOffer: (trip_id: number) =>
     api.patch(`/drivers/accept/${trip_id}`),
 
+  arrivedAtPickup: (trip_id: number) =>
+    api.patch(`/drivers/arrived/${trip_id}`),
+
+  getWaitFare: (trip_id: number) =>
+    api.get(`/drivers/wait-fare/${trip_id}`),
+  
   startTrip: (trip_id: number) =>
     api.patch(`/drivers/start/${trip_id}`),
 

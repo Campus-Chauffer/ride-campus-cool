@@ -9,9 +9,10 @@ import { useRideStore } from '../../store/rideStore';
 import socketService from '../../services/socket';
 import DriverFoundScreen from './DriverFoundScreen';
 import ActiveRideScreen from './ActiveRideScreen';
+import DriverArrivedScreen from './DriverArrivedScreen';
 import { colors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
 
-type Phase = 'searching' | 'driver_found' | 'in_progress' | 'completed';
+type Phase = 'searching' | 'driver_found' | 'driver_arrived' | 'in_progress' | 'completed';
 
 export default function RideMatchingScreen({ route, navigation }: any) {
   const { trip } = route.params;
@@ -64,7 +65,9 @@ export default function RideMatchingScreen({ route, navigation }: any) {
 
         if (updated.status === 'accepted' && currentPhase === 'searching') {
           updatePhase('driver_found');
-        } else if (updated.status === 'in_progress' && currentPhase === 'driver_found') {
+        } else if (updated.status === 'arrived' && (currentPhase === 'searching' || currentPhase === 'driver_found')) {
+          updatePhase('driver_arrived');
+        } else if (updated.status === 'in_progress' && (currentPhase === 'driver_found' || currentPhase === 'driver_arrived')) {
           updatePhase('in_progress');
         } else if (updated.status === 'completed') {
           clearInterval(pollInterval.current);
@@ -157,6 +160,14 @@ export default function RideMatchingScreen({ route, navigation }: any) {
         <DriverFoundScreen
           trip={currentTrip}
           onRideStarted={() => updatePhase('in_progress')}
+          onCancelled={() => navigation.goBack()}
+        />
+      )}
+
+      {phase === 'driver_arrived' && (
+        <DriverArrivedScreen
+          trip={currentTrip}
+          onTripStarted={() => updatePhase('in_progress')}
           onCancelled={() => navigation.goBack()}
         />
       )}

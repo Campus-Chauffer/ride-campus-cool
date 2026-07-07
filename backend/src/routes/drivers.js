@@ -2,9 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const pool = require('../db/pool');
+
 const {
   goOnline, goOffline, updateLocation,
-  checkOffers, acceptOffer, startTrip, completeTrip
+  checkOffers, acceptOffer, startTrip, arrivedAtPickup,
+  getWaitFare,  completeTrip
 } = require('../controllers/driversController');
 
 router.post('/online', authenticate, goOnline);
@@ -13,6 +15,8 @@ router.patch('/location', authenticate, updateLocation);
 router.get('/offers', authenticate, checkOffers);
 router.patch('/accept/:trip_id', authenticate, acceptOffer);
 router.patch('/start/:trip_id', authenticate, startTrip);
+router.patch('/arrived/:trip_id', authenticate, arrivedAtPickup);
+router.get('/wait-fare/:trip_id', authenticate, getWaitFare);
 router.patch('/complete/:trip_id', authenticate, completeTrip);
 router.get('/trip/:trip_id', authenticate, async (req, res) => {
   const { trip_id } = req.params;
