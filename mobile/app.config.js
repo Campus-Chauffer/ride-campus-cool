@@ -49,6 +49,9 @@ export default {
       [
         "expo-location",
         {
+          NSLocationWhenInUseUsageDescription: "Campus Chauffeur needs your location to find nearby drivers.",
+          NSLocationAlwaysAndWhenInUseUsageDescription: "Campus Chauffeur needs your location to find nearby drivers and update your position while online.",
+          NSLocationAlwaysUsageDescription: "Campus Chauffeur needs background location to keep you online and receive ride requests.",
           locationAlwaysAndWhenInUsePermission: "Campus Chauffeur needs your location to find nearby drivers and update your position while online.",
           locationWhenInUsePermission: "Campus Chauffeur needs your location to find nearby drivers.",
           locationAlwaysPermission: "Campus Chauffeur needs background location to keep you online and receive ride requests.",
@@ -56,6 +59,7 @@ export default {
           isAndroidForegroundServiceEnabled: true
         }
       ],
+      
       "expo-task-manager",
       "expo-notifications",
       [
