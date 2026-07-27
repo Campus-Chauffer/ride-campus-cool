@@ -224,10 +224,13 @@ const startTrip = async (req, res) => {
     const result = await pool.query(
       `UPDATE trips 
        SET status = 'in_progress', fare = $1, commission = $2, wait_penalty = $3
-       WHERE id = $4 AND driver_id = $5
+       WHERE id = $4 AND driver_id = $5 AND status = 'arrived'
        RETURNING *`,
       [newFare, newCommission, waitPenalty, trip_id, driver_id]
     );
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Trip not found or not ready to start' });
+    }  
 
     const updatedTrip = result.rows[0];
 

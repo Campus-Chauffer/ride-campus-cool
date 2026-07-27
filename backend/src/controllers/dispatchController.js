@@ -127,15 +127,34 @@ const dispatchRide = async (trip_id) => {
         { trip_id: trip.id }
       );
 
-      // Wait for driver to accept or timeout
-      await new Promise(resolve => setTimeout(resolve, OFFER_TIMEOUT_SECONDS * 1000));
+      // Wait for driver to accept or timeout — poll every second instead of
+      // sleeping blind for the full window. This closes the race condition where
+      // a driver's acceptance lands just before the old single end-of-window
+      // check, and is caught almost immediately instead of possibly losing to
+      // a blind reset.
+      let accepted = false;
+      for (let elapsed = 0; elapsed < OFFER_TIMEOUT_SECONDS; elapsed++) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const updatedTrip = await pool.query(
-        'SELECT status FROM trips WHERE id = $1',
-        [trip_id]
-      );
+        const check = await pool.query(
+          'SELECT status FROM trips WHERE id = $1',
+          [trip_id]
+        );
+        const status = check.rows[0]?.status;
 
-      if (updatedTrip.rows[0].status === 'accepted') {
+        if (status === 'accepted') {
+          accepted = true;
+          break;
+        }
+        if (status !== 'offered') {
+          // Trip left the offered state some other way (e.g. passenger cancelled
+          // mid-offer). Stop dispatching entirely rather than continuing to the
+          // next driver or resetting a trip that's no longer ours to manage.
+          return;
+        }
+      }
+
+      if (accepted) {
         // Notify passenger
         const passengerUser = await pool.query(
           'SELECT push_token FROM users WHERE id = $1',
@@ -150,17 +169,29 @@ const dispatchRide = async (trip_id) => {
         return;
       }
 
-      // Driver didn't accept — reset and try next
+      // Genuinely timed out with no acceptance — reset and try next driver.
+      // Guarded with status = 'offered' AND driver_id = this driver so that if
+      // an acceptance landed in the same instant this write runs, the reset
+      // becomes a no-op instead of clobbering a valid accepted trip.
       await pool.query(
-        "UPDATE trips SET driver_id = NULL, status = 'requested' WHERE id = $1",
-        [trip_id]
+        `UPDATE trips SET driver_id = NULL, status = 'requested' 
+         WHERE id = $1 AND status = 'offered' AND driver_id = $2`,
+        [trip_id, driver.id]
       );
     }
 
-    await pool.query(
-      "UPDATE trips SET status = 'no_driver_found' WHERE id = $1",
+    // No driver in the list accepted — do a final guarded check before giving
+    // up, in case the very last driver's acceptance is still settling.
+    const finalCheck = await pool.query(
+      'SELECT status FROM trips WHERE id = $1',
       [trip_id]
     );
+    if (finalCheck.rows[0]?.status === 'requested') {
+      await pool.query(
+        "UPDATE trips SET status = 'no_driver_found' WHERE id = $1 AND status = 'requested'",
+        [trip_id]
+      );
+    }
 
   } catch (err) {
     console.error('Dispatch error:', err);
