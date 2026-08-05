@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, X } from "lucide-react";
 import api from "../../api";
 
 const STATUS_STYLES = {
@@ -13,6 +13,11 @@ const TYPE_STYLES = {
   passenger: "bg-purple-500/10 text-purple-400",
   driver: "bg-blue-500/10 text-blue-400",
 };
+
+function capitalize(s) {
+  if (!s) return "—";
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 export default function Reports() {
   const [reports, setReports] = useState([]);
@@ -75,17 +80,17 @@ export default function Reports() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <div>
-        <h1 className="text-white text-xl font-semibold">Reports</h1>
-        <p className="text-gray-400 text-sm mt-1">Complaints submitted by passengers and drivers</p>
+        <h1 className="text-white text-xl font-semibold tracking-tight">Reports</h1>
+        <p className="text-gray-500 text-sm mt-1">Complaints submitted by passengers and drivers</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s) => (
-          <div key={s.label} className="bg-gray-900 rounded-xl p-4 border border-gray-800">
-            <p className="text-gray-400 text-xs mb-1">{s.label}</p>
-            <p className="text-white text-2xl font-semibold">{s.value}</p>
+          <div key={s.label} className="bg-gray-900 rounded-xl p-5 border border-gray-800">
+            <p className="text-gray-500 text-xs mb-1.5">{s.label}</p>
+            <p className="text-white text-2xl font-semibold tracking-tight">{s.value}</p>
           </div>
         ))}
       </div>
@@ -96,7 +101,7 @@ export default function Reports() {
 
       <div className="flex gap-3 flex-wrap">
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-          className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400">
+          className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400/50 transition">
           <option value="all">All statuses</option>
           <option value="pending">Pending</option>
           <option value="reviewed">Reviewed</option>
@@ -104,18 +109,18 @@ export default function Reports() {
           <option value="dismissed">Dismissed</option>
         </select>
         <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
-          className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400">
+          className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400/50 transition">
           <option value="all">All types</option>
           <option value="passenger">Passenger reports</option>
           <option value="driver">Driver reports</option>
         </select>
         <button onClick={fetchReports}
-          className="flex items-center gap-2 bg-gray-900 border border-gray-800 text-gray-400 hover:text-white px-3 py-2 rounded-lg text-sm transition">
+          className="flex items-center gap-2 bg-gray-900 border border-gray-800 text-gray-400 hover:text-white hover:border-gray-700 px-3 py-2 rounded-lg text-sm transition">
           <RefreshCw size={14} /> Refresh
         </button>
       </div>
 
-      <div className="flex gap-4 items-start">
+      <div className="flex gap-5 items-start">
         <div className="flex-1 bg-gray-900 border border-gray-800 rounded-xl overflow-hidden min-w-0">
           {loading ? (
             <div className="text-center text-gray-500 text-sm py-16">Loading reports…</div>
@@ -141,18 +146,18 @@ export default function Reports() {
                       <td className="px-4 py-3 text-white font-medium">#{report.id}</td>
                       <td className="px-4 py-3 text-gray-400">
                         {report.reporter_first_name ? `${report.reporter_first_name} ${report.reporter_last_name}` : report.reporter_id || "—"}
-                        </td>
+                      </td>
                       <td className="px-4 py-3 text-gray-400">
                         {report.reported_first_name ? `${report.reported_first_name} ${report.reported_last_name}` : report.reported_id || "—"}
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${TYPE_STYLES[report.type] || "bg-gray-500/10 text-gray-400"}`}>
-                          {report.type || "—"}
+                          {capitalize(report.type)}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_STYLES[report.status] || "bg-gray-500/10 text-gray-400"}`}>
-                          {report.status || "—"}
+                          {capitalize(report.status)}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-500 text-xs">{formatDate(report.created_at)}</td>
@@ -168,11 +173,13 @@ export default function Reports() {
           <div className="w-72 flex-shrink-0 bg-gray-900 border border-gray-800 rounded-xl p-5">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-white font-semibold">Report #{selected.id}</h2>
-              <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-white text-xl leading-none">×</button>
+              <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-white transition">
+                <X size={18} />
+              </button>
             </div>
             <div className="flex gap-2 mb-4">
-              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${TYPE_STYLES[selected.type] || "bg-gray-500/10 text-gray-400"}`}>{selected.type || "—"}</span>
-              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_STYLES[selected.status] || "bg-gray-500/10 text-gray-400"}`}>{selected.status || "—"}</span>
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${TYPE_STYLES[selected.type] || "bg-gray-500/10 text-gray-400"}`}>{capitalize(selected.type)}</span>
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_STYLES[selected.status] || "bg-gray-500/10 text-gray-400"}`}>{capitalize(selected.status)}</span>
             </div>
             <div className="space-y-2 text-sm mb-4">
               {[
@@ -187,7 +194,7 @@ export default function Reports() {
                 </div>
               ))}
             </div>
-            <div className="bg-gray-800 rounded-lg p-3 text-sm text-gray-300 leading-relaxed mb-5">
+            <div className="bg-gray-800/60 rounded-lg p-3 text-sm text-gray-300 leading-relaxed mb-5">
               {selected.description || "No description provided."}
             </div>
             <p className="text-gray-500 text-xs font-medium mb-2">Update status</p>
@@ -197,9 +204,9 @@ export default function Reports() {
                   key={s}
                   onClick={() => updateStatus(selected.id, s)}
                   disabled={selected.status === s || updatingId === selected.id}
-                  className={`w-full text-left text-sm px-3 py-2 rounded-lg border transition ${selected.status === s ? "border-gray-700 text-gray-600 cursor-default" : "border-gray-700 text-gray-300 hover:border-yellow-400 hover:text-yellow-400"}`}
+                  className={`w-full text-left text-sm px-3 py-2 rounded-lg border transition ${selected.status === s ? "border-gray-800 text-gray-600 cursor-default" : "border-gray-800 text-gray-300 hover:border-yellow-400/50 hover:text-yellow-400"}`}
                 >
-                  {updatingId === selected.id ? "Updating…" : `Mark as ${s.charAt(0).toUpperCase() + s.slice(1)}`}
+                  {updatingId === selected.id ? "Updating…" : `Mark as ${capitalize(s)}`}
                 </button>
               ))}
             </div>
@@ -212,9 +219,9 @@ export default function Reports() {
           <span>Showing {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, filtered.length)} of {filtered.length}</span>
           <div className="flex gap-2">
             <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-              className="px-3 py-1.5 bg-gray-900 border border-gray-800 rounded-lg text-xs hover:text-white disabled:opacity-40 transition">← Prev</button>
+              className="px-3 py-1.5 bg-gray-900 border border-gray-800 rounded-lg text-xs text-gray-400 hover:text-white hover:border-gray-700 disabled:opacity-40 transition">← Prev</button>
             <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-              className="px-3 py-1.5 bg-gray-900 border border-gray-800 rounded-lg text-xs hover:text-white disabled:opacity-40 transition">Next →</button>
+              className="px-3 py-1.5 bg-gray-900 border border-gray-800 rounded-lg text-xs text-gray-400 hover:text-white hover:border-gray-700 disabled:opacity-40 transition">Next →</button>
           </div>
         </div>
       )}

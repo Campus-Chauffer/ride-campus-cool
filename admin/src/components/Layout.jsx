@@ -31,15 +31,16 @@ export default function Layout({ children }) {
 
   return (
     <div className="min-h-screen bg-gray-950 flex">
-      {/* Sidebar */}
+      {/* Sidebar — fixed at all screen sizes so it never scrolls with page content */}
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 border-r border-gray-800
         transform transition-transform duration-200 ease-in-out
+        flex flex-col
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:relative lg:translate-x-0
+        lg:translate-x-0
       `}>
         {/* Logo */}
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-800">
+        <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-800 shrink-0">
           <div className="w-9 h-9 bg-yellow-400 rounded-xl flex items-center justify-center">
             <span className="text-lg">🚗</span>
           </div>
@@ -55,8 +56,8 @@ export default function Layout({ children }) {
           </button>
         </div>
 
-        {/* Nav */}
-        <nav className="p-4 flex-1">
+        {/* Nav — scrolls independently if it ever grows past viewport height */}
+        <nav className="p-4 flex-1 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = location.pathname === item.path;
@@ -81,8 +82,8 @@ export default function Layout({ children }) {
           })}
         </nav>
 
-        {/* User */}
-        <div className="p-4 border-t border-gray-800">
+        {/* User — pinned to bottom */}
+        <div className="p-4 border-t border-gray-800 shrink-0">
           <div className="flex items-center gap-3 px-3 py-2 rounded-lg">
             <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center">
               <span className="text-xs font-bold text-gray-900">
@@ -105,7 +106,7 @@ export default function Layout({ children }) {
         </div>
       </aside>
 
-      {/* Backdrop */}
+      {/* Backdrop (mobile only) */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
@@ -113,10 +114,10 @@ export default function Layout({ children }) {
         />
       )}
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Main content — offset by sidebar width on large screens, independent scroll */}
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
         {/* Top bar */}
-        <header className="bg-gray-900 border-b border-gray-800 px-4 py-4 flex items-center gap-4 lg:px-6">
+        <header className="bg-gray-900 border-b border-gray-800 px-4 py-4 flex items-center gap-4 lg:px-6 shrink-0">
           <button
             className="lg:hidden text-gray-400 hover:text-white"
             onClick={() => setSidebarOpen(true)}

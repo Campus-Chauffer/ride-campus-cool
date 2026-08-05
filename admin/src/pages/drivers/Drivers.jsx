@@ -11,15 +11,15 @@ const APPROVAL_STYLES = {
 
 function ImagePreview({ url, label }) {
   if (!url) return (
-    <div className="bg-gray-800 rounded-lg h-32 flex items-center justify-center text-gray-600 text-xs">{label} — not uploaded</div>
+    <div className="bg-gray-800/60 rounded-lg h-28 flex items-center justify-center text-gray-600 text-xs">{label} — not uploaded</div>
   );
   return (
     <div>
-      <p className="text-gray-500 text-xs mb-1">{label}</p>
+      <p className="text-gray-500 text-xs mb-1.5">{label}</p>
       <img
         src={url}
         alt={label}
-        className="w-full h-32 object-cover rounded-lg border border-gray-700 cursor-pointer hover:opacity-90 transition"
+        className="w-full h-28 object-cover rounded-lg border border-gray-800 cursor-pointer hover:opacity-90 hover:border-gray-700 transition"
         onClick={() => window.open(url, "_blank")}
       />
     </div>
@@ -96,25 +96,25 @@ export default function Drivers() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <div>
-        <h1 className="text-white text-xl font-semibold">Drivers</h1>
-        <p className="text-gray-400 text-sm mt-1">Review and manage driver applications</p>
+        <h1 className="text-white text-xl font-semibold tracking-tight">Drivers</h1>
+        <p className="text-gray-500 text-sm mt-1">Review and manage driver applications</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s) => (
-          <div key={s.label} className="bg-gray-900 rounded-xl p-4 border border-gray-800">
-            <p className="text-gray-400 text-xs mb-1">{s.label}</p>
-            <p className="text-white text-2xl font-semibold">{s.value}</p>
+          <div key={s.label} className="bg-gray-900 rounded-xl p-5 border border-gray-800">
+            <p className="text-gray-500 text-xs mb-1.5">{s.label}</p>
+            <p className="text-white text-2xl font-semibold tracking-tight">{s.value}</p>
           </div>
         ))}
       </div>
 
       {successMsg && (
-        <div className="bg-green-500/10 border border-green-500/20 text-green-400 rounded-lg px-4 py-3 text-sm flex justify-between">
+        <div className="bg-green-500/10 border border-green-500/20 text-green-400 rounded-lg px-4 py-3 text-sm flex justify-between items-center">
           {successMsg}
-          <button onClick={() => setSuccessMsg(null)}>×</button>
+          <button onClick={() => setSuccessMsg(null)} className="text-green-400/60 hover:text-green-400 text-lg leading-none">×</button>
         </div>
       )}
 
@@ -126,19 +126,19 @@ export default function Drivers() {
 
       <div className="flex gap-3 flex-wrap">
         <select value={filter} onChange={(e) => setFilter(e.target.value)}
-          className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400">
+          className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400/50 transition">
           <option value="all">All drivers</option>
           <option value="pending">Pending review</option>
           <option value="approved">Approved</option>
           <option value="blocked">Blocked</option>
         </select>
         <button onClick={fetchDrivers}
-          className="flex items-center gap-2 bg-gray-900 border border-gray-800 text-gray-400 hover:text-white px-3 py-2 rounded-lg text-sm transition">
+          className="flex items-center gap-2 bg-gray-900 border border-gray-800 text-gray-400 hover:text-white hover:border-gray-700 px-3 py-2 rounded-lg text-sm transition">
           <RefreshCw size={14} /> Refresh
         </button>
       </div>
 
-      <div className="flex gap-4 items-start">
+      <div className="flex gap-5 items-start">
         {/* Table */}
         <div className="flex-1 bg-gray-900 border border-gray-800 rounded-xl overflow-hidden min-w-0">
           {loading ? (
@@ -192,7 +192,7 @@ export default function Drivers() {
                             <button
                               onClick={() => approveDriver(driver.id)}
                               disabled={actioningId === driver.id}
-                              className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 transition"
+                              className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 transition disabled:opacity-50"
                             >
                               <CheckCircle size={12} /> Approve
                             </button>
@@ -201,7 +201,7 @@ export default function Drivers() {
                             <button
                               onClick={() => blockDriver(driver.id)}
                               disabled={actioningId === driver.id}
-                              className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition"
+                              className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition disabled:opacity-50"
                             >
                               <Ban size={12} /> Block
                             </button>
@@ -222,12 +222,12 @@ export default function Drivers() {
             {/* Panel header */}
             <div className="flex justify-between items-center px-5 py-4 border-b border-gray-800">
               <h2 className="text-white font-semibold">Driver Profile</h2>
-              <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-white text-xl leading-none">
+              <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-white transition">
                 <X size={18} />
               </button>
             </div>
 
-            <div className="p-5 space-y-5 overflow-y-auto max-h-[75vh]">
+            <div className="p-5 space-y-6 overflow-y-auto max-h-[75vh]">
               {/* Basic info */}
               <div className="flex items-center gap-3">
                 {selected.profile_photo ? (
@@ -304,15 +304,15 @@ export default function Drivers() {
                   <ImagePreview url={selected.vehicle_back_image} label="Vehicle Back" />
                 </div>
               </div>
-              
-               {/* Vehicle Checklist */}
+
+              {/* Vehicle Checklist */}
               {selected.vehicle_checklist && (
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <CheckCircle size={14} className="text-yellow-400" />
                     <p className="text-white font-medium text-sm">Vehicle Requirements</p>
                   </div>
-                  <div className="bg-gray-800 rounded-lg overflow-hidden">
+                  <div className="bg-gray-800/60 rounded-lg overflow-hidden">
                     {[
                       { id: 'ac', label: 'Working air conditioning' },
                       { id: 'seatbelts', label: 'All seatbelts functional' },
@@ -322,7 +322,7 @@ export default function Drivers() {
                     ].map((item, index, arr) => (
                       <div
                         key={item.id}
-                        className={`flex items-center justify-between px-4 py-2.5 text-sm ${index < arr.length - 1 ? 'border-b border-gray-700' : ''}`}
+                        className={`flex items-center justify-between px-4 py-2.5 text-sm ${index < arr.length - 1 ? 'border-b border-gray-800' : ''}`}
                       >
                         <span className="text-gray-400">{item.label}</span>
                         {selected.vehicle_checklist[item.id]
@@ -341,7 +341,7 @@ export default function Drivers() {
                   <button
                     onClick={() => approveDriver(selected.id)}
                     disabled={actioningId === selected.id}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold bg-green-500/10 text-green-400 hover:bg-green-500/20 rounded-lg transition"
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold bg-green-500/10 text-green-400 hover:bg-green-500/20 rounded-lg transition disabled:opacity-50"
                   >
                     <CheckCircle size={14} /> Approve
                   </button>
@@ -350,7 +350,7 @@ export default function Drivers() {
                   <button
                     onClick={() => blockDriver(selected.id)}
                     disabled={actioningId === selected.id}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg transition"
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg transition disabled:opacity-50"
                   >
                     <Ban size={14} /> Block
                   </button>
