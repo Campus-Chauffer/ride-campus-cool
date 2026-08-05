@@ -343,6 +343,33 @@ const getAnalytics = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+const getReverseGeocode = async (req, res) => {
+  const { lat, lng } = req.query;
+  if (!lat || !lng) {
+    return res.status(400).json({ error: 'lat and lng required' });
+  }
+
+  try {
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.status === 'OK' && data.results.length > 0) {
+      // Prefer a named point of interest over a raw street address if one exists
+      const poiResult = data.results.find(r => r.types.includes('point_of_interest') || r.types.includes('establishment'));
+      const best = poiResult || data.results[0];
+      res.json({ name: best.formatted_address });
+    } else {
+      res.json({ name: `${parseFloat(lat).toFixed(4)}, ${parseFloat(lng).toFixed(4)}` });
+    }
+  } catch (err) {
+    console.error('Reverse geocode error:', err);
+    res.json({ name: `${parseFloat(lat).toFixed(4)}, ${parseFloat(lng).toFixed(4)}` });
+  }
+};
+
 // Get admin payment ledger
 const getAdminLedger = async (req, res) => {
   try {
@@ -396,5 +423,5 @@ module.exports = {
   getAllTrips, getRevenueSummary,
   getAllUsers, blockUser, updateConfig,
   getAllReports, updateReport, getAllConfig,
-  getAnalytics, getAdminLedger, getDriverActivity
+  getAnalytics, getAdminLedger, getDriverActivity, getReverseGeocode
 };

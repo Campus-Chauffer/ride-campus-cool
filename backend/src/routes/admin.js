@@ -6,7 +6,7 @@ const {
   getAllTrips, getRevenueSummary,
   getAllUsers, blockUser, updateConfig,
   getAllReports, updateReport, getAllConfig,
-  getAnalytics, getAdminLedger, getDriverActivity
+  getAnalytics, getAdminLedger, getDriverActivity, getReverseGeocode
 } = require('../controllers/adminController');
 
 router.get('/drivers', adminAuth, getAllDrivers);
@@ -23,6 +23,6 @@ router.patch('/reports/:id', adminAuth, updateReport);
 router.get('/analytics', adminAuth, getAnalytics);
 router.get('/analytics/driver-activity', adminAuth, getDriverActivity);
 router.get('/ledger', adminAuth, getAdminLedger);
-
+router.get('/geocode', adminAuth, getReverseGeocode);
 
 module.exports = router;

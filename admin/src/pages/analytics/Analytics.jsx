@@ -38,6 +38,8 @@ export default function Analytics() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [topPickups, setTopPickups] = useState([]);
+  const [geocodingHotspots, setGeocodingHotspots] = useState(false);
 
   useEffect(() => { fetchAnalytics(); }, []);
 
@@ -47,10 +49,37 @@ export default function Analytics() {
       setError(null);
       const res = await api.get("/admin/analytics");
       setData(res.data);
+      await loadHotspotNames(res.data?.pickup_heatmap || []);
     } catch (err) {
       setError("Failed to load analytics data.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadHotspotNames(pickupHeatmap) {
+    const top10 = pickupHeatmap.slice(0, 10);
+    setGeocodingHotspots(true);
+    try {
+      const results = await Promise.all(
+        top10.map(async (p) => {
+          try {
+            const geoRes = await api.get("/admin/geocode", { params: { lat: p.lat, lng: p.lng } });
+            return {
+              name: geoRes.data.name,
+              count: parseInt(p.count),
+            };
+          } catch {
+            return {
+              name: `${parseFloat(p.lat).toFixed(4)}, ${parseFloat(p.lng).toFixed(4)}`,
+              count: parseInt(p.count),
+            };
+          }
+        })
+      );
+      setTopPickups(results);
+    } finally {
+      setGeocodingHotspots(false);
     }
   }
 
@@ -103,14 +132,6 @@ export default function Analytics() {
   const cancellationData = (data?.cancellations || []).map((c) => ({
     name: c.cancelled_by || "Unknown",
     value: parseInt(c.count),
-  }));
-
-  // Top 10 pickup hotspots
-  const topPickups = (data?.pickup_heatmap || []).slice(0, 10).map((p, i) => ({
-    name: `Spot ${i + 1}`,
-    count: parseInt(p.count),
-    lat: parseFloat(p.lat).toFixed(3),
-    lng: parseFloat(p.lng).toFixed(3),
   }));
 
   return (
@@ -349,13 +370,15 @@ export default function Analytics() {
           </p>
         </div>
         {topPickups.length === 0 ? (
-          <div className="text-center text-gray-500 text-sm py-12">No location data yet</div>
+          <div className="text-center text-gray-500 text-sm py-12">
+            {geocodingHotspots ? "Looking up locations..." : "No location data yet"}
+          </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-800 text-gray-500 text-xs">
                 <th className="text-left px-5 py-3 font-medium">Rank</th>
-                <th className="text-left px-5 py-3 font-medium">Coordinates</th>
+                <th className="text-left px-5 py-3 font-medium">Location</th>
                 <th className="text-left px-5 py-3 font-medium">Trip requests</th>
               </tr>
             </thead>
@@ -368,8 +391,8 @@ export default function Analytics() {
                   <td className="px-5 py-3">
                     <span className="text-yellow-400 font-semibold">#{i + 1}</span>
                   </td>
-                  <td className="px-5 py-3 text-gray-400 font-mono text-xs">
-                    {spot.lat}, {spot.lng}
+                  <td className="px-5 py-3 text-gray-300 text-sm">
+                    {spot.name}
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-2">
