@@ -356,6 +356,8 @@ const getReverseGeocode = async (req, res) => {
     const response = await fetch(url);
     const data = await response.json();
 
+    console.log('Geocode status:', data.status, data.error_message || '');
+
     if (data.status === 'OK' && data.results.length > 0) {
       // Prefer a named point of interest over a raw street address if one exists
       const poiResult = data.results.find(r => r.types.includes('point_of_interest') || r.types.includes('establishment'));
