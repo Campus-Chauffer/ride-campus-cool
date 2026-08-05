@@ -362,10 +362,39 @@ const getAdminLedger = async (req, res) => {
   }
 };
 
+const getDriverActivity = async (req, res) => {
+  try {
+    const totalDrivers = await pool.query(
+      `SELECT COUNT(*) FROM drivers WHERE approval_status = 'approved'`
+    );
+
+    const weeklyLogins = await pool.query(
+      `SELECT driver_id, COUNT(*) as login_count
+       FROM driver_sessions
+       WHERE went_online_at >= NOW() - INTERVAL '7 days'
+       GROUP BY driver_id`
+    );
+
+    const driversWithLoginsThisWeek = weeklyLogins.rows.length;
+    const total = parseInt(totalDrivers.rows[0].count);
+
+    res.json({
+      total_drivers: total,
+      drivers_active_this_week: driversWithLoginsThisWeek,
+      weekly_login_rate: total > 0 ? (driversWithLoginsThisWeek / total * 100).toFixed(1) : 0,
+      per_driver_logins: weeklyLogins.rows,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+
 module.exports = {
   getAllDrivers, approveDriver, blockDriver,
   getAllTrips, getRevenueSummary,
   getAllUsers, blockUser, updateConfig,
   getAllReports, updateReport, getAllConfig,
-  getAnalytics, getAdminLedger
+  getAnalytics, getAdminLedger, getDriverActivity
 };

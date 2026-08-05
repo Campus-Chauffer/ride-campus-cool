@@ -43,6 +43,12 @@ const goOnline = async (req, res) => {
       [lat, lng, user_id]
     );
 
+    // Log this session start for weekly login rate tracking
+    await pool.query(
+      `INSERT INTO driver_sessions (driver_id, went_online_at) VALUES ($1, NOW())`,
+      [driver.id]
+    );
+
     res.json({ message: 'You are now online' });
   } catch (err) {
     console.error(err);
@@ -72,6 +78,17 @@ const goOffline = async (req, res) => {
     await pool.query(
       'UPDATE drivers SET is_online = FALSE WHERE user_id = $1', [user_id]
     );
+
+    // Close the most recent open session for this driver
+    if (driver_id) {
+      await pool.query(
+        `UPDATE driver_sessions 
+         SET went_offline_at = NOW() 
+         WHERE driver_id = $1 AND went_offline_at IS NULL
+         ORDER BY went_online_at DESC LIMIT 1`,
+        [driver_id]
+      );
+    }
     res.json({ message: 'You are now offline' });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
@@ -425,5 +442,6 @@ const getWaitFare = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
 
 module.exports = { goOnline, goOffline, updateLocation, checkOffers, acceptOffer, startTrip, arrivedAtPickup,getWaitFare,  completeTrip };

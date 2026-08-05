@@ -6,7 +6,7 @@ const {
   getAllTrips, getRevenueSummary,
   getAllUsers, blockUser, updateConfig,
   getAllReports, updateReport, getAllConfig,
-  getAnalytics, getAdminLedger
+  getAnalytics, getAdminLedger, getDriverActivity
 } = require('../controllers/adminController');
 
 router.get('/drivers', adminAuth, getAllDrivers);
@@ -21,6 +21,8 @@ router.get('/config', adminAuth, getAllConfig);
 router.get('/reports', adminAuth, getAllReports);
 router.patch('/reports/:id', adminAuth, updateReport);
 router.get('/analytics', adminAuth, getAnalytics);
+router.get('/analytics/driver-activity', adminAuth, getDriverActivity);
 router.get('/ledger', adminAuth, getAdminLedger);
+
 
 module.exports = router;
