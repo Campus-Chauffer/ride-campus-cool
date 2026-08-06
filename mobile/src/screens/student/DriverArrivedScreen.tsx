@@ -1,12 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  StatusBar, Linking, Alert
+  StatusBar, Linking, Alert, Image
 } from 'react-native';
 import RNMapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
-import { MapPin, Phone, Clock, AlertTriangle, Car } from 'lucide-react-native';
+import { MapPin, Phone, Clock, AlertTriangle } from 'lucide-react-native';
 import { driverAPI, ridesAPI } from '../../services/api';
+import socketService from '../../services/socket';
 import { colors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding } from '../../utils/theme';
+
+const CAR_ICON = require('../../../assets/car-top.png');
 
 interface Props {
   trip: any;
@@ -18,6 +21,7 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
   const [waitSeconds, setWaitSeconds] = useState(0);
   const [currentFare, setCurrentFare] = useState(parseFloat(trip.fare));
   const [waitPenalty, setWaitPenalty] = useState(0);
+  const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const mapRef = useRef<RNMapView>(null);
   const timerRef = useRef<any>(null);
   const fareRef = useRef<any>(null);
@@ -41,9 +45,23 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
       }
     }, 10000);
 
+    // Subscribe to live driver location — same mechanism as ToPickupScreen,
+    // since the driver hasn't left the trip, just changed phase to "arrived"
+    socketService.joinRide(trip.id);
+    socketService.onDriverLocation((data) => {
+      setDriverLocation({ latitude: data.latitude, longitude: data.longitude });
+      mapRef.current?.animateToRegion({
+        latitude: data.latitude,
+        longitude: data.longitude,
+        latitudeDelta: 0.006,
+        longitudeDelta: 0.006,
+      }, 500);
+    });
+
     return () => {
       clearInterval(timerRef.current);
       clearInterval(fareRef.current);
+      socketService.offDriverLocation();
     };
   }, []);
 
@@ -78,33 +96,50 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
     ]);
   };
 
+  // Fall back to pickup location only until the first real location event arrives —
+  // avoids a blank/uncentered map for the brief window before the driver's phone
+  // emits its first position, without ever showing it as a stale "driver position"
+  const mapCenter = driverLocation ?? {
+    latitude: parseFloat(trip.pickup_lat),
+    longitude: parseFloat(trip.pickup_lng),
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Map showing driver location at pickup */}
+      {/* Map showing driver's live location */}
       <View style={styles.mapContainer}>
         <RNMapView
           ref={mapRef}
           style={StyleSheet.absoluteFillObject}
           provider={PROVIDER_GOOGLE}
           initialRegion={{
-            latitude: parseFloat(trip.pickup_lat),
-            longitude: parseFloat(trip.pickup_lng),
+            latitude: mapCenter.latitude,
+            longitude: mapCenter.longitude,
             latitudeDelta: 0.008,
             longitudeDelta: 0.008,
           }}
         >
+          {driverLocation && (
+            <Marker
+              coordinate={driverLocation}
+              title="Your driver"
+              anchor={{ x: 0.5, y: 0.5 }}
+            >
+              <Image source={CAR_ICON} style={{ width: 36, height: 36 }} resizeMode="contain" />
+            </Marker>
+          )}
           <Marker
             coordinate={{
               latitude: parseFloat(trip.pickup_lat),
               longitude: parseFloat(trip.pickup_lng),
             }}
-            title="Driver location"
+            title="Pickup point"
             anchor={{ x: 0.5, y: 1 }}
           >
-            <View style={styles.driverMarker}>
-              <Car size={16} color={colors.dark} />
+            <View style={styles.pickupMarker}>
+              <MapPin size={16} color={colors.dark} />
             </View>
           </Marker>
         </RNMapView>
@@ -246,5 +281,5 @@ const styles = StyleSheet.create({
   fareValue: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark },
   cancelBtn: { padding: spacing.md, borderRadius: radius.full, borderWidth: 1.5, borderColor: colors.gray2, alignItems: 'center' },
   cancelText: { fontSize: fontSizes.sm, color: colors.textMuted, fontWeight: '600' },
-  driverMarker: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', ...shadows.md },
+  pickupMarker: { width: 32, height: 32, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', ...shadows.md },
 });

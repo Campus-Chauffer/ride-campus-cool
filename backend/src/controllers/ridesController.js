@@ -116,6 +116,64 @@ const cancelRide = async (req, res) => {
   }
 };
 
+// Fetches turn-by-turn route coordinates between two points via Google Directions API,
+// decodes the returned polyline into an array the mobile app can render directly.
+const getDirections = async (req, res) => {
+  const { origin_lat, origin_lng, dest_lat, dest_lng } = req.query;
+  if (!origin_lat || !origin_lng || !dest_lat || !dest_lng) {
+    return res.status(400).json({ error: 'origin and destination coordinates required' });
+  }
+
+  try {
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin_lat},${origin_lng}&destination=${dest_lat},${dest_lng}&key=${apiKey}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.status !== 'OK' || !data.routes?.length) {
+      return res.json({ coordinates: [] });
+    }
+
+    const encoded = data.routes[0].overview_polyline.points;
+    const coordinates = decodePolyline(encoded);
+
+    res.json({ coordinates });
+  } catch (err) {
+    console.error('Directions error:', err);
+    res.json({ coordinates: [] });
+  }
+};
+
+// Standard Google polyline decoding algorithm
+function decodePolyline(encoded) {
+  const points = [];
+  let index = 0, lat = 0, lng = 0;
+
+  while (index < encoded.length) {
+    let b, shift = 0, result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    const dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
+    lat += dlat;
+
+    shift = 0;
+    result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    const dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
+    lng += dlng;
+
+    points.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
+  }
+  return points;
+}
+
 // Haversine formula to calculate distance between two coordinates
 const getDistanceKm = (lat1, lng1, lat2, lng2) => {
   const R = 6371;
@@ -184,4 +242,4 @@ const isWithinCampus = (lat, lng) => {
   return inside;
 };
 
-module.exports = { requestRide, getRideHistory, cancelRide };
+module.exports = { requestRide, getRideHistory, cancelRide, getDirections };

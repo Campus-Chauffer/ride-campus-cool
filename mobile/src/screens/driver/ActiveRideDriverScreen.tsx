@@ -1,122 +1,20 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet,
-  StatusBar, Alert, Image, Linking
+  View, Text, StyleSheet, TouchableOpacity,
+  Linking, StatusBar
 } from 'react-native';
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import * as Location from 'expo-location';
-import { MapPin, CheckCircle, Phone } from 'lucide-react-native';
-import Constants from 'expo-constants';
-import { driverAPI } from '../../services/api';
-import socketService from '../../services/socket';
-import { colors, spacing, fontSizes, radius, shadows, bottomPadding } from '../../utils/theme';
-
-const GOOGLE_MAPS_KEY = Constants.manifest2?.extra?.expoClient?.extra?.googleMapsApiKey
-  || Constants.expoConfig?.extra?.googleMapsApiKey
-  || (Constants as any).manifest?.extra?.googleMapsApiKey
-  || '';
-
-const CAR_ICON = require('../../../assets/car-top.png');
+import { Phone, MapPin, CheckCircle, Flag } from 'lucide-react-native';
+import { colors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
 
 interface Props {
   trip: any;
+  driverLocation: { latitude: number; longitude: number } | null;
+  routeCoords: { latitude: number; longitude: number }[];
   onCompleteTrip: () => void;
 }
 
-export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) {
-  const mapRef = useRef<any>(null);
-  const [driverLocation, setDriverLocation] = useState<any>(null);
-  const [routeCoords, setRouteCoords] = useState<any[]>([]);
-  const [heading, setHeading] = useState(0);
-  const [completing, setCompleting] = useState(false);
-  const handleComplete = () => {
-    if (completing) return;
-    setCompleting(true);
-    onCompleteTrip();
-  };
-  const locationInterval = useRef<any>(null);
-  const headingSubscription = useRef<any>(null);
-
-  useEffect(() => {
-    socketService.connect();
-    socketService.joinRide(trip.id);
-    getLocationAndRoute();
-    locationInterval.current = setInterval(updateLocation, 5000);
-    return () => {
-      clearInterval(locationInterval.current);
-      headingSubscription.current?.remove();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (driverLocation) {
-      getDirections(driverLocation.lat, driverLocation.lng);
-    }
-  }, [driverLocation]);
-
-  const getLocationAndRoute = async () => {
-    try {
-      const loc = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = loc.coords;
-      setDriverLocation({ lat: latitude, lng: longitude });
-      mapRef.current?.fitToCoordinates(
-        [
-          { latitude, longitude },
-          { latitude: parseFloat(trip.dropoff_lat), longitude: parseFloat(trip.dropoff_lng) },
-        ],
-        { edgePadding: { top: 80, right: 80, bottom: 280, left: 80 }, animated: true }
-      );
-      headingSubscription.current = await Location.watchHeadingAsync((h) => {
-        setHeading(h.trueHeading || h.magHeading || 0);
-      });
-    } catch (err) {
-      console.log('Location error:', err);
-    }
-  };
-
-  const updateLocation = async () => {
-    try {
-      const loc = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = loc.coords;
-      setDriverLocation({ lat: latitude, lng: longitude });
-      await driverAPI.updateLocation(latitude, longitude);
-      socketService.sendLocation(trip.id, latitude, longitude, heading);
-    } catch (err) {
-      console.log('Update error:', err);
-    }
-  };
-
-  const getDirections = async (fromLat: number, fromLng: number) => {
-    try {
-      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${fromLat},${fromLng}&destination=${trip.dropoff_lat},${trip.dropoff_lng}&key=${GOOGLE_MAPS_KEY}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.routes?.length > 0) {
-        const points = decodePolyline(data.routes[0].overview_polyline.points);
-        setRouteCoords(points);
-      }
-    } catch (err) {
-      console.log('Directions error:', err);
-    }
-  };
-
-  const decodePolyline = (encoded: string) => {
-    const points: any[] = [];
-    let index = 0, lat = 0, lng = 0;
-    while (index < encoded.length) {
-      let b, shift = 0, result = 0;
-      do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-      lat += result & 1 ? ~(result >> 1) : result >> 1;
-      shift = 0; result = 0;
-      do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-      lng += result & 1 ? ~(result >> 1) : result >> 1;
-      points.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
-    }
-    return points;
-  };
-
-  
-
+export default function ActiveRideDriverScreen({ trip, driverLocation, routeCoords, onCompleteTrip }: Props) {
   const callPassenger = () => {
     if (trip.passenger_phone) {
       Linking.openURL(`tel:${trip.passenger_phone}`);
@@ -126,84 +24,80 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      <RNMapView
-        ref={mapRef}
-        style={styles.map}
-        provider={PROVIDER_GOOGLE}
-        showsUserLocation={false}
-        showsMyLocationButton={false}
-        initialRegion={{
-          latitude: parseFloat(trip.dropoff_lat),
-          longitude: parseFloat(trip.dropoff_lng),
-          latitudeDelta: 0.02,
-          longitudeDelta: 0.02,
-        }}
-      >
-        {driverLocation && (
-          <Marker
-            coordinate={{ latitude: driverLocation.lat, longitude: driverLocation.lng }}
-            title="You"
-            anchor={{ x: 0.5, y: 0.5 }}
-            rotation={heading}
-            flat
-          >
-            <Image source={CAR_ICON} style={styles.carIcon} resizeMode="contain" />
-          </Marker>
-        )}
-        <Marker
-          coordinate={{ latitude: parseFloat(trip.dropoff_lat), longitude: parseFloat(trip.dropoff_lng) }}
-          title="Destination"
-          anchor={{ x: 0.5, y: 1 }}
+
+      <View style={styles.mapContainer}>
+        <RNMapView
+          style={StyleSheet.absoluteFillObject}
+          provider={PROVIDER_GOOGLE}
+          initialRegion={{
+            latitude: driverLocation?.latitude || parseFloat(trip.dropoff_lat),
+            longitude: driverLocation?.longitude || parseFloat(trip.dropoff_lng),
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          }}
         >
-          <View style={styles.dropoffMarker}>
-            <MapPin size={16} color={colors.white} />
-          </View>
-        </Marker>
-        {routeCoords.length > 0 && (
-          <Polyline coordinates={routeCoords} strokeColor={colors.primary} strokeWidth={4} />
-        )}
-      </RNMapView>
+          {driverLocation && (
+            <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }}>
+              <View style={styles.driverMarker}>
+                <MapPin size={16} color={colors.dark} />
+              </View>
+            </Marker>
+          )}
 
-      <View style={styles.bottomCard}>
-        <View style={styles.cardHeader}>
-          <View style={styles.headerIcon}>
-            <MapPin size={20} color={colors.primary} />
-          </View>
-          <View>
-            <Text style={styles.cardTitle}>Trip In Progress</Text>
-            <Text style={styles.cardSubtitle} numberOfLines={1}>{trip.dropoff_address}</Text>
-          </View>
-        </View>
+          <Marker
+            coordinate={{
+              latitude: parseFloat(trip.dropoff_lat),
+              longitude: parseFloat(trip.dropoff_lng),
+            }}
+            anchor={{ x: 0.5, y: 1 }}
+          >
+            <View style={styles.dropoffMarker}>
+              <Flag size={16} color={colors.white} />
+            </View>
+          </Marker>
 
-        <View style={styles.passengerRow}>
-          <View style={styles.passengerAvatar}>
-            <Text style={styles.passengerAvatarText}>
-              {trip.passenger_first_name?.[0] || 'P'}
-            </Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.passengerName}>
-              {trip.passenger_first_name} {trip.passenger_last_name}
-            </Text>
+          {routeCoords.length > 0 && (
+            <Polyline
+              coordinates={routeCoords}
+              strokeColor={colors.primary}
+              strokeWidth={4}
+            />
+          )}
+        </RNMapView>
+      </View>
+
+      <View style={styles.bottomSheet}>
+        <View style={styles.tripInfo}>
+          <View style={styles.passengerRow}>
+            <View style={styles.passengerAvatar}>
+              <Text style={styles.passengerAvatarText}>
+                {trip.passenger_first_name?.[0] || 'P'}
+              </Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.passengerName}>
+                {trip.passenger_first_name} {trip.passenger_last_name}
+              </Text>
+              <Text style={styles.tripStatus}>En route to destination</Text>
+            </View>
             {trip.passenger_phone && (
-              <TouchableOpacity onPress={callPassenger} style={styles.phoneRow}>
-                <Phone size={12} color={colors.primary} />
-                <Text style={styles.phoneText}>{trip.passenger_phone}</Text>
+              <TouchableOpacity style={styles.callBtn} onPress={callPassenger}>
+                <Phone size={16} color={colors.dark} />
               </TouchableOpacity>
             )}
           </View>
-          <Text style={styles.fareText}>GH₵{trip.fare}</Text>
+
+          <View style={styles.destinationRow}>
+            <Flag size={14} color={colors.primary} />
+            <Text style={styles.destinationText} numberOfLines={1}>
+              {trip.dropoff_address}
+            </Text>
+          </View>
         </View>
 
-        <TouchableOpacity
-          style={[styles.completeBtn, completing && { opacity: 0.6 }]}
-          onPress={handleComplete}
-          disabled={completing}
-        >
+        <TouchableOpacity style={styles.completeBtn} onPress={onCompleteTrip}>
           <CheckCircle size={20} color={colors.dark} />
-          <Text style={styles.completeBtnText}>
-            {completing ? 'Completing...' : 'Complete Trip'}
-          </Text>
+          <Text style={styles.completeBtnText}>Complete Trip</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -211,22 +105,34 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  map: { flex: 1 },
-  carIcon: { width: 30, height: 30 },
-  dropoffMarker: { width: 32, height: 32, borderRadius: radius.full, backgroundColor: colors.error, justifyContent: 'center', alignItems: 'center', ...shadows.md },
-  bottomCard: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, paddingBottom: bottomPadding, ...shadows.lg },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
-  headerIcon: { width: 44, height: 44, borderRadius: radius.full, backgroundColor: 'rgba(255,184,0,0.1)', justifyContent: 'center', alignItems: 'center' },
-  cardTitle: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark },
-  cardSubtitle: { fontSize: fontSizes.sm, color: colors.textMuted },
-  passengerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.gray, padding: spacing.md, borderRadius: radius.lg, marginBottom: spacing.md },
+  container: { flex: 1, backgroundColor: colors.white },
+  mapContainer: { flex: 1 },
+  driverMarker: {
+    width: 36, height: 36, borderRadius: radius.full,
+    backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center',
+    ...shadows.md,
+  },
+  dropoffMarker: {
+    width: 32, height: 32, borderRadius: radius.full,
+    backgroundColor: colors.dark, justifyContent: 'center', alignItems: 'center',
+    ...shadows.md,
+  },
+  bottomSheet: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: spacing.lg,
+    ...shadows.lg,
+  },
+  tripInfo: { marginBottom: spacing.md },
+  passengerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
   passengerAvatar: { width: 44, height: 44, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
   passengerAvatarText: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark },
   passengerName: { fontSize: fontSizes.md, fontWeight: '700', color: colors.dark },
-  phoneRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  phoneText: { fontSize: fontSizes.xs, color: colors.primary, fontWeight: '600' },
-  fareText: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark },
+  tripStatus: { fontSize: fontSizes.xs, color: colors.textMuted, marginTop: 2 },
+  callBtn: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
+  destinationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.gray, padding: spacing.md, borderRadius: radius.lg },
+  destinationText: { flex: 1, fontSize: fontSizes.sm, color: colors.dark },
   completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.primary, padding: spacing.md, borderRadius: radius.full, ...shadows.md },
   completeBtnText: { fontSize: fontSizes.sm, fontWeight: '700', color: colors.dark },
 });
