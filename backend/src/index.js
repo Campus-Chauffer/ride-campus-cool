@@ -28,29 +28,49 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Rate limiters
+// ── Rate limiters ──────────────────────────────────────────────────────────
+// Everything below is keyed by IP address by default (express-rate-limit's
+// standard behaviour). On a shared campus WiFi network, many students and
+// drivers can share the same public IP due to NAT — meaning a strict IP-based
+// limit doesn't actually mean "10 attempts per person," it can mean
+// "10 attempts total for everyone on that network combined." Two things
+// address this: authenticated routes now key by user ID instead of IP
+// (each real person gets their own quota regardless of shared network), and
+// the pre-auth limits (where there's no user ID yet) are loosened enough to
+// tolerate a burst of real, simultaneous sign-ins from one campus network.
+
+// Global limiter — broad safety net, IP-based since it covers unauthenticated
+// requests too. Raised from 60 to 120/min to give more headroom on shared IPs.
 const globalLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 60,
+  max: 120,
   message: { error: 'Too many requests, please slow down.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
+// Ride requests — authenticated route, so key by user ID when available.
+// Falls back to IP only if req.user isn't populated for some reason,
+// which shouldn't happen since this sits behind the `authenticate` middleware.
 const rideLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 5,
   message: { error: 'Too many ride requests. Please wait a moment.' },
+  keyGenerator: (req) => req.user?.id?.toString() || req.ip,
 });
 
+// OTP/login — the highest-risk limiter, since it runs before authentication
+// exists, meaning it MUST be IP-based. Loosened from 10 to 20 attempts per
+// 15 minutes specifically to tolerate a burst of real students signing in
+// from the same shared campus network at the same time (e.g. right after
+// a beta invite goes out to a WhatsApp group).
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 20,
   message: { error: 'Too many attempts. Please try again in 15 minutes.' },
 });
 
 app.use(globalLimiter);
-app.use('/api/rides/request', rideLimiter);
 app.use('/api/auth/request-otp', authLimiter);
 app.use('/api/auth/login', authLimiter);
 
