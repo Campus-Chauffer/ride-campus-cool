@@ -79,13 +79,20 @@ const goOffline = async (req, res) => {
       'UPDATE drivers SET is_online = FALSE WHERE user_id = $1', [user_id]
     );
 
-    // Close the most recent open session for this driver
+    // Close the most recent open session for this driver. Plain UPDATE
+    // doesn't support ORDER BY/LIMIT in Postgres, so target the row via a
+    // subquery instead — this previously threw a syntax error on every
+    // call, making /drivers/offline 500 unconditionally.
     if (driver_id) {
       await pool.query(
-        `UPDATE driver_sessions 
-         SET went_offline_at = NOW() 
-         WHERE driver_id = $1 AND went_offline_at IS NULL
-         ORDER BY went_online_at DESC LIMIT 1`,
+        `UPDATE driver_sessions
+         SET went_offline_at = NOW()
+         WHERE id = (
+           SELECT id FROM driver_sessions
+           WHERE driver_id = $1 AND went_offline_at IS NULL
+           ORDER BY went_online_at DESC
+           LIMIT 1
+         )`,
         [driver_id]
       );
     }

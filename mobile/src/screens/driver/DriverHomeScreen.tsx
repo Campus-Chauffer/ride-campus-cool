@@ -229,7 +229,15 @@ export default function DriverHomeScreen({ navigation }: any) {
     clearInterval(offerInterval.current);
     clearInterval(timerInterval.current);
     clearInterval(cancelPollInterval.current);
-    await driverAPI.goOffline();
+    try {
+      await driverAPI.goOffline();
+    } catch (err: any) {
+      // Don't let a failed/slow request leave the switch stuck on
+      // "online" — the local state is what actually controls polling
+      // and location updates, so it must always flip regardless of
+      // whether the server call succeeded.
+      console.log('goOffline error (going offline locally anyway):', err.response?.data?.error);
+    }
     clearInterval(locationInterval.current);
     setIsOnline(false);
     setTripPhaseSync('idle');
