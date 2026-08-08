@@ -276,7 +276,9 @@ const styles = StyleSheet.create({
   driverAvatarText: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark },
   driverName: { fontSize: fontSizes.md, fontWeight: '700', color: colors.dark },
   driverVehicle: { fontSize: fontSizes.xs, color: colors.textMuted, marginTop: 2 },
-  driverPlate: { fontSize: fontSizes.xs, color: colors.primary, fontWeight: '600', marginTop: 2 },
+  // Card background is light gray — brand yellow text there is ~1.9:1
+  // contrast, so use navy instead.
+  driverPlate: { fontSize: fontSizes.xs, color: colors.dark, fontWeight: '600', marginTop: 2 },
   callBtn: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
   fareRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
   fareLabel: { fontSize: fontSizes.sm, color: colors.textMuted },

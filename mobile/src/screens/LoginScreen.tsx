@@ -190,7 +190,9 @@ const styles = StyleSheet.create({
   },
   forgotText: {
     fontSize: fontSizes.sm,
-    color: colors.primary,
+    // Brand yellow reads as ~1.7:1 contrast on white — unreadable as text.
+    // Use the other brand color (navy) instead; yellow stays for fills/icons.
+    color: colors.dark,
     fontWeight: '600',
   },
   btn: {
@@ -218,7 +220,7 @@ const styles = StyleSheet.create({
   },
   registerLink: {
     fontSize: fontSizes.sm,
-    color: colors.primary,
+    color: colors.dark,
     fontWeight: '700',
   },
 });

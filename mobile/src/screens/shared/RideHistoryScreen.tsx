@@ -256,7 +256,8 @@ const styles = StyleSheet.create({
   rateBtnText: {
     fontSize: fontSizes.xs,
     fontWeight: '700',
-    color: colors.primary,
+    // Brand yellow on the near-white pill background is ~1.7:1 — swap to navy.
+    color: colors.dark,
   },
   emptyState: {
     flex: 1,

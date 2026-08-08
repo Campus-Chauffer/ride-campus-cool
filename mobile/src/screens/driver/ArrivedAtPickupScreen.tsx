@@ -208,9 +208,12 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,68,68,0.3)',
   },
   timerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
-  timerLabel: { fontSize: fontSizes.sm, fontWeight: '600', color: colors.primary },
+  // Card background is only an 8%-opacity yellow wash over white, so solid
+  // yellow text here read at ~1.7:1 contrast. The Clock icon above already
+  // carries the brand yellow; the text itself uses navy instead.
+  timerLabel: { fontSize: fontSizes.sm, fontWeight: '600', color: colors.dark },
   timerLabelPenalty: { color: '#FF4444' },
-  timerValue: { fontSize: 48, fontWeight: '800', color: colors.primary, letterSpacing: -1 },
+  timerValue: { fontSize: 48, fontWeight: '800', color: colors.dark, letterSpacing: -1 },
   timerValuePenalty: { color: '#FF4444' },
   timerSub: { fontSize: fontSizes.xs, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs },
   fareCard: {

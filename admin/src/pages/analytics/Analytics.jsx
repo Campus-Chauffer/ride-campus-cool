@@ -36,7 +36,7 @@ function StatCard({ icon, label, value, sub, color }) {
       </div>
       <p className="text-white text-2xl font-bold tracking-tight">{value ?? "—"}</p>
       <p className="text-gray-400 text-sm mt-0.5">{label}</p>
-      {sub && <p className="text-gray-600 text-xs mt-0.5">{sub}</p>}
+      {sub && <p className="text-gray-500 text-xs mt-0.5">{sub}</p>}
     </div>
   );
 }

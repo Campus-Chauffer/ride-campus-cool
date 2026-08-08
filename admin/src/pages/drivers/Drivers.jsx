@@ -11,7 +11,7 @@ const APPROVAL_STYLES = {
 
 function ImagePreview({ url, label }) {
   if (!url) return (
-    <div className="bg-gray-800/60 rounded-lg h-28 flex items-center justify-center text-gray-600 text-xs">{label} — not uploaded</div>
+    <div className="bg-gray-800/60 rounded-lg h-28 flex items-center justify-center text-gray-500 text-xs">{label} — not uploaded</div>
   );
   return (
     <div>
@@ -177,7 +177,7 @@ export default function Drivers() {
                         {driver.vehicle_make && driver.vehicle_model
                           ? `${driver.vehicle_make} ${driver.vehicle_model}`
                           : "—"}
-                        {driver.vehicle_color && <span className="text-gray-600"> · {driver.vehicle_color}</span>}
+                        {driver.vehicle_color && <span className="text-gray-500"> · {driver.vehicle_color}</span>}
                       </td>
                       <td className="px-4 py-3 text-gray-400">{driver.plate_number || "—"}</td>
                       <td className="px-4 py-3 text-gray-500 text-xs">{formatDate(driver.submission_date)}</td>

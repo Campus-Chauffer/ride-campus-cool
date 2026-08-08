@@ -9,8 +9,11 @@ export const colors = {
   offWhite: '#F8F8F8',
   gray: '#F2F2F2',
   gray2: '#E0E0E0',
-  gray3: '#BDBDBD',
-  textMuted: '#9E9E9E',
+  // Darkened from #BDBDBD/#9E9E9E — those read at ~1.9:1 and ~2.4:1 contrast
+  // against white/light backgrounds, well under the 4.5:1 WCAG AA minimum
+  // for text. These values clear ~4.6-5:1 while staying the same neutral gray.
+  gray3: '#757575',
+  textMuted: '#6B6B6B',
   textDark: '#1A1A2E',
   success: '#4CAF50',
   error: '#F44336',

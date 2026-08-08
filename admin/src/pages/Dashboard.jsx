@@ -353,7 +353,7 @@ function StatCard({ icon, label, value, sub, color, pulse }) {
         {pulse && <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />}
       </div>
       <p className="text-gray-400 text-sm mt-0.5">{label}</p>
-      {sub && <p className="text-gray-600 text-xs mt-0.5">{sub}</p>}
+      {sub && <p className="text-gray-500 text-xs mt-0.5">{sub}</p>}
     </div>
   );
 }

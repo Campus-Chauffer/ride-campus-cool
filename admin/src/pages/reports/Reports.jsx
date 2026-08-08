@@ -204,7 +204,7 @@ export default function Reports() {
                   key={s}
                   onClick={() => updateStatus(selected.id, s)}
                   disabled={selected.status === s || updatingId === selected.id}
-                  className={`w-full text-left text-sm px-3 py-2 rounded-lg border transition ${selected.status === s ? "border-gray-800 text-gray-600 cursor-default" : "border-gray-800 text-gray-300 hover:border-yellow-400/50 hover:text-yellow-400"}`}
+                  className={`w-full text-left text-sm px-3 py-2 rounded-lg border transition ${selected.status === s ? "border-yellow-400/50 text-yellow-400 cursor-default" : "border-gray-800 text-gray-300 hover:border-yellow-400/50 hover:text-yellow-400"}`}
                 >
                   {updatingId === selected.id ? "Updating…" : `Mark as ${capitalize(s)}`}
                 </button>

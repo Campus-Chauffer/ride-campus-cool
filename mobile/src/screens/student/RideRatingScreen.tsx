@@ -230,7 +230,9 @@ const styles = StyleSheet.create({
   fareRoute: { fontSize: fontSizes.sm, fontWeight: '600', color: colors.white, textAlign: 'center', maxWidth: 140 },
   sectionTitle: { fontSize: fontSizes.sm, fontWeight: '700', color: colors.dark, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.5 },
   starsRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.sm, marginBottom: spacing.sm },
-  ratingText: { textAlign: 'center', fontSize: fontSizes.md, fontWeight: '700', color: colors.primary, marginBottom: spacing.lg },
+  // Sits directly on the white screen background, not the dark fare card —
+  // brand yellow text there is ~1.7:1 contrast, so use navy instead.
+  ratingText: { textAlign: 'center', fontSize: fontSizes.md, fontWeight: '700', color: colors.dark, marginBottom: spacing.lg },
   tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
   tag: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full, borderWidth: 1.5, borderColor: colors.gray2, backgroundColor: colors.gray },
   tagActive: { borderColor: colors.primary, backgroundColor: '#FFFBF0' },

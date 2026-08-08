@@ -441,7 +441,8 @@ const styles = StyleSheet.create({
   },
   loginLink: {
     fontSize: fontSizes.sm,
-    color: colors.primary,
+    // Brand yellow on white is ~1.7:1 contrast — use navy, the other brand color.
+    color: colors.dark,
     fontWeight: '700',
   },
 });
