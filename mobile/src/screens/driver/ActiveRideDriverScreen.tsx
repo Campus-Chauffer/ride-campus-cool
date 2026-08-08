@@ -1,20 +1,74 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   Linking, StatusBar
 } from 'react-native';
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import * as Location from 'expo-location';
 import { Phone, MapPin, CheckCircle, Flag } from 'lucide-react-native';
+import socketService from '../../services/socket';
+import { ridesAPI } from '../../services/api';
 import { colors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+
+const LOCATION_SHARE_INTERVAL_MS = 4000;
 
 interface Props {
   trip: any;
-  driverLocation: { latitude: number; longitude: number } | null;
-  routeCoords: { latitude: number; longitude: number }[];
   onCompleteTrip: () => void;
 }
 
-export default function ActiveRideDriverScreen({ trip, driverLocation, routeCoords, onCompleteTrip }: Props) {
+export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) {
+  const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
+
+  // Same as ToPickupScreen: this screen is the location source for the
+  // to-destination leg, broadcasting our GPS position over the socket so
+  // the passenger's map follows us live.
+  useEffect(() => {
+    let cancelled = false;
+
+    const shareLocation = async () => {
+      try {
+        const loc = await Location.getCurrentPositionAsync({});
+        if (cancelled) return;
+        const { latitude, longitude, heading } = loc.coords;
+        setDriverLocation({ latitude, longitude });
+        socketService.sendLocation(trip.id, latitude, longitude, heading || 0);
+      } catch (err) {
+        console.log('Location share error:', err);
+      }
+    };
+
+    shareLocation();
+    const interval = setInterval(shareLocation, LOCATION_SHARE_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    fetchRoute();
+  }, [driverLocation]);
+
+  async function fetchRoute() {
+    if (!driverLocation) return;
+    try {
+      const res = await ridesAPI.getDirections(
+        driverLocation.latitude,
+        driverLocation.longitude,
+        parseFloat(trip.dropoff_lat),
+        parseFloat(trip.dropoff_lng)
+      );
+      if (res.data?.coordinates) {
+        setRouteCoords(res.data.coordinates);
+      }
+    } catch (err) {
+      console.log('Directions error:', err);
+    }
+  }
+
   const callPassenger = () => {
     if (trip.passenger_phone) {
       Linking.openURL(`tel:${trip.passenger_phone}`);

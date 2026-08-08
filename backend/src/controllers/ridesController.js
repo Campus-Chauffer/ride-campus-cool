@@ -74,13 +74,14 @@ const getRideHistory = async (req, res) => {
   const passenger_id = req.user.id;
   try {
     const result = await pool.query(
-  `SELECT t.*, 
-          u.first_name as driver_first_name, 
+  `SELECT t.*,
+          u.first_name as driver_first_name,
           u.last_name as driver_last_name,
           u.phone_number as driver_phone,
           u.profile_photo as driver_photo,
           d.user_id as driver_user_id,
-          d.vehicle_make, d.vehicle_model, d.vehicle_color, d.plate_number
+          d.vehicle_make, d.vehicle_model, d.vehicle_color, d.plate_number,
+          d.current_lat as driver_lat, d.current_lng as driver_lng
    FROM trips t
    LEFT JOIN drivers d ON t.driver_id = d.id
    LEFT JOIN users u ON d.user_id = u.id

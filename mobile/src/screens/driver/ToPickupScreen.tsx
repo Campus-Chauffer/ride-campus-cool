@@ -4,10 +4,13 @@ import {
   StatusBar, Linking, Alert
 } from 'react-native';
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import * as Location from 'expo-location';
 import { CheckCircle, MapPin, Phone } from 'lucide-react-native';
 import socketService from '../../services/socket';
 import { ridesAPI } from '../../services/api';
 import { colors, spacing, fontSizes, radius, shadows, bottomPadding } from '../../utils/theme';
+
+const LOCATION_SHARE_INTERVAL_MS = 4000;
 
 const CAR_ICON = require('../../../assets/car-top.png');
 
@@ -22,14 +25,30 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   const mapRef = useRef<RNMapView>(null);
 
+  // Track our own GPS position and broadcast it over the socket so the
+  // passenger's map can follow us live on the way to pickup — this screen
+  // is the location source for this leg of the trip, not a listener.
   useEffect(() => {
-    socketService.joinRide(trip.id);
-    socketService.onDriverLocation((data) => {
-      setDriverLocation({ latitude: data.latitude, longitude: data.longitude });
-    });
+    let cancelled = false;
+
+    const shareLocation = async () => {
+      try {
+        const loc = await Location.getCurrentPositionAsync({});
+        if (cancelled) return;
+        const { latitude, longitude, heading } = loc.coords;
+        setDriverLocation({ latitude, longitude });
+        socketService.sendLocation(trip.id, latitude, longitude, heading || 0);
+      } catch (err) {
+        console.log('Location share error:', err);
+      }
+    };
+
+    shareLocation();
+    const interval = setInterval(shareLocation, LOCATION_SHARE_INTERVAL_MS);
 
     return () => {
-      socketService.offDriverLocation();
+      cancelled = true;
+      clearInterval(interval);
     };
   }, []);
 
