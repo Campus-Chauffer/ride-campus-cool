@@ -49,15 +49,8 @@ const globalLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Ride requests — authenticated route, so key by user ID when available.
-// Falls back to IP only if req.user isn't populated for some reason,
-// which shouldn't happen since this sits behind the `authenticate` middleware.
-const rideLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 5,
-  message: { error: 'Too many ride requests. Please wait a moment.' },
-  keyGenerator: (req) => req.user?.id?.toString() || req.ip,
-});
+// (The ride-request limiter lives in routes/rides.js, scoped to that route —
+// it used to also be declared here but was never mounted, just duplicated.)
 
 // OTP/login — the highest-risk limiter, since it runs before authentication
 // exists, meaning it MUST be IP-based. Loosened from 10 to 20 attempts per
