@@ -1,14 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  Linking, StatusBar
+  Linking, StatusBar, Image
 } from 'react-native';
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import { Phone, MapPin, Flag } from 'lucide-react-native';
+import { Phone, Flag } from 'lucide-react-native';
 import socketService from '../../services/socket';
 import { ridesAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+
+const CAR_ICON = require('../../../assets/car-top.png');
 
 interface Props {
   trip: any;
@@ -20,6 +22,8 @@ export default function ActiveRideScreen({ trip }: Props) {
   const styles = getStyles(colors);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [driverHeading, setDriverHeading] = useState(0);
+  const [trackCarMarker, setTrackCarMarker] = useState(true);
   const mapRef = useRef<RNMapView>(null);
   const routeRequestId = useRef(0);
 
@@ -28,6 +32,7 @@ export default function ActiveRideScreen({ trip }: Props) {
     socketService.joinRide(trip.id);
     socketService.onDriverLocation((data) => {
       setDriverLocation({ latitude: data.latitude, longitude: data.longitude });
+      setDriverHeading(data.heading || 0);
       mapRef.current?.animateToRegion({
         latitude: data.latitude,
         longitude: data.longitude,
@@ -40,6 +45,15 @@ export default function ActiveRideScreen({ trip }: Props) {
       socketService.offDriverLocation();
     };
   }, []);
+
+  // Same jank-avoidance as DriverFoundScreen: the car icon only visually
+  // changes when heading updates, so only track view changes briefly
+  // around that instead of leaving it on permanently.
+  useEffect(() => {
+    setTrackCarMarker(true);
+    const t = setTimeout(() => setTrackCarMarker(false), 250);
+    return () => clearTimeout(t);
+  }, [driverHeading]);
 
   // Re-fetch the route whenever driverLocation changes, so the line
   // follows the driver's actual position instead of staying fixed
@@ -92,10 +106,14 @@ export default function ActiveRideScreen({ trip }: Props) {
           }}
         >
           {driverLocation && (
-            <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
-              <View style={styles.driverMarker}>
-                <MapPin size={16} color={colors.dark} />
-              </View>
+            <Marker
+              coordinate={driverLocation}
+              anchor={{ x: 0.5, y: 0.5 }}
+              rotation={driverHeading}
+              flat
+              tracksViewChanges={trackCarMarker}
+            >
+              <Image source={CAR_ICON} style={styles.carIcon} resizeMode="contain" />
             </Marker>
           )}
 
@@ -152,11 +170,7 @@ export default function ActiveRideScreen({ trip }: Props) {
 const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   mapContainer: { flex: 1 },
-  driverMarker: {
-    width: 36, height: 36, borderRadius: radius.full,
-    backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center',
-    ...shadows.md,
-  },
+  carIcon: { width: 40, height: 40 },
   dropoffMarker: {
     width: 32, height: 32, borderRadius: radius.full,
     backgroundColor: colors.dark, justifyContent: 'center', alignItems: 'center',

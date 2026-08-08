@@ -16,6 +16,7 @@ const ratingsRoutes = require('./routes/ratings');
 const driverRegistrationRoutes = require('./routes/driverRegistration');
 const announcementsRoutes = require('./routes/announcements');
 const { scheduleDailyLockout, scheduleNightWarning } = require('./utils/scheduler');
+const pool = require('./db/pool');
 
 const app = express();
 const server = http.createServer(app);
@@ -92,9 +93,28 @@ io.on('connection', (socket) => {
     console.log(`Socket ${socket.id} joined ride:${rideId}`);
   });
 
-  socket.on('driver:location', (data) => {
-    const { rideId, latitude, longitude } = data;
-    io.to(`ride:${rideId}`).emit('ride:driver_location', { latitude, longitude });
+  socket.on('driver:location', async (data) => {
+    const { rideId, latitude, longitude, heading } = data;
+    // heading was previously dropped here, so every passenger-facing car
+    // marker rendered with rotation=0 regardless of the driver's actual
+    // bearing — this is what "stuck facing one direction" was.
+    io.to(`ride:${rideId}`).emit('ride:driver_location', { latitude, longitude, heading });
+
+    // Persist so current_lat/current_lng isn't frozen at "last seen before
+    // pickup" for the rest of the trip — anything that reads driver position
+    // via the DB (the passenger's polling fallback, admin views) would
+    // otherwise never see movement during an active ride, only the socket
+    // listeners would, making location updates depend entirely on socket
+    // uptime instead of degrading gracefully.
+    try {
+      await pool.query(
+        `UPDATE drivers SET current_lat = $1, current_lng = $2
+         WHERE id = (SELECT driver_id FROM trips WHERE id = $3)`,
+        [latitude, longitude, rideId]
+      );
+    } catch (err) {
+      console.error('Driver location persist error:', err);
+    }
   });
 
   socket.on('disconnect', () => {

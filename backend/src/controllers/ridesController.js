@@ -132,6 +132,13 @@ const getDirections = async (req, res) => {
     const data = await response.json();
 
     if (data.status !== 'OK' || !data.routes?.length) {
+      // Google returns HTTP 200 even for key/billing/quota failures, with the
+      // real reason only in the body — surfacing it here is the difference
+      // between "no route exists" and "the API key can't be used server-side"
+      // showing up as the exact same silent empty response to the client.
+      if (data.status !== 'ZERO_RESULTS') {
+        console.error('Directions API non-OK status:', data.status, data.error_message || '');
+      }
       return res.json({ coordinates: [] });
     }
 
@@ -164,6 +171,9 @@ const getGeocode = async (req, res) => {
     const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`;
     const response = await fetch(url);
     const data = await response.json();
+    if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+      console.error('Geocode API non-OK status:', data.status, data.error_message || '');
+    }
     res.json({ results: data.results || [] });
   } catch (err) {
     console.error('Geocode error:', err);
@@ -185,6 +195,9 @@ const getPlaceAutocomplete = async (req, res) => {
     const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}${locationParam}&key=${apiKey}`;
     const response = await fetch(url);
     const data = await response.json();
+    if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+      console.error('Places Autocomplete API non-OK status:', data.status, data.error_message || '');
+    }
     res.json({ predictions: data.predictions || [] });
   } catch (err) {
     console.error('Place autocomplete error:', err);
@@ -205,6 +218,9 @@ const getPlaceDetails = async (req, res) => {
     const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place_id}&fields=geometry,name,formatted_address&key=${apiKey}`;
     const response = await fetch(url);
     const data = await response.json();
+    if (data.status !== 'OK') {
+      console.error('Place Details API non-OK status:', data.status, data.error_message || '');
+    }
     res.json({ result: data.result || null });
   } catch (err) {
     console.error('Place details error:', err);
