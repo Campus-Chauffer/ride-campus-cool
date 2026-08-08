@@ -6,7 +6,8 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { ArrowLeft, Camera, ChevronRight, Check } from 'lucide-react-native';
-import { colors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { useThemeStore } from '../../store/themeStore';
+import { getColors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
 
 const CHECKLIST_ITEMS = [
   { id: 'ac', label: 'My vehicle has working air conditioning' },
@@ -17,6 +18,9 @@ const CHECKLIST_ITEMS = [
 ];
 
 export default function DriverRegistrationScreen({ navigation }: any) {
+  const { isDark } = useThemeStore();
+  const colors = getColors(isDark);
+  const styles = getStyles(colors);
   const [ghanaCardNumber, setGhanaCardNumber] = useState('');
   const [ghanaCardImage, setGhanaCardImage] = useState('');
   const [licenseNumber, setLicenseNumber] = useState('');
@@ -115,7 +119,7 @@ export default function DriverRegistrationScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backBtn}
@@ -246,7 +250,7 @@ export default function DriverRegistrationScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   header: {
     flexDirection: 'row',

@@ -7,11 +7,15 @@ import {
 import { ArrowLeft, Phone, KeyRound, User } from 'lucide-react-native';
 import { authAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { colors, spacing, fontSizes, radius, shadows } from '../utils/theme';
+import { useThemeStore } from '../store/themeStore';
+import { getColors, spacing, fontSizes, radius, shadows } from '../utils/theme';
 
 export default function AuthScreen({ route, navigation }: any) {
   const { role } = route.params;
   const { setAuth } = useAuthStore();
+  const { isDark } = useThemeStore();
+  const colors = getColors(isDark);
+  const styles = getStyles(colors);
 
   const [step, setStep] = useState<'phone' | 'otp' | 'profile'>('phone');
   const [phone, setPhone] = useState('');
@@ -117,7 +121,7 @@ export default function AuthScreen({ route, navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -263,7 +267,7 @@ export default function AuthScreen({ route, navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   keyboardView: { flex: 1 },
   header: {

@@ -6,11 +6,15 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'react-native';
 import { Car, GraduationCap } from 'lucide-react-native';
-import { colors, spacing, fontSizes, radius, shadows } from '../utils/theme';
+import { useThemeStore } from '../store/themeStore';
+import { getColors, spacing, fontSizes, radius, shadows } from '../utils/theme';
 
 const { height } = Dimensions.get('window');
 
 export default function LandingScreen({ navigation }: any) {
+  const { isDark } = useThemeStore();
+  const colors = getColors(isDark);
+  const styles = getStyles(colors);
   const [selectedRole, setSelectedRole] = useState<'passenger' | 'driver' | null>(null);
 
   return (
@@ -100,7 +104,7 @@ export default function LandingScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.dark },
   topSection: {
     minHeight: height * 0.38,

@@ -7,7 +7,8 @@ import RNMapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { MapPin, Phone, Clock, AlertTriangle } from 'lucide-react-native';
 import { driverAPI, ridesAPI } from '../../services/api';
 import socketService from '../../services/socket';
-import { colors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding } from '../../utils/theme';
+import { useThemeStore } from '../../store/themeStore';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding } from '../../utils/theme';
 
 const CAR_ICON = require('../../../assets/car-top.png');
 
@@ -18,6 +19,9 @@ interface Props {
 }
 
 export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }: Props) {
+  const { isDark } = useThemeStore();
+  const colors = getColors(isDark);
+  const styles = getStyles(colors);
   const [waitSeconds, setWaitSeconds] = useState(0);
   const [currentFare, setCurrentFare] = useState(parseFloat(trip.fare));
   const [waitPenalty, setWaitPenalty] = useState(0);
@@ -106,7 +110,7 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Map showing driver's live location */}
       <View style={styles.mapContainer}>
@@ -226,7 +230,7 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   mapContainer: { flex: 1 },
   bottomSheet: {

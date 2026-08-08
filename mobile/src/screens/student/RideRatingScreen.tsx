@@ -5,12 +5,16 @@ import {
 } from 'react-native';
 import { Star, Flag } from 'lucide-react-native';
 import { useRideStore } from '../../store/rideStore';
-import { colors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { useThemeStore } from '../../store/themeStore';
+import { getColors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
 import api from '../../services/api';
 
 export default function RideRatingScreen({ route, navigation }: any) {
   const { trip } = route.params;
   const { clearRide } = useRideStore();
+  const { isDark } = useThemeStore();
+  const colors = getColors(isDark);
+  const styles = getStyles(colors);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
@@ -71,7 +75,7 @@ export default function RideRatingScreen({ route, navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <ScrollView contentContainerStyle={styles.scroll}>
 
         <View style={styles.completeBadge}>
@@ -206,7 +210,7 @@ export default function RideRatingScreen({ route, navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   scroll: { padding: spacing.lg, paddingBottom: spacing.xxl },
   completeBadge: { alignItems: 'center', marginBottom: spacing.lg, paddingTop: spacing.md },

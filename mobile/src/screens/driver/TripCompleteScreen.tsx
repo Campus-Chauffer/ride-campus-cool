@@ -4,7 +4,8 @@ import {
   SafeAreaView, StatusBar, ScrollView, TextInput, Alert, Dimensions
 } from 'react-native';
 import { Flag, CheckCircle } from 'lucide-react-native';
-import { colors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding } from '../../utils/theme';
+import { useThemeStore } from '../../store/themeStore';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding } from '../../utils/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -16,6 +17,9 @@ interface Props {
 }
 
 export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: Props) {
+  const { isDark } = useThemeStore();
+  const colors = getColors(isDark);
+  const styles = getStyles(colors);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -32,7 +36,7 @@ export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: P
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle={isDark ? 'dark-content' : 'light-content'} />
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -123,7 +127,7 @@ export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: P
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.dark, paddingTop: androidTopPadding },
   scroll: { padding: spacing.md, paddingBottom: bottomPadding, flexGrow: 1, justifyContent: 'center' },
   header: {

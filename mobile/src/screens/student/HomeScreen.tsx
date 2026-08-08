@@ -12,7 +12,8 @@ import SideMenu from '../../components/SideMenu';
 import { ridesAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useRideStore } from '../../store/rideStore';
-import { colors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { useThemeStore } from '../../store/themeStore';
+import { getColors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
 
 const { height } = Dimensions.get('window');
 const COLLAPSED_HEIGHT = height * 0.32;
@@ -89,6 +90,9 @@ const UG_LEGON_BOUNDARY = [
 export default function StudentHomeScreen({ navigation }: any) {
   const { user } = useAuthStore();
   const { setActiveRide } = useRideStore();
+  const { isDark } = useThemeStore();
+  const colors = getColors(isDark);
+  const styles = getStyles(colors);
   const mapRef = useRef<RNMapView>(null);
 
   const [userLocation, setUserLocation] = useState<any>(null);
@@ -430,7 +434,7 @@ export default function StudentHomeScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       <RNMapView
         ref={mapRef}
@@ -645,7 +649,7 @@ export default function StudentHomeScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
   menuBtn: {

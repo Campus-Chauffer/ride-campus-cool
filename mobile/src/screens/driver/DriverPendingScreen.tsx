@@ -6,10 +6,14 @@ import {
 import { Clock, XCircle, LogOut } from 'lucide-react-native';
 import { driverRegistrationAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
-import { colors, spacing, fontSizes, radius } from '../../utils/theme';
+import { useThemeStore } from '../../store/themeStore';
+import { getColors, spacing, fontSizes, radius } from '../../utils/theme';
 
 export default function DriverPendingScreen({ navigation }: any) {
   const { logout } = useAuthStore();
+  const { isDark } = useThemeStore();
+  const colors = getColors(isDark);
+  const styles = getStyles(colors);
   const [status, setStatus] = useState('pending');
   const [loading, setLoading] = useState(true);
 
@@ -35,7 +39,7 @@ export default function DriverPendingScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle={isDark ? 'dark-content' : 'light-content'} />
 
       <View style={styles.header}>
         <TouchableOpacity
@@ -97,7 +101,7 @@ export default function DriverPendingScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.dark },
   header: {
     paddingHorizontal: spacing.lg,

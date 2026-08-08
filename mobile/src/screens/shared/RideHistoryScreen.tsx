@@ -5,16 +5,21 @@ import {
 } from 'react-native';
 import { ArrowLeft, MapPin, Navigation, Clock, Star } from 'lucide-react-native';
 import { useAuthStore } from '../../store/authStore';
-import { colors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { useThemeStore } from '../../store/themeStore';
+import { getColors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
 import { ridesAPI, driverAPI } from '../../services/api';
 
-const STATUS_COLORS: any = {
+// Depends on the current theme's colors, so it's a function computed inside
+// the component (like getStyles) rather than a module-scope constant —
+// a plain object here would freeze on the colors captured at import time
+// and never react to the dark-mode toggle.
+const getStatusColors = (colors: any): any => ({
   completed: colors.success,
   cancelled: colors.error,
   no_driver_found: colors.textMuted,
   in_progress: colors.info,
   requested: colors.primary,
-};
+});
 
 const STATUS_LABELS: any = {
   completed: 'Completed',
@@ -26,6 +31,10 @@ const STATUS_LABELS: any = {
 
 export default function RideHistoryScreen({ navigation }: any) {
   const { user } = useAuthStore();
+  const { isDark } = useThemeStore();
+  const colors = getColors(isDark);
+  const styles = getStyles(colors);
+  const STATUS_COLORS = getStatusColors(colors);
   const [rides, setRides] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -107,7 +116,7 @@ export default function RideHistoryScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <ArrowLeft size={22} color={colors.dark} />
@@ -137,7 +146,7 @@ export default function RideHistoryScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.offWhite },
   header: {
     flexDirection: 'row',

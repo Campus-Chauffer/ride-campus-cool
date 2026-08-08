@@ -10,13 +10,17 @@ import socketService from '../../services/socket';
 import DriverFoundScreen from './DriverFoundScreen';
 import ActiveRideScreen from './ActiveRideScreen';
 import DriverArrivedScreen from './DriverArrivedScreen';
-import { colors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { useThemeStore } from '../../store/themeStore';
+import { getColors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
 
 type Phase = 'searching' | 'driver_found' | 'driver_arrived' | 'in_progress' | 'completed';
 
 export default function RideMatchingScreen({ route, navigation }: any) {
   const { trip } = route.params;
   const { clearRide } = useRideStore();
+  const { isDark } = useThemeStore();
+  const colors = getColors(isDark);
+  const styles = getStyles(colors);
   const [phase, setPhase] = useState<Phase>('searching');
   const [currentTrip, setCurrentTrip] = useState(trip);
   const phaseRef = useRef<Phase>('searching');
@@ -108,7 +112,7 @@ export default function RideMatchingScreen({ route, navigation }: any) {
     <View style={styles.container}>
       {phase === 'searching' && (
         <SafeAreaView style={styles.searchContainer}>
-          <StatusBar barStyle="light-content" />
+          <StatusBar barStyle={isDark ? 'dark-content' : 'light-content'} />
           <View style={styles.header}>
             <TouchableOpacity style={styles.closeBtn} onPress={cancelRide}>
               <X size={20} color={colors.white} />
@@ -182,7 +186,7 @@ export default function RideMatchingScreen({ route, navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1 },
   searchContainer: { flex: 1, backgroundColor: colors.dark },
   header: {

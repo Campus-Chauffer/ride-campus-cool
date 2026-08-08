@@ -15,7 +15,8 @@ import TripCompleteScreen from './TripCompleteScreen';
 import { driverAPI, ratingsAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useRideStore } from '../../store/rideStore';
-import { colors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding } from '../../utils/theme';
+import { useThemeStore } from '../../store/themeStore';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding } from '../../utils/theme';
 import socketService from '../../services/socket';
 import ArrivedAtPickupScreen from './ArrivedAtPickupScreen';
 import { AppState } from 'react-native';
@@ -25,6 +26,9 @@ const CAR_ICON = require('../../../assets/car-top.png');
 export default function DriverHomeScreen({ navigation }: any) {
   const { user } = useAuthStore();
   const { pendingOffer, setPendingOffer, clearRide } = useRideStore();
+  const { isDark } = useThemeStore();
+  const colors = getColors(isDark);
+  const styles = getStyles(colors);
 
   const [isOnline, setIsOnline] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -341,7 +345,9 @@ export default function DriverHomeScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      {/* Screen background is dark by default (light-mode) — opposite
+          ternary from most screens since it flips to light once inverted. */}
+      <StatusBar barStyle={isDark ? 'dark-content' : 'light-content'} />
 
       <View style={styles.header}>
         <View>
@@ -468,7 +474,7 @@ export default function DriverHomeScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.dark, paddingTop: androidTopPadding },
   header: {
     flexDirection: 'row',

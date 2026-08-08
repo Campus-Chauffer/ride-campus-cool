@@ -6,7 +6,8 @@ import {
 import { MapPin, Navigation, Clock } from 'lucide-react-native';
 import { driverAPI } from '../../services/api';
 import { useRideStore } from '../../store/rideStore';
-import { colors, spacing, fontSizes, radius, shadows, androidTopPadding } from '../../utils/theme';
+import { useThemeStore } from '../../store/themeStore';
+import { getColors, spacing, fontSizes, radius, shadows, androidTopPadding } from '../../utils/theme';
 
 const { width } = Dimensions.get('window');
 const SLIDER_WIDTH = width - spacing.lg * 2 - 32;
@@ -21,6 +22,9 @@ interface Props {
 }
 
 export default function RideOfferScreen({ trip, onAccepted, onDeclined, timer }: Props) {
+  const { isDark } = useThemeStore();
+  const colors = getColors(isDark);
+  const styles = getStyles(colors);
   const slideX = useRef(new Animated.Value(0)).current;
   const [accepted, setAccepted] = useState(false);
 
@@ -66,7 +70,7 @@ export default function RideOfferScreen({ trip, onAccepted, onDeclined, timer }:
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Timer */}
       <View style={styles.timerContainer}>
@@ -144,7 +148,7 @@ export default function RideOfferScreen({ trip, onAccepted, onDeclined, timer }:
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.white,

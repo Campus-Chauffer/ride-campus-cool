@@ -5,7 +5,8 @@ import {
 } from 'react-native';
 import { CheckCircle, MapPin, Phone, Clock, AlertTriangle } from 'lucide-react-native';
 import { driverAPI } from '../../services/api';
-import { colors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding } from '../../utils/theme';
+import { useThemeStore } from '../../store/themeStore';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding } from '../../utils/theme';
 
 interface Props {
   trip: any;
@@ -14,6 +15,9 @@ interface Props {
 }
 
 export default function ArrivedAtPickupScreen({ trip, onStartTrip, onCancelled }: Props) {
+  const { isDark } = useThemeStore();
+  const colors = getColors(isDark);
+  const styles = getStyles(colors);
   const [waitSeconds, setWaitSeconds] = useState(0);
   const [currentFare, setCurrentFare] = useState(parseFloat(trip.fare));
   const [waitPenalty, setWaitPenalty] = useState(0);
@@ -73,7 +77,10 @@ export default function ArrivedAtPickupScreen({ trip, onStartTrip, onCancelled }
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      {/* Header background is dark by default (light-mode), so unlike most
+          screens this needs the opposite ternary — it flips to a light
+          background once inverted in dark mode. */}
+      <StatusBar barStyle={isDark ? 'dark-content' : 'light-content'} />
 
       {/* Header */}
       <View style={styles.header}>
@@ -175,7 +182,7 @@ export default function ArrivedAtPickupScreen({ trip, onStartTrip, onCancelled }
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white, paddingTop: androidTopPadding },
   header: {
     backgroundColor: colors.dark,

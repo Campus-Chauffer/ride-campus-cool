@@ -7,13 +7,17 @@ import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps'
 import { Phone, MapPin, Flag } from 'lucide-react-native';
 import socketService from '../../services/socket';
 import { ridesAPI } from '../../services/api';
-import { colors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { useThemeStore } from '../../store/themeStore';
+import { getColors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
 
 interface Props {
   trip: any;
 }
 
 export default function ActiveRideScreen({ trip }: Props) {
+  const { isDark } = useThemeStore();
+  const colors = getColors(isDark);
+  const styles = getStyles(colors);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const mapRef = useRef<RNMapView>(null);
@@ -73,7 +77,7 @@ export default function ActiveRideScreen({ trip }: Props) {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       <View style={styles.mapContainer}>
         <RNMapView
@@ -145,7 +149,7 @@ export default function ActiveRideScreen({ trip }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   mapContainer: { flex: 1 },
   driverMarker: {

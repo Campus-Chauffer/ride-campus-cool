@@ -6,9 +6,13 @@ import {
 } from 'react-native';
 import { ArrowLeft, Wallet, Clock, CheckCircle, TrendingUp, RefreshCw } from 'lucide-react-native';
 import { walletAPI } from '../../services/api';
-import { colors, spacing, fontSizes, radius } from '../../utils/theme';
+import { useThemeStore } from '../../store/themeStore';
+import { getColors, spacing, fontSizes, radius } from '../../utils/theme';
 
 export default function EarningsScreen({ navigation }: any) {
+  const { isDark } = useThemeStore();
+  const colors = getColors(isDark);
+  const styles = getStyles(colors);
   const [wallet, setWallet] = useState<any>(null);
   const [ledger, setLedger] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +60,7 @@ export default function EarningsScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle={isDark ? 'dark-content' : 'light-content'} />
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <ArrowLeft size={22} color={colors.white} />
@@ -160,7 +164,7 @@ export default function EarningsScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.dark },
   header: {
     flexDirection: 'row',

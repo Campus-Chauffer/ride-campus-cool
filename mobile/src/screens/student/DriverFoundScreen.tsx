@@ -8,7 +8,8 @@ import * as Location from 'expo-location';
 import { MapPin, X, Phone } from 'lucide-react-native';
 import { ridesAPI } from '../../services/api';
 import socketService from '../../services/socket';
-import { colors, spacing, fontSizes, radius, shadows, bottomPadding } from '../../utils/theme';
+import { useThemeStore } from '../../store/themeStore';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding } from '../../utils/theme';
 
 const CAR_ICON = require('../../../assets/car-top.png');
 
@@ -19,6 +20,9 @@ interface Props {
 }
 
 export default function DriverFoundScreen({ trip, onRideStarted, onCancelled }: Props) {
+  const { isDark } = useThemeStore();
+  const colors = getColors(isDark);
+  const styles = getStyles(colors);
   const mapRef = useRef<any>(null);
   const userLocationRef = useRef<any>(null);
   const [userLocation, setUserLocation] = useState<any>(null);
@@ -176,7 +180,7 @@ export default function DriverFoundScreen({ trip, onRideStarted, onCancelled }: 
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       <RNMapView
         ref={mapRef}
@@ -288,7 +292,7 @@ export default function DriverFoundScreen({ trip, onRideStarted, onCancelled }: 
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
   carMarkerContainer: { alignItems: 'center' },
