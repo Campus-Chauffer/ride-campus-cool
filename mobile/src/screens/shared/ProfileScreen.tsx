@@ -127,7 +127,7 @@ export default function ProfileScreen({ navigation }: any) {
           >
             <Edit size={18} color={colors.white} />
             <Text style={styles.actionText}>Edit Profile</Text>
-            <ChevronRight size={16} color={colors.gray3} />
+            <ChevronRight size={16} color={'rgba(255,255,255,0.3)'} />
           </TouchableOpacity>
 
           <View style={styles.actionDivider} />
@@ -267,7 +267,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: fontSizes.md,
     fontWeight: '600',
-    color: colors.dark,
+    // This screen's background is always the dark navy (colors.dark) by
+    // fixed design, not tied to the app's dark-mode toggle — this was
+    // using colors.dark for the text too, making it identical to its own
+    // background (1:1 contrast, invisible). Every other label on this
+    // screen already uses white/near-white; match that.
+    color: colors.white,
   },
   actionDivider: {
     height: 1,

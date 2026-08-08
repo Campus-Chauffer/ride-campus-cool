@@ -489,6 +489,8 @@ const styles = StyleSheet.create({
   offlineCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.dark, borderRadius: radius.xl, padding: spacing.md, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', ...shadows.lg },
   onlineCardText: { flex: 1 },
   onlineTitle: { fontSize: fontSizes.md, fontWeight: '700', color: colors.white },
-  offlineTitle: { fontSize: fontSizes.md, fontWeight: '700', color: colors.gray3 },
+  // Sibling to onlineTitle on the same dark card — was using gray3, a token
+  // meant for muted text on light backgrounds, which reads dim here.
+  offlineTitle: { fontSize: fontSizes.md, fontWeight: '700', color: colors.white },
   onlineSubtitle: { fontSize: fontSizes.xs, color: 'rgba(255,255,255,0.4)', marginTop: 2 },
 });
