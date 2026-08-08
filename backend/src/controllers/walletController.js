@@ -84,7 +84,7 @@ const getLedger = async (req, res) => {
 
 // Record a commission payment (admin records this)
 const recordPayment = async (req, res) => {
-  const { driver_id, amount } = req.body;
+  const { driver_id, amount, description } = req.body;
 
   if (!driver_id || !amount) {
     return res.status(400).json({ error: 'Driver ID and amount required' });
@@ -95,7 +95,7 @@ const recordPayment = async (req, res) => {
     await pool.query(
       `INSERT INTO ledger (driver_id, amount, type, description)
        VALUES ($1, $2, 'payment', $3)`,
-      [driver_id, amount, `Commission payment of GH₵${amount}`]
+      [driver_id, amount, description || `Commission payment of GH₵${amount}`]
     );
 
     // Update wallet
