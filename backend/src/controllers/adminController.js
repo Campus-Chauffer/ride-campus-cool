@@ -73,35 +73,46 @@ const getAllTrips = async (req, res) => {
   }
 };
 
-// Get revenue summary
+// Get revenue summary. Accepts optional ?from=&to= (ISO timestamps, exclusive
+// upper bound) to scope the summary + daily breakdown to a period instead of
+// all-time — used by the admin dashboard's day/week/month/year filter.
+// Wallet summary is always global since it's a current-balance snapshot, not
+// something that makes sense scoped to a past period.
 const getRevenueSummary = async (req, res) => {
+  const { from, to } = req.query;
+  const hasRange = Boolean(from && to);
+  const rangeParams = hasRange ? [from, to] : [];
+
   try {
     const totalResult = await pool.query(
-      `SELECT 
+      `SELECT
         COUNT(*) as total_trips,
         COALESCE(SUM(CASE WHEN status = 'completed' THEN fare ELSE 0 END), 0) as total_revenue,
         COALESCE(SUM(CASE WHEN status = 'completed' THEN commission ELSE 0 END), 0) as total_commission,
         COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_trips,
         COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_trips,
         COUNT(CASE WHEN status = 'no_driver_found' THEN 1 END) as no_driver_trips
-       FROM trips`
+       FROM trips
+       ${hasRange ? 'WHERE created_at >= $1 AND created_at < $2' : ''}`,
+      rangeParams
     );
 
     const dailyResult = await pool.query(
-      `SELECT 
+      `SELECT
         DATE(created_at) as date,
         COUNT(*) as trips,
         SUM(fare) as revenue,
         SUM(commission) as commission
        FROM trips
        WHERE status = 'completed'
-       AND created_at >= NOW() - INTERVAL '30 days'
+       ${hasRange ? 'AND created_at >= $1 AND created_at < $2' : "AND created_at >= NOW() - INTERVAL '30 days'"}
        GROUP BY DATE(created_at)
-       ORDER BY date DESC`
+       ORDER BY date ASC`,
+      rangeParams
     );
 
     const walletSummary = await pool.query(
-      `SELECT 
+      `SELECT
         SUM(total_commission_owed) as total_owed,
         SUM(total_paid) as total_paid,
         SUM(total_commission_owed - total_paid) as total_outstanding,
@@ -113,6 +124,90 @@ const getRevenueSummary = async (req, res) => {
       summary: totalResult.rows[0],
       daily: dailyResult.rows,
       wallet_summary: walletSummary.rows[0]
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Ride history + ratings + complaints for a single user, for the admin
+// detail panel. Works for either role (a driver's own user_id, or a
+// passenger's id) since the two need different joins — a driver's rides
+// are found via trips.driver_id (through the drivers table), a passenger's
+// via trips.passenger_id directly. Scoped to what's actually relevant for
+// admin decisions (ride activity, ratings received, complaints filed
+// against them) rather than dumping the full user record.
+const getUserRideHistory = async (req, res) => {
+  const { user_id } = req.params;
+
+  try {
+    const userResult = await pool.query('SELECT role FROM users WHERE id = $1', [user_id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const { role } = userResult.rows[0];
+
+    let trips;
+    if (role === 'driver') {
+      const driverResult = await pool.query('SELECT id FROM drivers WHERE user_id = $1', [user_id]);
+      const driver_id = driverResult.rows[0]?.id;
+      trips = driver_id
+        ? await pool.query(
+            `SELECT t.id, t.created_at, t.completed_at, t.status, t.fare, t.commission,
+                    t.pickup_address, t.dropoff_address,
+                    t.passenger_rating as rating_received, t.passenger_comment as feedback_received,
+                    pu.first_name as other_party_first_name, pu.last_name as other_party_last_name
+             FROM trips t
+             JOIN users pu ON t.passenger_id = pu.id
+             WHERE t.driver_id = $1
+             ORDER BY t.created_at DESC
+             LIMIT 100`,
+            [driver_id]
+          )
+        : { rows: [] };
+    } else {
+      trips = await pool.query(
+        `SELECT t.id, t.created_at, t.completed_at, t.status, t.fare,
+                t.pickup_address, t.dropoff_address,
+                t.driver_rating as rating_received, t.driver_comment as feedback_received,
+                du.first_name as other_party_first_name, du.last_name as other_party_last_name
+         FROM trips t
+         LEFT JOIN drivers d ON t.driver_id = d.id
+         LEFT JOIN users du ON d.user_id = du.id
+         WHERE t.passenger_id = $1
+         ORDER BY t.created_at DESC
+         LIMIT 100`,
+        [user_id]
+      );
+    }
+
+    // Complaints filed against this person (either role), with trip context
+    // when the report is tied to a specific ride.
+    const reports = await pool.query(
+      `SELECT r.id, r.type, r.description, r.status, r.created_at,
+              ru.first_name as reporter_first_name, ru.last_name as reporter_last_name,
+              t.pickup_address, t.dropoff_address, t.created_at as trip_date
+       FROM reports r
+       JOIN users ru ON r.reporter_id = ru.id
+       LEFT JOIN trips t ON r.trip_id = t.id
+       WHERE r.reported_id = $1
+       ORDER BY r.created_at DESC`,
+      [user_id]
+    );
+
+    const completedRatings = trips.rows.filter(t => t.rating_received != null);
+    const avgRating = completedRatings.length > 0
+      ? (completedRatings.reduce((sum, t) => sum + t.rating_received, 0) / completedRatings.length).toFixed(1)
+      : null;
+
+    res.json({
+      role,
+      trips: trips.rows,
+      reports: reports.rows,
+      total_trips: trips.rows.length,
+      completed_trips: trips.rows.filter(t => t.status === 'completed').length,
+      average_rating: avgRating,
     });
   } catch (err) {
     console.error(err);
@@ -136,12 +231,16 @@ const getAllUsers = async (req, res) => {
 // Block a user
 const blockUser = async (req, res) => {
   const { user_id } = req.params;
+  // The admin UI sends { action: 'block' | 'unblock' } — this previously
+  // always set status to 'blocked' regardless, so "Unblock" silently
+  // re-blocked the user instead of restoring them.
+  const status = req.body.action === 'unblock' ? 'active' : 'blocked';
   try {
     await pool.query(
-      `UPDATE users SET status = 'blocked' WHERE id = $1`,
-      [user_id]
+      `UPDATE users SET status = $1 WHERE id = $2`,
+      [status, user_id]
     );
-    res.json({ message: 'User blocked' });
+    res.json({ message: status === 'blocked' ? 'User blocked' : 'User unblocked' });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
@@ -391,6 +490,81 @@ const getAdminLedger = async (req, res) => {
   }
 };
 
+// Today's snapshot for the admin dashboard: ride requests by status, revenue
+// generated, and which drivers went online today with how many rides they
+// completed. All queries are scoped to the server's local calendar day via
+// CURRENT_DATE, matching what an admin means by "today" at a glance.
+const getTodayStats = async (req, res) => {
+  const RIDE_STATUSES = ['requested', 'offered', 'accepted', 'arrived', 'in_progress', 'completed', 'cancelled', 'no_driver_found'];
+
+  try {
+    const ridesResult = await pool.query(`
+      SELECT status, COUNT(*) as count
+      FROM trips
+      WHERE created_at >= CURRENT_DATE AND created_at < CURRENT_DATE + INTERVAL '1 day'
+      GROUP BY status
+    `);
+
+    const rides = {};
+    for (const s of RIDE_STATUSES) rides[s] = 0;
+    let totalRequests = 0;
+    for (const row of ridesResult.rows) {
+      rides[row.status] = parseInt(row.count);
+      totalRequests += parseInt(row.count);
+    }
+
+    const revenueResult = await pool.query(`
+      SELECT COALESCE(SUM(fare), 0) as revenue, COALESCE(SUM(commission), 0) as commission
+      FROM trips
+      WHERE status = 'completed'
+      AND completed_at >= CURRENT_DATE AND completed_at < CURRENT_DATE + INTERVAL '1 day'
+    `);
+
+    // Drivers who had at least one online session today, and how many rides
+    // each completed today. DISTINCT driver_id first, then join to trips
+    // separately — joining trips directly against driver_sessions would fan
+    // out and double-count rides for any driver with more than one session.
+    const driverActivityResult = await pool.query(`
+      WITH online_today AS (
+        SELECT DISTINCT driver_id FROM driver_sessions
+        WHERE went_online_at >= CURRENT_DATE AND went_online_at < CURRENT_DATE + INTERVAL '1 day'
+      )
+      SELECT
+        ot.driver_id,
+        u.first_name, u.last_name, u.phone_number,
+        COUNT(t.id) FILTER (
+          WHERE t.status = 'completed'
+          AND t.completed_at >= CURRENT_DATE AND t.completed_at < CURRENT_DATE + INTERVAL '1 day'
+        ) as rides_completed_today
+      FROM online_today ot
+      JOIN drivers d ON d.id = ot.driver_id
+      JOIN users u ON u.id = d.user_id
+      LEFT JOIN trips t ON t.driver_id = ot.driver_id
+      GROUP BY ot.driver_id, u.first_name, u.last_name, u.phone_number
+      ORDER BY rides_completed_today DESC
+    `);
+
+    res.json({
+      date: new Date().toISOString().slice(0, 10),
+      rides,
+      total_requests: totalRequests,
+      revenue: parseFloat(revenueResult.rows[0].revenue),
+      commission: parseFloat(revenueResult.rows[0].commission),
+      drivers_online_today: driverActivityResult.rows.length,
+      driver_activity: driverActivityResult.rows.map(r => ({
+        driver_id: r.driver_id,
+        first_name: r.first_name,
+        last_name: r.last_name,
+        phone_number: r.phone_number,
+        rides_completed_today: parseInt(r.rides_completed_today),
+      })),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 const getDriverActivity = async (req, res) => {
   try {
     const totalDrivers = await pool.query(
@@ -425,5 +599,6 @@ module.exports = {
   getAllTrips, getRevenueSummary,
   getAllUsers, blockUser, updateConfig,
   getAllReports, updateReport, getAllConfig,
-  getAnalytics, getAdminLedger, getDriverActivity, getReverseGeocode
+  getAnalytics, getAdminLedger, getDriverActivity, getReverseGeocode,
+  getTodayStats, getUserRideHistory
 };

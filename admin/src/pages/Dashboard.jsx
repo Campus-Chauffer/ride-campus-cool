@@ -6,6 +6,8 @@ import {
 } from 'recharts';
 import api from '../api';
 import { Car, Users, MapPin, Wallet, TrendingUp, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import DateRangeFilter, { getPeriodRange, PERIODS } from '../components/DateRangeFilter';
+import TodayStats from '../components/TodayStats';
 
 const COLORS = ['#FBBF24', '#34D399', '#F87171', '#60A5FA'];
 
@@ -15,31 +17,33 @@ export default function Dashboard() {
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  
+  const [period, setPeriod] = useState('month');
+
   useEffect(() => {
     loadData(false);
-  const interval = setInterval(() => loadData(true), 5000);
+    const interval = setInterval(() => loadData(true), 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [period]);
 
   const loadData = async (isBackground = false) => {
     if (!isBackground) setLoading(true);
     else setRefreshing(true);
     try {
-      const [revenueRes, driversRes, usersRes, tripsRes] = await Promise.all([
-        api.get('/admin/revenue'),
+      const range = getPeriodRange(period);
+      const revenueParams = range ? { from: range.from, to: range.to } : {};
+
+      const [revenueRes, driversRes, usersRes] = await Promise.all([
+        api.get('/admin/revenue', { params: revenueParams }),
         api.get('/admin/drivers'),
         api.get('/admin/users'),
-        api.get('/admin/trips'),
       ]);
       setRevenue(revenueRes.data);
       setDrivers(Array.isArray(driversRes.data) ? driversRes.data : []);
 
-      const trips = Array.isArray(tripsRes.data) ? tripsRes.data : tripsRes.data?.trips || [];
       const users = Array.isArray(usersRes.data) ? usersRes.data : usersRes.data?.users || [];
-      const completed = trips.filter(t => t.status === 'completed');
-      const cancelled = trips.filter(t => t.status === 'cancelled');
-      const noDriver = trips.filter(t => t.status === 'no_driver_found');
+      const summary = revenueRes.data.summary || {};
+      const totalTripsInPeriod = parseInt(summary.total_trips) || 0;
+      const completedInPeriod = parseInt(summary.completed_trips) || 0;
       const onlineDrivers = driversRes.data.filter(d => d.is_online);
       const approvedDrivers = driversRes.data.filter(d => d.approval_status === 'approved');
       const pendingDrivers = driversRes.data.filter(d => d.approval_status === 'pending');
@@ -50,15 +54,15 @@ export default function Dashboard() {
         approvedDrivers: approvedDrivers.length,
         pendingDrivers: pendingDrivers.length,
         onlineDrivers: onlineDrivers.length,
-        totalTrips: trips.length,
-        completedTrips: completed.length,
-        cancelledTrips: cancelled.length,
-        noDriverTrips: noDriver.length,
-        totalRevenue: parseFloat(revenueRes.data.summary?.total_revenue) || 0,
-        totalCommission: parseFloat(revenueRes.data.summary?.total_commission) || 0,
+        totalTrips: totalTripsInPeriod,
+        completedTrips: completedInPeriod,
+        cancelledTrips: parseInt(summary.cancelled_trips) || 0,
+        noDriverTrips: parseInt(summary.no_driver_trips) || 0,
+        totalRevenue: parseFloat(summary.total_revenue) || 0,
+        totalCommission: parseFloat(summary.total_commission) || 0,
         outstandingCommission: parseFloat(revenueRes.data.wallet_summary?.total_outstanding) || 0,
-        completionRate: trips.length > 0
-          ? ((completed.length / trips.length) * 100).toFixed(1)
+        completionRate: totalTripsInPeriod > 0
+          ? ((completedInPeriod / totalTripsInPeriod) * 100).toFixed(1)
           : 0,
       });
     } catch (err) {
@@ -91,20 +95,33 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-    <div className="flex justify-between items-center">
+    <div className="flex justify-between items-center flex-wrap gap-3">
   <div>
     <h1 className="text-white text-xl font-semibold">Dashboard</h1>
     <p className="text-gray-400 text-sm mt-1">
       Live data · refreshes every 5 seconds {refreshing && <span className="text-yellow-400">· updating...</span>}
     </p>
   </div>
-  <button
-    onClick={() => loadData(false)}
-    className="flex items-center gap-2 bg-gray-900 border border-gray-800 text-gray-400 hover:text-white px-3 py-2 rounded-lg text-sm transition"
-  >
-    <RefreshCw size={14} /> Refresh now
-  </button>
+  <div className="flex items-center gap-3 flex-wrap">
+    <DateRangeFilter value={period} onChange={setPeriod} />
+    <button
+      onClick={() => loadData(false)}
+      className="flex items-center gap-2 bg-gray-900 border border-gray-800 text-gray-400 hover:text-white px-3 py-2 rounded-lg text-sm transition"
+    >
+      <RefreshCw size={14} /> Refresh now
+    </button>
+  </div>
 </div>
+
+      {/* Today snapshot — always "today" regardless of the period filter above */}
+      <TodayStats />
+
+      <div>
+        <h2 className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">
+          {PERIODS.find(p => p.id === period)?.label || 'This Period'}
+        </h2>
+      </div>
+
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard

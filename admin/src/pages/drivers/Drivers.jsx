@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { RefreshCw, CheckCircle, Ban, X, FileText, Car, User } from "lucide-react";
+import { RefreshCw, CheckCircle, Ban, X, FileText, Car, User, MapPin } from "lucide-react";
 import api from "../../api";
+import RideHistoryPanel from "../../components/RideHistoryPanel";
 
 const APPROVAL_STYLES = {
   approved: "bg-green-500/10 text-green-400",
@@ -334,6 +335,15 @@ export default function Drivers() {
                   </div>
                 </div>
               )}
+
+              {/* Ride history, ratings & complaints */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <MapPin size={14} className="text-yellow-400" />
+                  <p className="text-white font-medium text-sm">Ride History & Ratings</p>
+                </div>
+                <RideHistoryPanel userId={selected.user_id} />
+              </div>
 
               {/* Action buttons */}
               <div className="flex gap-3 pt-2">
