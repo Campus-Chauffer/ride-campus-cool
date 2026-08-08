@@ -34,6 +34,7 @@ export default function DriverHomeScreen({ navigation }: any) {
   const [offerTimer, setOfferTimer] = useState(15);
   const [driverLocation, setDriverLocation] = useState<any>(null);
   const [heading, setHeading] = useState(0);
+  const [trackCarMarker, setTrackCarMarker] = useState(true);
   const mapRef = useRef<RNMapView>(null);
   const locationInterval = useRef<any>(null);
   const offerInterval = useRef<any>(null);
@@ -76,10 +77,30 @@ export default function DriverHomeScreen({ navigation }: any) {
   return () => subscription.remove();
 }, [isOnline, driverLocation]);
 
+  // Only re-rasterize the car marker's bitmap around an actual heading
+  // change instead of on every render — the default tracksViewChanges=true
+  // is the main source of map jank for custom markers.
+  useEffect(() => {
+    setTrackCarMarker(true);
+    const t = setTimeout(() => setTrackCarMarker(false), 250);
+    return () => clearTimeout(t);
+  }, [heading]);
+
   const getInitialLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') return;
+
+      // Paint from a cached fix immediately if one exists, then refine with
+      // a fresh reading — avoids leaving the map blank for a few seconds
+      // while waiting on a cold GPS lock.
+      Location.getLastKnownPositionAsync({}).then((cached) => {
+        if (!cached) return;
+        const { latitude, longitude } = cached.coords;
+        setDriverLocation({ lat: latitude, lng: longitude });
+        mapRef.current?.animateToRegion({ latitude, longitude, latitudeDelta: 0.02, longitudeDelta: 0.02 });
+      }).catch(() => {});
+
       const loc = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = loc.coords;
       setDriverLocation({ lat: latitude, lng: longitude });
@@ -360,6 +381,7 @@ export default function DriverHomeScreen({ navigation }: any) {
                 anchor={{ x: 0.5, y: 0.5 }}
                 rotation={heading}
                 flat
+                tracksViewChanges={trackCarMarker}
               >
                 <Image source={CAR_ICON} style={styles.carIcon} resizeMode="contain" />
               </Marker>

@@ -126,6 +126,7 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
               coordinate={driverLocation}
               title="Your driver"
               anchor={{ x: 0.5, y: 0.5 }}
+              tracksViewChanges={false}
             >
               <Image source={CAR_ICON} style={{ width: 36, height: 36 }} resizeMode="contain" />
             </Marker>
@@ -137,6 +138,7 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
             }}
             title="Pickup point"
             anchor={{ x: 0.5, y: 1 }}
+            tracksViewChanges={false}
           >
             <View style={styles.pickupMarker}>
               <MapPin size={16} color={colors.dark} />

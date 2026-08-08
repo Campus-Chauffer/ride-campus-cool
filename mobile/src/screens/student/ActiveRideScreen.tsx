@@ -17,6 +17,7 @@ export default function ActiveRideScreen({ trip }: Props) {
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const mapRef = useRef<RNMapView>(null);
+  const routeRequestId = useRef(0);
 
   // Subscribe to the driver's live location once, on mount
   useEffect(() => {
@@ -45,6 +46,9 @@ export default function ActiveRideScreen({ trip }: Props) {
 
   async function fetchRoute() {
     if (!driverLocation) return; // wait until we have a real starting point
+    // Guard against an older, slower response overwriting a newer route
+    // when requests fire faster than the network can resolve them.
+    const requestId = ++routeRequestId.current;
     try {
       const res = await ridesAPI.getDirections(
         driverLocation.latitude,
@@ -52,6 +56,7 @@ export default function ActiveRideScreen({ trip }: Props) {
         parseFloat(trip.dropoff_lat),
         parseFloat(trip.dropoff_lng)
       );
+      if (requestId !== routeRequestId.current) return;
       if (res.data?.coordinates) {
         setRouteCoords(res.data.coordinates);
       }
@@ -83,7 +88,7 @@ export default function ActiveRideScreen({ trip }: Props) {
           }}
         >
           {driverLocation && (
-            <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }}>
+            <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
               <View style={styles.driverMarker}>
                 <MapPin size={16} color={colors.dark} />
               </View>
@@ -96,6 +101,7 @@ export default function ActiveRideScreen({ trip }: Props) {
               longitude: parseFloat(trip.dropoff_lng),
             }}
             anchor={{ x: 0.5, y: 1 }}
+            tracksViewChanges={false}
           >
             <View style={styles.dropoffMarker}>
               <Flag size={16} color={colors.white} />

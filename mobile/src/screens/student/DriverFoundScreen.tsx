@@ -37,7 +37,9 @@ export default function DriverFoundScreen({ trip, onRideStarted, onCancelled }: 
   const [routeCoords, setRouteCoords] = useState<any[]>([]);
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
   const [etaText, setEtaText] = useState<string | null>(null);
+  const [trackCarMarker, setTrackCarMarker] = useState(true);
   const pollInterval = useRef<any>(null);
+  const directionsRequestId = useRef(0);
 
   useEffect(() => {
     getUserLocation();
@@ -80,6 +82,16 @@ export default function DriverFoundScreen({ trip, onRideStarted, onCancelled }: 
   }, [userLocation]);
 
   const getUserLocation = async () => {
+    // Race a cached fix (near-instant) against a fresh one (accurate but can
+    // take a few seconds on a cold GPS lock) so the map/route/marker can
+    // paint immediately instead of staying blank until the fresh fix lands.
+    Location.getLastKnownPositionAsync({}).then((cached) => {
+      if (!cached || userLocationRef.current) return;
+      const location = { lat: cached.coords.latitude, lng: cached.coords.longitude };
+      setUserLocation(location);
+      userLocationRef.current = location;
+    }).catch(() => {});
+
     try {
       const loc = await Location.getCurrentPositionAsync({});
       const location = { lat: loc.coords.latitude, lng: loc.coords.longitude };
@@ -118,10 +130,15 @@ export default function DriverFoundScreen({ trip, onRideStarted, onCancelled }: 
   };
 
   const getDirections = async (fromLat: number, fromLng: number, toLat: number, toLng: number) => {
+    // Requests fire from three places (socket updates, the 3s poll, and the
+    // userLocation effect) and can resolve out of order on a slow network —
+    // guard against an older response clobbering a newer one's route/ETA.
+    const requestId = ++directionsRequestId.current;
     try {
       const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${fromLat},${fromLng}&destination=${toLat},${toLng}&key=${GOOGLE_MAPS_KEY}`;
       const res = await fetch(url);
       const data = await res.json();
+      if (requestId !== directionsRequestId.current) return;
       if (data.routes?.length > 0) {
         const points = decodePolyline(data.routes[0].overview_polyline.points);
         setRouteCoords(points);
@@ -151,6 +168,17 @@ export default function DriverFoundScreen({ trip, onRideStarted, onCancelled }: 
     }
     return points;
   };
+
+  // react-native-maps re-rasterizes a custom marker's view on every render
+  // while tracksViewChanges is true, which is expensive and the main source
+  // of map jank. The car icon only visually changes when heading or the ETA
+  // badge text changes, so track briefly around those changes and otherwise
+  // leave it off.
+  useEffect(() => {
+    setTrackCarMarker(true);
+    const t = setTimeout(() => setTrackCarMarker(false), 250);
+    return () => clearTimeout(t);
+  }, [driverHeading, etaMinutes]);
 
   const cancelRide = () => {
     Alert.alert('Cancel Ride', 'Are you sure you want to cancel?', [
@@ -196,6 +224,7 @@ export default function DriverFoundScreen({ trip, onRideStarted, onCancelled }: 
             anchor={{ x: 0.5, y: 0.5 }}
             rotation={driverHeading}
             flat
+            tracksViewChanges={trackCarMarker}
           >
             {/* ETA badge on the car icon like Bolt */}
             <View style={styles.carMarkerContainer}>
@@ -217,6 +246,7 @@ export default function DriverFoundScreen({ trip, onRideStarted, onCancelled }: 
           }}
           title="Your pickup"
           anchor={{ x: 0.5, y: 1 }}
+          tracksViewChanges={false}
         >
           <View style={styles.pickupMarker}>
             <MapPin size={16} color={colors.white} />

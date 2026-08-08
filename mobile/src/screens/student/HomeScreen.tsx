@@ -182,6 +182,17 @@ export default function StudentHomeScreen({ navigation }: any) {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') return;
+
+      // Paint from a cached fix immediately if available so the map isn't
+      // left blank for the few seconds a cold GPS lock can take, then
+      // refine with a fresh, accurate reading.
+      Location.getLastKnownPositionAsync({}).then((cached) => {
+        if (!cached) return;
+        const { latitude, longitude } = cached.coords;
+        setUserLocation({ lat: latitude, lng: longitude });
+        mapRef.current?.animateToRegion({ latitude, longitude, latitudeDelta: 0.02, longitudeDelta: 0.02 });
+      }).catch(() => {});
+
       const loc = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = loc.coords;
       setUserLocation({ lat: latitude, lng: longitude });
@@ -470,7 +481,7 @@ export default function StudentHomeScreen({ navigation }: any) {
           fillColor="rgba(255, 184, 0, 0.07)"
         />
         {selectedPickup && (
-          <Marker coordinate={{ latitude: selectedPickup.lat, longitude: selectedPickup.lng }} title="Pickup">
+          <Marker coordinate={{ latitude: selectedPickup.lat, longitude: selectedPickup.lng }} title="Pickup" tracksViewChanges={false}>
             <View style={styles.pickupMarker}>
               <View style={styles.pickupDot} />
             </View>

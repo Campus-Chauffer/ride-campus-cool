@@ -24,6 +24,7 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
   const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   const mapRef = useRef<RNMapView>(null);
+  const routeRequestId = useRef(0);
 
   // Track our own GPS position and broadcast it over the socket so the
   // passenger's map can follow us live on the way to pickup — this screen
@@ -31,17 +32,28 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
   useEffect(() => {
     let cancelled = false;
 
+    const applyLocation = (coords: { latitude: number; longitude: number; heading?: number | null }) => {
+      if (cancelled) return;
+      const { latitude, longitude, heading } = coords;
+      setDriverLocation({ latitude, longitude });
+      socketService.sendLocation(trip.id, latitude, longitude, heading || 0);
+    };
+
     const shareLocation = async () => {
       try {
         const loc = await Location.getCurrentPositionAsync({});
-        if (cancelled) return;
-        const { latitude, longitude, heading } = loc.coords;
-        setDriverLocation({ latitude, longitude });
-        socketService.sendLocation(trip.id, latitude, longitude, heading || 0);
+        applyLocation(loc.coords);
       } catch (err) {
         console.log('Location share error:', err);
       }
     };
+
+    // A cold GPS fix can take a few seconds — race a cached fix in parallel
+    // so the map/marker/route can appear immediately instead of sitting
+    // blank until the first accurate reading resolves.
+    Location.getLastKnownPositionAsync({}).then((cached) => {
+      if (cached) applyLocation(cached.coords);
+    }).catch(() => {});
 
     shareLocation();
     const interval = setInterval(shareLocation, LOCATION_SHARE_INTERVAL_MS);
@@ -58,6 +70,8 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
 
   async function fetchRoute() {
     if (!driverLocation) return; // wait until we have a real starting point
+    // Guard against an older, slower response overwriting a newer route.
+    const requestId = ++routeRequestId.current;
     try {
       const res = await ridesAPI.getDirections(
         driverLocation.latitude,
@@ -65,6 +79,7 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
         parseFloat(trip.pickup_lat),
         parseFloat(trip.pickup_lng)
       );
+      if (requestId !== routeRequestId.current) return;
       if (res.data?.coordinates) {
         setRouteCoords(res.data.coordinates);
       }
@@ -96,7 +111,7 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
           }}
         >
           {driverLocation && (
-            <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }}>
+            <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
               <View style={styles.driverMarker}>
                 <MapPin size={16} color={colors.dark} />
               </View>
@@ -109,6 +124,7 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
               longitude: parseFloat(trip.pickup_lng),
             }}
             anchor={{ x: 0.5, y: 1 }}
+            tracksViewChanges={false}
           >
             <View style={styles.pickupMarker}>
               <MapPin size={16} color={colors.white} />

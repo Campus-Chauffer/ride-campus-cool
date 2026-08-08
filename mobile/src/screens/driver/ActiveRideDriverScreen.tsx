@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   Linking, StatusBar
@@ -20,6 +20,7 @@ interface Props {
 export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) {
   const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
+  const routeRequestId = useRef(0);
 
   // Same as ToPickupScreen: this screen is the location source for the
   // to-destination leg, broadcasting our GPS position over the socket so
@@ -27,17 +28,27 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
   useEffect(() => {
     let cancelled = false;
 
+    const applyLocation = (coords: { latitude: number; longitude: number; heading?: number | null }) => {
+      if (cancelled) return;
+      const { latitude, longitude, heading } = coords;
+      setDriverLocation({ latitude, longitude });
+      socketService.sendLocation(trip.id, latitude, longitude, heading || 0);
+    };
+
     const shareLocation = async () => {
       try {
         const loc = await Location.getCurrentPositionAsync({});
-        if (cancelled) return;
-        const { latitude, longitude, heading } = loc.coords;
-        setDriverLocation({ latitude, longitude });
-        socketService.sendLocation(trip.id, latitude, longitude, heading || 0);
+        applyLocation(loc.coords);
       } catch (err) {
         console.log('Location share error:', err);
       }
     };
+
+    // Race a cached fix in parallel with the first accurate one so the map
+    // isn't left blank for the few seconds a cold GPS lock can take.
+    Location.getLastKnownPositionAsync({}).then((cached) => {
+      if (cached) applyLocation(cached.coords);
+    }).catch(() => {});
 
     shareLocation();
     const interval = setInterval(shareLocation, LOCATION_SHARE_INTERVAL_MS);
@@ -54,6 +65,7 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
 
   async function fetchRoute() {
     if (!driverLocation) return;
+    const requestId = ++routeRequestId.current;
     try {
       const res = await ridesAPI.getDirections(
         driverLocation.latitude,
@@ -61,6 +73,7 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
         parseFloat(trip.dropoff_lat),
         parseFloat(trip.dropoff_lng)
       );
+      if (requestId !== routeRequestId.current) return;
       if (res.data?.coordinates) {
         setRouteCoords(res.data.coordinates);
       }
@@ -91,7 +104,7 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
           }}
         >
           {driverLocation && (
-            <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }}>
+            <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
               <View style={styles.driverMarker}>
                 <MapPin size={16} color={colors.dark} />
               </View>
@@ -104,6 +117,7 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
               longitude: parseFloat(trip.dropoff_lng),
             }}
             anchor={{ x: 0.5, y: 1 }}
+            tracksViewChanges={false}
           >
             <View style={styles.dropoffMarker}>
               <Flag size={16} color={colors.white} />
