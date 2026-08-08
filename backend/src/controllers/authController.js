@@ -70,6 +70,11 @@ const register = async (req, res) => {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
+  // role is client-supplied input — never trust it beyond the two roles a
+  // self-signup is allowed to create. Admin accounts must be provisioned
+  // out-of-band, never through this public endpoint.
+  const requestedRole = role === 'driver' ? 'driver' : 'passenger';
+
   try {
     const existing = await pool.query(
       'SELECT id FROM users WHERE phone_number = $1 OR email = $2',
@@ -84,12 +89,12 @@ const register = async (req, res) => {
     const result = await pool.query(
       `INSERT INTO users (phone_number, first_name, last_name, email, role, password_hash)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [phone_number, first_name, last_name, email, role || 'passenger', password_hash]
+      [phone_number, first_name, last_name, email, requestedRole, password_hash]
     );
 
     const user = result.rows[0];
 
-    if (role === 'driver') {
+    if (requestedRole === 'driver') {
       const driverResult = await pool.query(
         'INSERT INTO drivers (user_id) VALUES ($1) RETURNING *',
         [user.id]

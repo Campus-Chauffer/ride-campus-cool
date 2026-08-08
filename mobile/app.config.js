@@ -72,7 +72,6 @@ export default {
       ]
     ],
     extra: {
-      googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
       eas: {
         projectId: "3b913f57-d8c6-403a-8928-ed3c917d4c61"
       }

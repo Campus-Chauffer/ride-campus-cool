@@ -6,6 +6,9 @@ CREATE TABLE IF NOT EXISTS users (
   last_name VARCHAR(100),
   role VARCHAR(20) DEFAULT 'passenger',
   status VARCHAR(20) DEFAULT 'active',
+  password_hash VARCHAR(255),
+  push_token TEXT,
+  profile_photo TEXT,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -29,6 +32,16 @@ CREATE TABLE IF NOT EXISTS drivers (
   is_online BOOLEAN DEFAULT FALSE,
   current_lat DECIMAL(10,8),
   current_lng DECIMAL(11,8),
+  ghana_card_number VARCHAR(50),
+  ghana_card_image TEXT,
+  license_number VARCHAR(50),
+  license_image TEXT,
+  license_expiry DATE,
+  vehicle_front_image TEXT,
+  vehicle_side_image TEXT,
+  vehicle_back_image TEXT,
+  vehicle_checklist JSONB,
+  submission_date TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -44,10 +57,24 @@ CREATE TABLE IF NOT EXISTS trips (
   dropoff_address TEXT,
   fare DECIMAL(10,2),
   commission DECIMAL(10,2),
+  distance_km DECIMAL(6,2),
+  wait_penalty DECIMAL(10,2) DEFAULT 0,
   ride_type VARCHAR(20) DEFAULT 'standard',
   status VARCHAR(20) DEFAULT 'requested',
+  cancelled_by VARCHAR(20),
+  passenger_rating INTEGER,
+  passenger_comment TEXT,
+  rated_by_passenger BOOLEAN DEFAULT FALSE,
+  driver_rating INTEGER,
+  driver_comment TEXT,
+  rated_by_driver BOOLEAN DEFAULT FALSE,
+  matched_at TIMESTAMP,
+  accepted_at TIMESTAMP,
+  arrived_at TIMESTAMP,
+  started_at TIMESTAMP,
+  completed_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW(),
-  completed_at TIMESTAMP
+  updated_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS wallets (
@@ -70,17 +97,51 @@ CREATE TABLE IF NOT EXISTS ledger (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS driver_sessions (
+  id SERIAL PRIMARY KEY,
+  driver_id INTEGER REFERENCES drivers(id),
+  went_online_at TIMESTAMP,
+  went_offline_at TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS reports (
+  id SERIAL PRIMARY KEY,
+  reporter_id INTEGER REFERENCES users(id),
+  reported_id INTEGER REFERENCES users(id),
+  trip_id INTEGER REFERENCES trips(id),
+  type VARCHAR(50) DEFAULT 'behaviour',
+  description TEXT,
+  status VARCHAR(20) DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS config (
   id SERIAL PRIMARY KEY,
   key VARCHAR(100) UNIQUE NOT NULL,
   value VARCHAR(255) NOT NULL
 );
 
+-- The fare-tier keys below (lower/upper distance + flat fares, base fare,
+-- per-km rate) are read by requestRide() in ridesController.js but were
+-- previously never seeded here, only present in the live database via a
+-- manual patch — meaning a fresh database built from this file could never
+-- actually price a ride. Values are pulled from the mobile app's client-side
+-- fare mirror (HomeScreen.tsx calculateFare, commented "mirrors backend"),
+-- which is the closest available record of what production is likely using.
+-- Verify against the live config table and adjust if they've drifted.
 INSERT INTO config (key, value) VALUES
   ('day_price', '13'),
   ('night_price', '16'),
   ('commission_rate', '0.15'),
   ('lockout_threshold', '-40'),
   ('night_start', '23'),
-  ('night_end', '5')
+  ('night_end', '5'),
+  ('lower_distance_km', '0.7'),
+  ('upper_distance_km', '4.0'),
+  ('day_lower_flat', '10'),
+  ('night_lower_flat', '13'),
+  ('day_upper_flat', '19'),
+  ('night_upper_flat', '20'),
+  ('base_fare', '8'),
+  ('price_per_km', '3')
 ON CONFLICT (key) DO NOTHING;

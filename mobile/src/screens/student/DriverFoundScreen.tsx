@@ -6,15 +6,9 @@ import {
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { MapPin, X, Phone } from 'lucide-react-native';
-import Constants from 'expo-constants';
 import { ridesAPI } from '../../services/api';
 import socketService from '../../services/socket';
 import { colors, spacing, fontSizes, radius, shadows, bottomPadding } from '../../utils/theme';
-
-const GOOGLE_MAPS_KEY = Constants.manifest2?.extra?.expoClient?.extra?.googleMapsApiKey
-  || Constants.expoConfig?.extra?.googleMapsApiKey
-  || (Constants as any).manifest?.extra?.googleMapsApiKey
-  || '';
 
 const CAR_ICON = require('../../../assets/car-top.png');
 
@@ -135,38 +129,18 @@ export default function DriverFoundScreen({ trip, onRideStarted, onCancelled }: 
     // guard against an older response clobbering a newer one's route/ETA.
     const requestId = ++directionsRequestId.current;
     try {
-      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${fromLat},${fromLng}&destination=${toLat},${toLng}&key=${GOOGLE_MAPS_KEY}`;
-      const res = await fetch(url);
-      const data = await res.json();
+      const res = await ridesAPI.getDirections(fromLat, fromLng, toLat, toLng);
       if (requestId !== directionsRequestId.current) return;
-      if (data.routes?.length > 0) {
-        const points = decodePolyline(data.routes[0].overview_polyline.points);
-        setRouteCoords(points);
-        const leg = data.routes[0].legs?.[0];
-        if (leg?.duration) {
-          const mins = Math.ceil(leg.duration.value / 60);
-          setEtaMinutes(mins);
-          setEtaText(leg.duration.text);
+      if (res.data?.coordinates?.length > 0) {
+        setRouteCoords(res.data.coordinates);
+        if (res.data.duration_minutes != null) {
+          setEtaMinutes(res.data.duration_minutes);
+          setEtaText(res.data.duration_text);
         }
       }
     } catch (err) {
       console.log('Directions error:', err);
     }
-  };
-
-  const decodePolyline = (encoded: string) => {
-    const points: any[] = [];
-    let index = 0, lat = 0, lng = 0;
-    while (index < encoded.length) {
-      let b, shift = 0, result = 0;
-      do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-      lat += result & 1 ? ~(result >> 1) : result >> 1;
-      shift = 0; result = 0;
-      do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-      lng += result & 1 ? ~(result >> 1) : result >> 1;
-      points.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
-    }
-    return points;
   };
 
   // react-native-maps re-rasterizes a custom marker's view on every render

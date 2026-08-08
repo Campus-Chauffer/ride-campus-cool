@@ -137,11 +137,78 @@ const getDirections = async (req, res) => {
 
     const encoded = data.routes[0].overview_polyline.points;
     const coordinates = decodePolyline(encoded);
+    const leg = data.routes[0].legs?.[0];
 
-    res.json({ coordinates });
+    res.json({
+      coordinates,
+      duration_minutes: leg?.duration ? Math.ceil(leg.duration.value / 60) : null,
+      duration_text: leg?.duration?.text || null,
+    });
   } catch (err) {
     console.error('Directions error:', err);
     res.json({ coordinates: [] });
+  }
+};
+
+// Reverse geocode a coordinate to a human-readable place name. Proxied
+// server-side so the Google Maps API key never ships inside the mobile
+// app bundle, where it would be extractable from the compiled APK/IPA.
+const getGeocode = async (req, res) => {
+  const { lat, lng } = req.query;
+  if (!lat || !lng) {
+    return res.status(400).json({ error: 'lat and lng required' });
+  }
+
+  try {
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`;
+    const response = await fetch(url);
+    const data = await response.json();
+    res.json({ results: data.results || [] });
+  } catch (err) {
+    console.error('Geocode error:', err);
+    res.json({ results: [] });
+  }
+};
+
+// Place autocomplete predictions for the search box, proxied for the same
+// reason as getGeocode above.
+const getPlaceAutocomplete = async (req, res) => {
+  const { query, lat, lng } = req.query;
+  if (!query) {
+    return res.status(400).json({ error: 'query required' });
+  }
+
+  try {
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    const locationParam = (lat && lng) ? `&location=${lat},${lng}&radius=5000` : '';
+    const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}${locationParam}&key=${apiKey}`;
+    const response = await fetch(url);
+    const data = await response.json();
+    res.json({ predictions: data.predictions || [] });
+  } catch (err) {
+    console.error('Place autocomplete error:', err);
+    res.json({ predictions: [] });
+  }
+};
+
+// Resolve a place_id (from autocomplete) to coordinates, proxied for the
+// same reason as getGeocode above.
+const getPlaceDetails = async (req, res) => {
+  const { place_id } = req.query;
+  if (!place_id) {
+    return res.status(400).json({ error: 'place_id required' });
+  }
+
+  try {
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place_id}&fields=geometry,name,formatted_address&key=${apiKey}`;
+    const response = await fetch(url);
+    const data = await response.json();
+    res.json({ result: data.result || null });
+  } catch (err) {
+    console.error('Place details error:', err);
+    res.json({ result: null });
   }
 };
 
@@ -243,4 +310,7 @@ const isWithinCampus = (lat, lng) => {
   return inside;
 };
 
-module.exports = { requestRide, getRideHistory, cancelRide, getDirections };
+module.exports = {
+  requestRide, getRideHistory, cancelRide, getDirections,
+  getGeocode, getPlaceAutocomplete, getPlaceDetails,
+};

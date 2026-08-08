@@ -8,7 +8,6 @@ import {
 import * as Location from 'expo-location';
 import RNMapView, { Marker, Polyline, Polygon, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { MapPin, Navigation, Menu, X, Crosshair, LocateFixed } from 'lucide-react-native';
-import Constants from 'expo-constants';
 import SideMenu from '../../components/SideMenu';
 import { ridesAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
@@ -18,11 +17,6 @@ import { colors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
 const { height } = Dimensions.get('window');
 const COLLAPSED_HEIGHT = height * 0.32;
 const EXPANDED_HEIGHT = height * 0.78;
-
-const GOOGLE_MAPS_KEY = Constants.manifest2?.extra?.expoClient?.extra?.googleMapsApiKey
-  || Constants.expoConfig?.extra?.googleMapsApiKey
-  || (Constants as any).manifest?.extra?.googleMapsApiKey
-  || '';
 
 // Pricing logic mirrors backend
 const calculateFare = (distanceKm: number, isNight: boolean): number => {
@@ -235,11 +229,10 @@ export default function StudentHomeScreen({ navigation }: any) {
     if (!pinRegion) return;
     setReverseGeoLoading(true);
     try {
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${pinRegion.latitude},${pinRegion.longitude}&key=${GOOGLE_MAPS_KEY}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      const address = data.results?.[0]?.formatted_address || `${pinRegion.latitude.toFixed(5)}, ${pinRegion.longitude.toFixed(5)}`;
-      const shortAddress = data.results?.[0]?.address_components?.slice(0, 2)?.map((c: any) => c.long_name).join(', ') || address;
+      const res = await ridesAPI.getGeocode(pinRegion.latitude, pinRegion.longitude);
+      const results = res.data?.results || [];
+      const address = results[0]?.formatted_address || `${pinRegion.latitude.toFixed(5)}, ${pinRegion.longitude.toFixed(5)}`;
+      const shortAddress = results[0]?.address_components?.slice(0, 2)?.map((c: any) => c.long_name).join(', ') || address;
       if (!isWithinCampus(pinRegion.latitude, pinRegion.longitude)) {
         Alert.alert(
         'Outside Campus',
@@ -278,13 +271,12 @@ export default function StudentHomeScreen({ navigation }: any) {
     if (!loc) return;
     forPickup ? setSearchingPickup(true) : setSearching(true);
     try {
-      const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&location=${loc.lat},${loc.lng}&radius=5000&key=${GOOGLE_MAPS_KEY}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.predictions) {
+      const res = await ridesAPI.getPlacesAutocomplete(query, loc.lat, loc.lng);
+      const predictions = res.data?.predictions;
+      if (predictions) {
         forPickup
-          ? setPickupSearchResults(data.predictions.slice(0, 5))
-          : setSearchResults(data.predictions.slice(0, 5));
+          ? setPickupSearchResults(predictions.slice(0, 5))
+          : setSearchResults(predictions.slice(0, 5));
       }
     } catch (err) {
       console.log('Search error:', err);
@@ -311,11 +303,10 @@ export default function StudentHomeScreen({ navigation }: any) {
   const selectPlaceResult = async (place: any, forPickup = false) => {
     Keyboard.dismiss();
     try {
-      const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=geometry,name,formatted_address&key=${GOOGLE_MAPS_KEY}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.result?.geometry?.location) {
-        const { lat, lng } = data.result.geometry.location;
+      const res = await ridesAPI.getPlaceDetails(place.place_id);
+      const result = res.data?.result;
+      if (result?.geometry?.location) {
+        const { lat, lng } = result.geometry.location;
         if (!isWithinCampus(lat, lng)) {
           Alert.alert(
             'Outside Campus',
@@ -324,7 +315,7 @@ export default function StudentHomeScreen({ navigation }: any) {
           );
           return;
         }
-        const loc = { name: data.result.name || place.structured_formatting?.main_text, lat, lng };
+        const loc = { name: result.name || place.structured_formatting?.main_text, lat, lng };
         if (forPickup) {
           setSelectedPickup(loc);
           setPickup(loc.name);
@@ -350,12 +341,9 @@ export default function StudentHomeScreen({ navigation }: any) {
 
   const getDirections = async (dest: any, origin: any) => {
     try {
-      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.lat},${origin.lng}&destination=${dest.lat},${dest.lng}&key=${GOOGLE_MAPS_KEY}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.routes?.length > 0) {
-        const points = decodePolyline(data.routes[0].overview_polyline.points);
-        setRouteCoords(points);
+      const res = await ridesAPI.getDirections(origin.lat, origin.lng, dest.lat, dest.lng);
+      if (res.data?.coordinates?.length > 0) {
+        setRouteCoords(res.data.coordinates);
         mapRef.current?.fitToCoordinates(
           [{ latitude: origin.lat, longitude: origin.lng }, { latitude: dest.lat, longitude: dest.lng }],
           { edgePadding: { top: 80, right: 80, bottom: 350, left: 80 }, animated: true }
@@ -364,21 +352,6 @@ export default function StudentHomeScreen({ navigation }: any) {
     } catch (err) {
       console.log('Directions error:', err);
     }
-  };
-
-  const decodePolyline = (encoded: string) => {
-    const points: any[] = [];
-    let index = 0, lat = 0, lng = 0;
-    while (index < encoded.length) {
-      let b, shift = 0, result = 0;
-      do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-      lat += result & 1 ? ~(result >> 1) : result >> 1;
-      shift = 0; result = 0;
-      do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-      lng += result & 1 ? ~(result >> 1) : result >> 1;
-      points.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
-    }
-    return points;
   };
 
   const selectDestination = (dest: any) => {
@@ -407,11 +380,10 @@ export default function StudentHomeScreen({ navigation }: any) {
 
   const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
     try {
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_KEY}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      return data.results?.[0]?.address_components?.slice(0, 2)?.map((c: any) => c.long_name).join(', ')
-        || data.results?.[0]?.formatted_address
+      const res = await ridesAPI.getGeocode(lat, lng);
+      const results = res.data?.results;
+      return results?.[0]?.address_components?.slice(0, 2)?.map((c: any) => c.long_name).join(', ')
+        || results?.[0]?.formatted_address
         || 'My Location';
     } catch {
       return 'My Location';

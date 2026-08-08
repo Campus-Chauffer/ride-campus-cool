@@ -103,6 +103,15 @@ export const ridesAPI = {
 
   getDirections: (origin_lat: number, origin_lng: number, dest_lat: number, dest_lng: number) =>
     api.get('/rides/directions', { params: { origin_lat, origin_lng, dest_lat, dest_lng } }),
+
+  getGeocode: (lat: number, lng: number) =>
+    api.get('/rides/geocode', { params: { lat, lng } }),
+
+  getPlacesAutocomplete: (query: string, lat?: number, lng?: number) =>
+    api.get('/rides/places/autocomplete', { params: { query, lat, lng } }),
+
+  getPlaceDetails: (place_id: string) =>
+    api.get('/rides/places/details', { params: { place_id } }),
 };
 
 export const driverAPI = {
