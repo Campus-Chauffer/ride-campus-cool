@@ -166,4 +166,8 @@ export const ratingsAPI = {
     api.post(`/ratings/${trip_id}/rate-driver`, { rating, comment }),
 };
 
+export const announcementsAPI = {
+  getAll: () => api.get('/announcements'),
+};
+
 export default api;

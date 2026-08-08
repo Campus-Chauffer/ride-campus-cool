@@ -27,8 +27,9 @@ const dispatchRide = async (trip_id) => {
     const trip = tripResult.rows[0];
 
     const driversResult = await pool.query(
-      `SELECT d.*, COALESCE(w.is_locked, FALSE) as is_locked 
+      `SELECT d.*, u.first_name, u.last_name, COALESCE(w.is_locked, FALSE) as is_locked
        FROM drivers d
+       JOIN users u ON u.id = d.user_id
        LEFT JOIN wallets w ON w.driver_id = d.id
        WHERE d.is_online = TRUE
        AND COALESCE(w.is_locked, FALSE) = FALSE
@@ -124,7 +125,7 @@ const dispatchRide = async (trip_id) => {
         driverUser.rows[0]?.push_token,
         'New Ride Request!',
         `Pickup: ${trip.pickup_address} \u2192 ${trip.dropoff_address}`,
-        { trip_id: trip.id }
+        { type: 'ride_request', trip_id: trip.id }
       );
 
       // Wait for driver to accept or timeout — poll every second instead of
@@ -155,16 +156,22 @@ const dispatchRide = async (trip_id) => {
       }
 
       if (accepted) {
-        // Notify passenger
+        // Notify passenger with enough detail to identify the car on sight
+        // and gauge the wait — ETA is a straight-line-distance estimate
+        // (same distance calc used for dispatch radius), not a routed one,
+        // since calling the Directions API on this hot path would add
+        // latency and cost for a number that's advisory at best.
         const passengerUser = await pool.query(
           'SELECT push_token FROM users WHERE id = $1',
           [trip.passenger_id]
         );
+        const AVG_CAMPUS_SPEED_KMH = 25;
+        const etaMinutes = Math.max(1, Math.round((driver.distance / AVG_CAMPUS_SPEED_KMH) * 60));
         await sendPushNotification(
           passengerUser.rows[0]?.push_token,
           'Driver Found!',
-          `${driver.first_name} is on the way to pick you up.`,
-          { trip_id: trip.id }
+          `${driver.first_name} is on the way in a ${driver.vehicle_color} ${driver.vehicle_make} ${driver.vehicle_model} (${driver.plate_number}) — ETA ${etaMinutes} min.`,
+          { type: 'driver_found', trip_id: trip.id, driver_id: driver.id, eta_minutes: etaMinutes }
         );
         return;
       }

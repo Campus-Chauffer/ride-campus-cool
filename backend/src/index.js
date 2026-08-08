@@ -14,6 +14,7 @@ const adminRoutes = require('./routes/admin');
 const reportsRoutes = require('./routes/reports');
 const ratingsRoutes = require('./routes/ratings');
 const driverRegistrationRoutes = require('./routes/driverRegistration');
+const announcementsRoutes = require('./routes/announcements');
 const { scheduleDailyLockout, scheduleNightWarning } = require('./utils/scheduler');
 
 const app = express();
@@ -77,6 +78,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/ratings', ratingsRoutes);
 app.use('/api/driver-registration', driverRegistrationRoutes);
+app.use('/api/announcements', announcementsRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Campus Chauffeur API running' });

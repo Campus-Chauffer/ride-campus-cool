@@ -330,7 +330,8 @@ const completeTrip = async (req, res) => {
       [trip.commission, driver.id]
     );
 
-    // Notify passenger
+    // Notify passenger — pay reminder doubles as the completion notice since
+    // fares are settled in cash with the driver, not in-app.
     const passengerUser = await pool.query(
       'SELECT push_token FROM users WHERE id = $1',
       [trip.passenger_id]
@@ -338,8 +339,8 @@ const completeTrip = async (req, res) => {
     await sendPushNotification(
       passengerUser.rows[0]?.push_token,
       'Trip Completed!',
-      `Your trip to ${trip.dropoff_address} is complete. Fare: GH₵${trip.fare}`,
-      { trip_id: trip.id }
+      `You've arrived at ${trip.dropoff_address}. Pay GH₵${trip.fare} to your driver, and don't forget to rate your ride!`,
+      { type: 'trip_completed_passenger', trip_id: trip.id }
     );
 
     // Send receipt and rating reminders
@@ -348,12 +349,22 @@ const completeTrip = async (req, res) => {
       [trip.passenger_id]
     );
     const driverData = await pool.query(
-      'SELECT u.email, u.first_name FROM users u WHERE u.id = $1',
+      'SELECT u.email, u.first_name, u.push_token FROM users u WHERE u.id = $1',
       [req.user.id]
     );
 
     const passenger = passengerData.rows[0];
     const driverUser = driverData.rows[0];
+
+    // Notify driver — amount to collect plus a rating nudge
+    if (driverUser) {
+      await sendPushNotification(
+        driverUser.push_token,
+        'Trip Complete!',
+        `Collect GH₵${trip.fare} from your passenger, and remember to rate them.`,
+        { type: 'trip_completed_driver', trip_id: trip.id }
+      );
+    }
 
     if (passenger) {
       await sendRideReceipt(passenger.email, passenger.first_name, trip);

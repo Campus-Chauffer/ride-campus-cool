@@ -24,8 +24,22 @@ import ProfileScreen from '../screens/shared/ProfileScreen';
 import EditProfileScreen from '../screens/shared/EditProfileScreen';
 import SettingsScreen from '../screens/shared/SettingsScreen';
 import RideHistoryScreen from '../screens/shared/RideHistoryScreen';
+import AnnouncementsScreen from '../screens/shared/AnnouncementsScreen';
 import EarningsScreen from '../screens/driver/EarningsScreen';
 import { registerPushToken } from '../utils/registerPushToken';
+import * as Notifications from 'expo-notifications';
+import { createNavigationContainerRef } from '@react-navigation/native';
+
+export const navigationRef = createNavigationContainerRef();
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 const Stack = createStackNavigator();
 
@@ -50,6 +64,7 @@ function StudentScreens() {
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="RideHistory" component={RideHistoryScreen} />
+      <Stack.Screen name="Announcements" component={AnnouncementsScreen} />
     </Stack.Navigator>
   );
 }
@@ -69,6 +84,7 @@ function DriverScreens({ initialRoute }: { initialRoute: string }) {
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="RideHistory" component={RideHistoryScreen} />
       <Stack.Screen name="Earnings" component={EarningsScreen} />
+      <Stack.Screen name="Announcements" component={AnnouncementsScreen} />
     </Stack.Navigator>
   );
 }
@@ -93,6 +109,20 @@ function AppScreens() {
       setIsOffline(!state.isConnected);
     });
     return () => unsubscribe();
+  }, []);
+
+  // Tapping an admin-announcement push opens the in-app announcements list.
+  // Ride-lifecycle notifications (offer, driver found, arrived, etc.) don't
+  // need a jump — the relevant screen is already what's on top from the
+  // existing status-polling flow, so only 'announcement' is handled here.
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data;
+      if (data?.type === 'announcement' && navigationRef.isReady()) {
+        navigationRef.navigate('Announcements' as never);
+      }
+    });
+    return () => subscription.remove();
   }, []);
 
   const checkDriverStatus = async () => {
@@ -155,7 +185,7 @@ export default function AppNavigator() {
   }, []);
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <AppScreens />
     </NavigationContainer>
   );

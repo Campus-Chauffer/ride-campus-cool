@@ -9,6 +9,7 @@ const {
   getAnalytics, getAdminLedger, getDriverActivity, getReverseGeocode,
   getTodayStats, getUserRideHistory
 } = require('../controllers/adminController');
+const { createAnnouncement, getAnnouncementsAdmin } = require('../controllers/announcementsController');
 
 router.get('/drivers', adminAuth, getAllDrivers);
 router.patch('/drivers/:driver_id/approve', adminAuth, approveDriver);
@@ -27,5 +28,7 @@ router.get('/analytics/driver-activity', adminAuth, getDriverActivity);
 router.get('/ledger', adminAuth, getAdminLedger);
 router.get('/geocode', adminAuth, getReverseGeocode);
 router.get('/stats/today', adminAuth, getTodayStats);
+router.post('/announcements', adminAuth, createAnnouncement);
+router.get('/announcements', adminAuth, getAnnouncementsAdmin);
 
 module.exports = router;

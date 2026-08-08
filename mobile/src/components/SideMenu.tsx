@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import {
   User, Clock, Wallet, Settings,
-  LogOut, ChevronRight
+  LogOut, ChevronRight, Megaphone
 } from 'lucide-react-native';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
@@ -94,6 +94,7 @@ export default function SideMenu({ visible, onClose, navigation }: Props) {
             { icon: <User size={20} color={textColor} />, label: 'My Profile', screen: 'Profile' },
             { icon: <Clock size={20} color={textColor} />, label: 'Ride History', screen: 'RideHistory' },
             ...(isDriver ? [{ icon: <Wallet size={20} color={textColor} />, label: 'Earnings', screen: 'Earnings' }] : []),
+            { icon: <Megaphone size={20} color={textColor} />, label: 'Announcements', screen: 'Announcements' },
             { icon: <Settings size={20} color={textColor} />, label: 'Settings', screen: 'Settings' },
           ].map((item) => (
             <TouchableOpacity
