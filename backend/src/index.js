@@ -19,6 +19,15 @@ const { scheduleDailyLockout, scheduleNightWarning } = require('./utils/schedule
 const pool = require('./db/pool');
 
 const app = express();
+// Railway puts one reverse proxy hop in front of the app, which sets
+// X-Forwarded-For on every request. Without telling Express to trust it,
+// req.ip (and therefore every IP-keyed rate limiter — the global limiter,
+// the OTP/login limiter, and the IPv6 fallback in the ride-request limiter)
+// resolves to the proxy's own address for every request instead of the
+// real client, meaning all users would effectively share one rate-limit
+// bucket. `1` trusts exactly the first hop, not an arbitrary chain, so a
+// client can't spoof X-Forwarded-For to fake a different IP.
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] }
