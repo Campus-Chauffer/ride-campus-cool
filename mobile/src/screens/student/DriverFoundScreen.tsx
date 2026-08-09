@@ -12,6 +12,11 @@ import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, navy, white } from '../../utils/theme';
 
 const CAR_ICON = require('../../../assets/car-top.png');
+// Driver location updates arrive roughly every 4s (the driver's own share
+// interval) — animating the marker over most of that window makes it glide
+// continuously instead of snapping in place, without lagging behind the
+// next update.
+const MARKER_ANIMATION_MS = 2500;
 
 interface Props {
   trip: any;
@@ -24,13 +29,17 @@ export default function DriverFoundScreen({ trip, onRideStarted, onCancelled }: 
   const colors = getColors(isDark);
   const styles = getStyles(colors);
   const mapRef = useRef<any>(null);
+  const carMarkerRef = useRef<any>(null);
   const userLocationRef = useRef<any>(null);
   const [userLocation, setUserLocation] = useState<any>(null);
-  const [driverLocation, setDriverLocation] = useState<any>(
-    trip.driver_lat && trip.driver_lng
-      ? { lat: parseFloat(trip.driver_lat), lng: parseFloat(trip.driver_lng) }
-      : null
-  );
+  const initialDriverLocation = trip.driver_lat && trip.driver_lng
+    ? { lat: parseFloat(trip.driver_lat), lng: parseFloat(trip.driver_lng) }
+    : null;
+  const [driverLocation, setDriverLocation] = useState<any>(initialDriverLocation);
+  // Mirrors driverLocation but read inside a mount-only effect's closure, so
+  // it always reflects the latest value instead of the one captured when
+  // the effect first ran (state would be frozen at its initial value there).
+  const driverLocationRef = useRef<any>(initialDriverLocation);
   const [driverHeading, setDriverHeading] = useState(0);
   const [routeCoords, setRouteCoords] = useState<any[]>([]);
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
@@ -39,12 +48,24 @@ export default function DriverFoundScreen({ trip, onRideStarted, onCancelled }: 
   const pollInterval = useRef<any>(null);
   const directionsRequestId = useRef(0);
 
+  // Glides the car icon to its new position instead of letting the
+  // coordinate prop change snap it there instantly. Falls back to a plain
+  // state update (instant placement) the first time, since there's nothing
+  // to animate from yet.
+  const moveDriverMarker = (lat: number, lng: number) => {
+    if (carMarkerRef.current && driverLocationRef.current) {
+      carMarkerRef.current.animateMarkerToCoordinate({ latitude: lat, longitude: lng }, MARKER_ANIMATION_MS);
+    }
+    driverLocationRef.current = { lat, lng };
+  };
+
   useEffect(() => {
     getUserLocation();
     pollTripStatus();
 
     socketService.onDriverLocation((data) => {
       const { latitude, longitude, heading } = data;
+      moveDriverMarker(latitude, longitude);
       setDriverLocation({ lat: latitude, lng: longitude });
       setDriverHeading(heading || 0);
       if (userLocationRef.current) {
@@ -116,6 +137,7 @@ export default function DriverFoundScreen({ trip, onRideStarted, onCancelled }: 
         if (currentTrip.driver_lat && currentTrip.driver_lng) {
           const dLat = parseFloat(currentTrip.driver_lat);
           const dLng = parseFloat(currentTrip.driver_lng);
+          moveDriverMarker(dLat, dLng);
           setDriverLocation({ lat: dLat, lng: dLng });
           if (userLocationRef.current) {
             getDirections(dLat, dLng, userLocationRef.current.lat, userLocationRef.current.lng);
@@ -197,6 +219,7 @@ export default function DriverFoundScreen({ trip, onRideStarted, onCancelled }: 
       >
         {driverLocation && (
           <Marker
+            ref={carMarkerRef}
             coordinate={{ latitude: driverLocation.lat, longitude: driverLocation.lng }}
             title="Driver"
             anchor={{ x: 0.5, y: 0.5 }}

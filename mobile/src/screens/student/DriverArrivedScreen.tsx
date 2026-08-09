@@ -11,6 +11,9 @@ import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, navy } from '../../utils/theme';
 
 const CAR_ICON = require('../../../assets/car-top.png');
+// Smooths out small GPS jitter while the driver is parked waiting, rather
+// than the marker twitching between near-identical points every update.
+const MARKER_ANIMATION_MS = 1500;
 
 interface Props {
   trip: any;
@@ -26,7 +29,12 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
   const [currentFare, setCurrentFare] = useState(parseFloat(trip.fare));
   const [waitPenalty, setWaitPenalty] = useState(0);
   const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  // Mirrors driverLocation but read inside a mount-only effect's closure, so
+  // it always reflects the latest value instead of the one captured when
+  // the effect first ran (state would be frozen at null there).
+  const driverLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const mapRef = useRef<RNMapView>(null);
+  const carMarkerRef = useRef<any>(null);
   const timerRef = useRef<any>(null);
   const fareRef = useRef<any>(null);
 
@@ -53,7 +61,14 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
     // since the driver hasn't left the trip, just changed phase to "arrived"
     socketService.joinRide(trip.id);
     socketService.onDriverLocation((data) => {
-      setDriverLocation({ latitude: data.latitude, longitude: data.longitude });
+      const coord = { latitude: data.latitude, longitude: data.longitude };
+      // Glide the car icon to its new position instead of letting the
+      // coordinate prop change snap it there instantly.
+      if (carMarkerRef.current && driverLocationRef.current) {
+        carMarkerRef.current.animateMarkerToCoordinate(coord, MARKER_ANIMATION_MS);
+      }
+      driverLocationRef.current = coord;
+      setDriverLocation(coord);
       mapRef.current?.animateToRegion({
         latitude: data.latitude,
         longitude: data.longitude,
@@ -127,6 +142,7 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
         >
           {driverLocation && (
             <Marker
+              ref={carMarkerRef}
               coordinate={driverLocation}
               title="Your driver"
               anchor={{ x: 0.5, y: 0.5 }}
