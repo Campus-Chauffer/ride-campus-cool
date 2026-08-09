@@ -6,6 +6,21 @@ const { Server } = require('socket.io');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
+// One-time startup check — confirms what the running process actually
+// received for GOOGLE_MAPS_API_KEY without ever logging the full value.
+// The Directions/Geocode/Places calls were getting REQUEST_DENIED even
+// though the same key works fine when called directly, which points at
+// Railway not passing the expected value through to this process rather
+// than the key itself being bad — this makes that visible at a glance.
+{
+  const mapsKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!mapsKey) {
+    console.error('GOOGLE_MAPS_API_KEY is not set on this process.');
+  } else {
+    console.log(`GOOGLE_MAPS_API_KEY is set (length ${mapsKey.length}, ends with "${mapsKey.slice(-6)}").`);
+  }
+}
+
 const authRoutes = require('./routes/auth');
 const rideRoutes = require('./routes/rides');
 const driverRoutes = require('./routes/drivers');
