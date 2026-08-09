@@ -9,7 +9,7 @@ import { CheckCircle, MapPin, Phone } from 'lucide-react-native';
 import socketService from '../../services/socket';
 import { ridesAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, bottomPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, navy } from '../../utils/theme';
 
 const LOCATION_SHARE_INTERVAL_MS = 4000;
 
@@ -117,7 +117,7 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
           {driverLocation && (
             <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
               <View style={styles.driverMarker}>
-                <MapPin size={16} color={colors.dark} />
+                <MapPin size={16} color={navy} />
               </View>
             </Marker>
           )}
@@ -182,7 +182,7 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
             </TouchableOpacity>
           )}
           <TouchableOpacity style={styles.arrivedBtn} onPress={onArrived}>
-            <CheckCircle size={20} color={colors.dark} />
+            <CheckCircle size={20} color={navy} />
             <Text style={styles.arrivedBtnText}>I've Arrived at Pickup</Text>
           </TouchableOpacity>
         </View>
@@ -227,7 +227,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   passengerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   passengerAvatar: { width: 44, height: 44, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
-  passengerAvatarText: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark },
+  passengerAvatarText: { fontSize: fontSizes.lg, fontWeight: '800', color: navy },
   passengerName: { fontSize: fontSizes.md, fontWeight: '700', color: colors.dark },
   passengerPhone: { fontSize: fontSizes.xs, color: colors.textMuted, marginTop: 2 },
   fareText: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark },
@@ -242,5 +242,5 @@ const getStyles = (colors: any) => StyleSheet.create({
     gap: spacing.sm, backgroundColor: colors.primary, padding: spacing.md,
     borderRadius: radius.full, ...shadows.md,
   },
-  arrivedBtnText: { fontSize: fontSizes.sm, fontWeight: '700', color: colors.dark },
+  arrivedBtnText: { fontSize: fontSizes.sm, fontWeight: '700', color: navy },
 });

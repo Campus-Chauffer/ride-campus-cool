@@ -8,7 +8,7 @@ import { ArrowLeft, Phone, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { authAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows } from '../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy } from '../utils/theme';
 
 export default function LoginScreen({ route, navigation }: any) {
   const role = route.params?.role || 'passenger';
@@ -110,7 +110,7 @@ export default function LoginScreen({ route, navigation }: any) {
             activeOpacity={0.9}
           >
             {loading
-              ? <ActivityIndicator color={colors.dark} />
+              ? <ActivityIndicator color={navy} />
               : <Text style={styles.btnText}>Sign In</Text>
             }
           </TouchableOpacity>
@@ -207,10 +207,13 @@ const getStyles = (colors: any) => StyleSheet.create({
     ...shadows.md,
   },
   btnDisabled: { opacity: 0.5 },
+  // btn's background is the fixed brand yellow in both themes, so its text
+  // is pinned to navy rather than colors.dark, which would invert to
+  // near-white in dark mode and disappear against the still-yellow button.
   btnText: {
     fontSize: fontSizes.md,
     fontWeight: '700',
-    color: colors.dark,
+    color: navy,
     letterSpacing: 0.3,
   },
   registerRow: {

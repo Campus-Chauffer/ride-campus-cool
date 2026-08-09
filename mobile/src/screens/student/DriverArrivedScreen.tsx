@@ -8,7 +8,7 @@ import { MapPin, Phone, Clock, AlertTriangle } from 'lucide-react-native';
 import { driverAPI, ridesAPI } from '../../services/api';
 import socketService from '../../services/socket';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, navy } from '../../utils/theme';
 
 const CAR_ICON = require('../../../assets/car-top.png');
 
@@ -145,7 +145,7 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
             tracksViewChanges={false}
           >
             <View style={styles.pickupMarker}>
-              <MapPin size={16} color={colors.dark} />
+              <MapPin size={16} color={navy} />
             </View>
           </Marker>
         </RNMapView>
@@ -204,7 +204,7 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
             </View>
             {trip.driver_phone && (
               <TouchableOpacity style={styles.callBtn} onPress={callDriver}>
-                <Phone size={16} color={colors.dark} />
+                <Phone size={16} color={navy} />
               </TouchableOpacity>
             )}
           </View>
@@ -277,7 +277,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   driverRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   driverAvatar: { width: 48, height: 48, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
-  driverAvatarText: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark },
+  driverAvatarText: { fontSize: fontSizes.lg, fontWeight: '800', color: navy },
   driverName: { fontSize: fontSizes.md, fontWeight: '700', color: colors.dark },
   driverVehicle: { fontSize: fontSizes.xs, color: colors.textMuted, marginTop: 2 },
   // Card background is light gray — brand yellow text there is ~1.9:1

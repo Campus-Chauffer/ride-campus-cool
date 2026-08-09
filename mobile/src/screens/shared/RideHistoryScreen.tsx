@@ -6,7 +6,7 @@ import {
 import { ArrowLeft, MapPin, Navigation, Clock, Star } from 'lucide-react-native';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy } from '../../utils/theme';
 import { ridesAPI, driverAPI } from '../../services/api';
 
 // Depends on the current theme's colors, so it's a function computed inside
@@ -265,8 +265,9 @@ const getStyles = (colors: any) => StyleSheet.create({
   rateBtnText: {
     fontSize: fontSizes.xs,
     fontWeight: '700',
-    // Brand yellow on the near-white pill background is ~1.7:1 — swap to navy.
-    color: colors.dark,
+    // Fixed cream background in both themes, so pinned to navy — colors.dark
+    // would invert to near-white in dark mode and disappear against it.
+    color: navy,
   },
   emptyState: {
     flex: 1,

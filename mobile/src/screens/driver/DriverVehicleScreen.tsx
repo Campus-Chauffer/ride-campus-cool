@@ -8,7 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { ArrowLeft, ChevronRight, Camera } from 'lucide-react-native';
 import { driverRegistrationAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, white } from '../../utils/theme';
 
 export default function DriverVehicleScreen({ route, navigation }: any) {
   const { isDark } = useThemeStore();
@@ -189,10 +189,10 @@ export default function DriverVehicleScreen({ route, navigation }: any) {
           activeOpacity={0.9}
         >
           {loading
-            ? <ActivityIndicator color={colors.dark} />
+            ? <ActivityIndicator color={navy} />
             : <>
                 <Text style={styles.submitBtnText}>Submit for Approval</Text>
-                <ChevronRight size={20} color={colors.dark} />
+                <ChevronRight size={20} color={navy} />
               </>
           }
         </TouchableOpacity>
@@ -321,7 +321,10 @@ const getStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  uploadedBadgeText: { fontSize: 10, fontWeight: '700', color: colors.white },
+  // uploadedBadge's background is the fixed success green in both themes,
+  // so its checkmark text is pinned to white rather than colors.white,
+  // which would invert to navy in dark mode.
+  uploadedBadgeText: { fontSize: 10, fontWeight: '700', color: white },
   submitBtn: {
     flexDirection: 'row',
     backgroundColor: colors.primary,
@@ -332,10 +335,13 @@ const getStyles = (colors: any) => StyleSheet.create({
     ...shadows.md,
   },
   submitBtnDisabled: { opacity: 0.5 },
+  // submitBtn's background is the fixed brand yellow in both themes, so its
+  // text is pinned to navy rather than colors.dark, which would invert to
+  // near-white in dark mode and disappear against the still-yellow button.
   submitBtnText: {
     fontSize: fontSizes.md,
     fontWeight: '700',
-    color: colors.dark,
+    color: navy,
     marginRight: spacing.xs,
   },
 });

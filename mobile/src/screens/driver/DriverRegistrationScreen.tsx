@@ -7,7 +7,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { ArrowLeft, Camera, ChevronRight, Check } from 'lucide-react-native';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, white } from '../../utils/theme';
 
 const CHECKLIST_ITEMS = [
   { id: 'ac', label: 'My vehicle has working air conditioning' },
@@ -216,7 +216,7 @@ export default function DriverRegistrationScreen({ navigation }: any) {
                 checklist[item.id] && styles.checkboxChecked
               ]}>
                 {checklist[item.id] && (
-                  <Check size={14} color={colors.dark} strokeWidth={3} />
+                  <Check size={14} color={navy} strokeWidth={3} />
                 )}
               </View>
               <Text style={[
@@ -243,7 +243,7 @@ export default function DriverRegistrationScreen({ navigation }: any) {
           activeOpacity={0.9}
         >
           <Text style={styles.nextBtnText}>Continue</Text>
-          <ChevronRight size={20} color={colors.dark} />
+          <ChevronRight size={20} color={navy} />
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -370,10 +370,13 @@ const getStyles = (colors: any) => StyleSheet.create({
     paddingVertical: 4,
     borderRadius: radius.full,
   },
+  // uploadedBadge's background is the fixed success green in both themes,
+  // so its checkmark text is pinned to white rather than colors.white,
+  // which would invert to navy in dark mode.
   uploadedBadgeText: {
     fontSize: fontSizes.xs,
     fontWeight: '700',
-    color: colors.white,
+    color: white,
   },
   checklistSubtitle: {
     fontSize: fontSizes.xs,
@@ -445,10 +448,13 @@ const getStyles = (colors: any) => StyleSheet.create({
     ...shadows.md,
   },
   nextBtnDisabled: { opacity: 0.4 },
+  // nextBtn's background is the fixed brand yellow in both themes, so its
+  // text is pinned to navy rather than colors.dark, which would invert to
+  // near-white in dark mode and disappear against the still-yellow button.
   nextBtnText: {
     fontSize: fontSizes.md,
     fontWeight: '700',
-    color: colors.dark,
+    color: navy,
     marginRight: spacing.xs,
   },
 });

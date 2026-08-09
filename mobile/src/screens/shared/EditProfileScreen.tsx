@@ -8,7 +8,7 @@ import { ArrowLeft, Check } from 'lucide-react-native';
 import { profileAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy } from '../../utils/theme';
 
 export default function EditProfileScreen({ navigation }: any) {
   const { user, setAuth } = useAuthStore();
@@ -50,8 +50,8 @@ await setAuth(currentToken || '', { ...user!, ...res.data });
         <Text style={styles.headerTitle}>Edit Profile</Text>
         <TouchableOpacity style={styles.saveBtn} onPress={save} disabled={loading}>
           {loading
-            ? <ActivityIndicator size="small" color={colors.dark} />
-            : <Check size={20} color={colors.dark} />
+            ? <ActivityIndicator size="small" color={navy} />
+            : <Check size={20} color={navy} />
           }
         </TouchableOpacity>
       </View>
@@ -111,7 +111,7 @@ await setAuth(currentToken || '', { ...user!, ...res.data });
           disabled={loading}
         >
           {loading
-            ? <ActivityIndicator color={colors.dark} />
+            ? <ActivityIndicator color={navy} />
             : <Text style={styles.saveBtnText}>Save Changes</Text>
           }
         </TouchableOpacity>
@@ -159,10 +159,13 @@ const getStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  // avatar's background is the fixed brand yellow in both themes, so its
+  // initials are pinned to navy rather than colors.dark, which would invert
+  // to near-white in dark mode and disappear against the still-yellow circle.
   avatarText: {
     fontSize: fontSizes.xl,
     fontWeight: '800',
-    color: colors.dark,
+    color: navy,
   },
   inputContainer: { marginBottom: spacing.md },
   inputLabel: {
@@ -210,9 +213,12 @@ const getStyles = (colors: any) => StyleSheet.create({
     ...shadows.md,
   },
   saveBtnDisabled: { opacity: 0.5 },
+  // saveFullBtn's background is the fixed brand yellow in both themes, so
+  // this text is pinned to navy rather than colors.dark, which would invert
+  // to near-white in dark mode and disappear against the still-yellow button.
   saveBtnText: {
     fontSize: fontSizes.md,
     fontWeight: '700',
-    color: colors.dark,
+    color: navy,
   },
 });

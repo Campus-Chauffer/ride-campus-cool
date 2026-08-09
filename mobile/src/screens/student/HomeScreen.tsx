@@ -13,7 +13,7 @@ import { ridesAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useRideStore } from '../../store/rideStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy } from '../../utils/theme';
 
 const { height } = Dimensions.get('window');
 const COLLAPSED_HEIGHT = height * 0.32;
@@ -499,7 +499,7 @@ export default function StudentHomeScreen({ navigation }: any) {
           <View style={styles.pinConfirmContainer}>
             <TouchableOpacity style={styles.pinConfirmBtn} onPress={confirmPin} disabled={reverseGeoLoading}>
               {reverseGeoLoading
-                ? <ActivityIndicator color={colors.dark} size="small" />
+                ? <ActivityIndicator color={navy} size="small" />
                 : <Text style={styles.pinConfirmText}>Set as {pinTarget === 'pickup' ? 'Pickup' : 'Dropoff'}</Text>
               }
             </TouchableOpacity>
@@ -626,7 +626,7 @@ export default function StudentHomeScreen({ navigation }: any) {
                     activeOpacity={0.9}
                   >
                     {loading
-                      ? <ActivityIndicator color={colors.dark} />
+                      ? <ActivityIndicator color={navy} />
                       : <Text style={styles.requestBtnText}>
                           Request Ride{estimatedFare ? ` · GH₵${estimatedFare}` : ''}
                         </Text>
@@ -716,7 +716,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
     ...shadows.md,
   },
-  pinConfirmText: { fontSize: fontSizes.md, fontWeight: '700', color: colors.dark },
+  pinConfirmText: { fontSize: fontSizes.md, fontWeight: '700', color: navy },
   pickupMarker: {
     width: 20, height: 20,
     borderRadius: radius.full,
@@ -802,8 +802,11 @@ const getStyles = (colors: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,184,0,0.3)',
   },
-  fareEstimateLabel: { fontSize: fontSizes.sm, color: colors.textMuted, fontWeight: '500' },
-  fareEstimateValue: { fontSize: fontSizes.xl, fontWeight: '800', color: colors.dark },
+  // fareEstimate's card background is a fixed cream tone in both themes, so
+  // its text is pinned to navy rather than colors.dark/textMuted, which
+  // would invert to near-white and disappear against it in dark mode.
+  fareEstimateLabel: { fontSize: fontSizes.sm, color: navy, opacity: 0.6, fontWeight: '500' },
+  fareEstimateValue: { fontSize: fontSizes.xl, fontWeight: '800', color: navy },
 
   requestBtn: {
     backgroundColor: colors.primary,
@@ -813,7 +816,10 @@ const getStyles = (colors: any) => StyleSheet.create({
     ...shadows.md,
   },
   requestBtnDisabled: { opacity: 0.5 },
-  requestBtnText: { fontSize: fontSizes.md, fontWeight: '700', color: colors.dark, letterSpacing: 0.3 },
+  // requestBtn's background is the fixed brand yellow in both themes, so its
+  // text is pinned to navy — colors.dark would invert to near-white in dark
+  // mode and become nearly unreadable against the still-yellow button.
+  requestBtnText: { fontSize: fontSizes.md, fontWeight: '700', color: navy, letterSpacing: 0.3 },
   hintBox: {
     flexDirection: 'row',
     alignItems: 'center',

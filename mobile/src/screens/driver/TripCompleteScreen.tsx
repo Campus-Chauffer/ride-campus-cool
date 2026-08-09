@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Flag, CheckCircle } from 'lucide-react-native';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, navy } from '../../utils/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -223,10 +223,13 @@ const getStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
     ...shadows.sm,
   },
+  // submitBtn's background is the fixed brand yellow in both themes, so its
+  // text is pinned to navy rather than colors.dark, which would invert to
+  // near-white in dark mode and disappear against the still-yellow button.
   submitBtnText: {
     fontSize: fontSizes.sm,
     fontWeight: '700',
-    color: colors.dark,
+    color: navy,
   },
   ratedCard: {
     flexDirection: 'row',

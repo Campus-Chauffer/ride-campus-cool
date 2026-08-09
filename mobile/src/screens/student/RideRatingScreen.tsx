@@ -6,7 +6,7 @@ import {
 import { Star, Flag } from 'lucide-react-native';
 import { useRideStore } from '../../store/rideStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, white } from '../../utils/theme';
 import api from '../../services/api';
 
 export default function RideRatingScreen({ route, navigation }: any) {
@@ -223,15 +223,22 @@ const getStyles = (colors: any) => StyleSheet.create({
     marginBottom: spacing.md,
     ...shadows.md,
   },
-  checkText: { fontSize: 32, color: colors.white },
+  // checkCircle's background is the fixed success green in both themes, so
+  // its checkmark is pinned to white rather than colors.white, which would
+  // invert to navy in dark mode.
+  checkText: { fontSize: 32, color: white },
   completeTitle: { fontSize: fontSizes.xl, fontWeight: '800', color: colors.dark, marginBottom: spacing.xs },
   completeSubtitle: { fontSize: fontSizes.sm, color: colors.textMuted },
-  fareCard: { backgroundColor: colors.dark, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg, ...shadows.md },
+  // This is a fixed-dark "receipt" card by design (translucent-white label,
+  // brand-yellow value) — pinned to navy rather than colors.dark, which
+  // would invert to near-white in dark mode and break every child's
+  // contrast (translucent white and brand yellow both assume a dark card).
+  fareCard: { backgroundColor: navy, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg, ...shadows.md },
   fareRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
   fareLabel: { fontSize: fontSizes.xs, color: 'rgba(255,255,255,0.5)', fontWeight: '500', marginBottom: spacing.xs, textAlign: 'center' },
   fareValue: { fontSize: fontSizes.xxl, fontWeight: '800', color: colors.primary, textAlign: 'center' },
   fareDivider: { width: 1, height: 40, backgroundColor: 'rgba(255,255,255,0.1)' },
-  fareRoute: { fontSize: fontSizes.sm, fontWeight: '600', color: colors.white, textAlign: 'center', maxWidth: 140 },
+  fareRoute: { fontSize: fontSizes.sm, fontWeight: '600', color: white, textAlign: 'center', maxWidth: 140 },
   sectionTitle: { fontSize: fontSizes.sm, fontWeight: '700', color: colors.dark, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.5 },
   starsRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   // Sits directly on the white screen background, not the dark fare card —
@@ -241,11 +248,14 @@ const getStyles = (colors: any) => StyleSheet.create({
   tag: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full, borderWidth: 1.5, borderColor: colors.gray2, backgroundColor: colors.gray },
   tagActive: { borderColor: colors.primary, backgroundColor: '#FFFBF0' },
   tagText: { fontSize: fontSizes.xs, fontWeight: '600', color: colors.textMuted },
-  tagTextActive: { color: colors.dark },
+  // tagActive's background is a fixed cream tone in both themes, so its
+  // text is pinned to navy rather than colors.dark, which would invert to
+  // near-white and disappear against it in dark mode.
+  tagTextActive: { color: navy },
   commentInput: { backgroundColor: colors.gray, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.gray2, padding: spacing.md, fontSize: fontSizes.sm, color: colors.dark, marginBottom: spacing.lg, minHeight: 80, textAlignVertical: 'top' },
   submitBtn: { backgroundColor: colors.primary, padding: spacing.md, borderRadius: radius.full, alignItems: 'center', ...shadows.md },
   submitBtnDisabled: { opacity: 0.5 },
-  submitBtnText: { fontSize: fontSizes.md, fontWeight: '700', color: colors.dark, letterSpacing: 0.3 },
+  submitBtnText: { fontSize: fontSizes.md, fontWeight: '700', color: navy, letterSpacing: 0.3 },
   skipBtn: { alignItems: 'center', padding: spacing.md, marginTop: spacing.sm },
   skipText: { fontSize: fontSizes.sm, color: colors.textMuted, fontWeight: '600' },
   reportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: spacing.md, marginTop: spacing.xs },
@@ -259,5 +269,8 @@ const getStyles = (colors: any) => StyleSheet.create({
   modalCancelBtn: { flex: 1, padding: spacing.md, borderRadius: radius.full, borderWidth: 1.5, borderColor: colors.gray2, alignItems: 'center' },
   modalCancelText: { fontSize: fontSizes.sm, fontWeight: '600', color: colors.textMuted },
   modalSubmitBtn: { flex: 1, padding: spacing.md, borderRadius: radius.full, backgroundColor: colors.error, alignItems: 'center' },
-  modalSubmitText: { fontSize: fontSizes.sm, fontWeight: '700', color: colors.white },
+  // modalSubmitBtn's background is the fixed error red in both themes, so
+  // its text is pinned to white rather than colors.white, which would
+  // invert to navy in dark mode.
+  modalSubmitText: { fontSize: fontSizes.sm, fontWeight: '700', color: white },
 });

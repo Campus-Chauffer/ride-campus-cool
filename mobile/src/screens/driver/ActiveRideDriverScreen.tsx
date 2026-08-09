@@ -9,7 +9,7 @@ import { Phone, MapPin, CheckCircle, Flag } from 'lucide-react-native';
 import socketService from '../../services/socket';
 import { ridesAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy } from '../../utils/theme';
 
 const LOCATION_SHARE_INTERVAL_MS = 4000;
 
@@ -110,7 +110,7 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
           {driverLocation && (
             <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
               <View style={styles.driverMarker}>
-                <MapPin size={16} color={colors.dark} />
+                <MapPin size={16} color={navy} />
               </View>
             </Marker>
           )}
@@ -154,7 +154,7 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
             </View>
             {trip.passenger_phone && (
               <TouchableOpacity style={styles.callBtn} onPress={callPassenger}>
-                <Phone size={16} color={colors.dark} />
+                <Phone size={16} color={navy} />
               </TouchableOpacity>
             )}
           </View>
@@ -168,7 +168,7 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
         </View>
 
         <TouchableOpacity style={styles.completeBtn} onPress={onCompleteTrip}>
-          <CheckCircle size={20} color={colors.dark} />
+          <CheckCircle size={20} color={navy} />
           <Text style={styles.completeBtnText}>Complete Trip</Text>
         </TouchableOpacity>
       </View>
@@ -199,12 +199,12 @@ const getStyles = (colors: any) => StyleSheet.create({
   tripInfo: { marginBottom: spacing.md },
   passengerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
   passengerAvatar: { width: 44, height: 44, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
-  passengerAvatarText: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark },
+  passengerAvatarText: { fontSize: fontSizes.lg, fontWeight: '800', color: navy },
   passengerName: { fontSize: fontSizes.md, fontWeight: '700', color: colors.dark },
   tripStatus: { fontSize: fontSizes.xs, color: colors.textMuted, marginTop: 2 },
   callBtn: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
   destinationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.gray, padding: spacing.md, borderRadius: radius.lg },
   destinationText: { flex: 1, fontSize: fontSizes.sm, color: colors.dark },
   completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.primary, padding: spacing.md, borderRadius: radius.full, ...shadows.md },
-  completeBtnText: { fontSize: fontSizes.sm, fontWeight: '700', color: colors.dark },
+  completeBtnText: { fontSize: fontSizes.sm, fontWeight: '700', color: navy },
 });

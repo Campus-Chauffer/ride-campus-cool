@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'react-native';
 import { Car, GraduationCap } from 'lucide-react-native';
 import { useThemeStore } from '../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows } from '../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy } from '../utils/theme';
 
 const { height } = Dimensions.get('window');
 
@@ -53,13 +53,13 @@ export default function LandingScreen({ navigation }: any) {
           <View style={[styles.roleIcon, selectedRole === 'passenger' && styles.roleIconActive]}>
             <GraduationCap
               size={24}
-              color={selectedRole === 'passenger' ? colors.dark : colors.textMuted}
+              color={selectedRole === 'passenger' ? navy : colors.textMuted}
               strokeWidth={2}
             />
           </View>
           <View style={styles.roleText}>
-            <Text style={styles.roleName}>Student</Text>
-            <Text style={styles.roleDesc}>I need a ride around campus</Text>
+            <Text style={[styles.roleName, selectedRole === 'passenger' && styles.roleTextActive]}>Student</Text>
+            <Text style={[styles.roleDesc, selectedRole === 'passenger' && styles.roleTextActive]}>I need a ride around campus</Text>
           </View>
           <View style={[styles.radioOuter, selectedRole === 'passenger' && styles.radioOuterActive]}>
             {selectedRole === 'passenger' && <View style={styles.radioInner} />}
@@ -74,13 +74,13 @@ export default function LandingScreen({ navigation }: any) {
           <View style={[styles.roleIcon, selectedRole === 'driver' && styles.roleIconActive]}>
             <Car
               size={24}
-              color={selectedRole === 'driver' ? colors.dark : colors.textMuted}
+              color={selectedRole === 'driver' ? navy : colors.textMuted}
               strokeWidth={2}
             />
           </View>
           <View style={styles.roleText}>
-            <Text style={styles.roleName}>Driver</Text>
-            <Text style={styles.roleDesc}>I want to earn on campus</Text>
+            <Text style={[styles.roleName, selectedRole === 'driver' && styles.roleTextActive]}>Driver</Text>
+            <Text style={[styles.roleDesc, selectedRole === 'driver' && styles.roleTextActive]}>I want to earn on campus</Text>
           </View>
           <View style={[styles.radioOuter, selectedRole === 'driver' && styles.radioOuterActive]}>
             {selectedRole === 'driver' && <View style={styles.radioInner} />}
@@ -190,6 +190,11 @@ const getStyles = (colors: any) => StyleSheet.create({
     fontSize: fontSizes.xs,
     color: colors.textMuted,
   },
+  // roleCardActive's background is a fixed cream tone in both themes, so
+  // when a card is selected its text is pinned to navy — colors.dark/
+  // textMuted would invert to near-white in dark mode and disappear
+  // against it.
+  roleTextActive: { color: navy },
   radioOuter: {
     width: 22,
     height: 22,
@@ -215,10 +220,13 @@ const getStyles = (colors: any) => StyleSheet.create({
     ...shadows.md,
   },
   continueBtnDisabled: { opacity: 0.4 },
+  // continueBtn's background is the fixed brand yellow in both themes, so
+  // its text is pinned to navy rather than colors.dark, which would invert
+  // to near-white in dark mode and disappear against the still-yellow button.
   continueBtnText: {
     fontSize: fontSizes.md,
     fontWeight: '700',
-    color: colors.dark,
+    color: navy,
     letterSpacing: 0.3,
   },
   terms: {

@@ -10,7 +10,7 @@ import {
 import { profileAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy } from '../../utils/theme';
 
 export default function ProfileScreen({ navigation }: any) {
   const { user } = useAuthStore();
@@ -188,10 +188,13 @@ const getStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.sm,
   },
+  // avatar's background is the fixed brand yellow in both themes, so its
+  // initials are pinned to navy rather than colors.dark, which would invert
+  // to near-white in dark mode and disappear against the still-yellow circle.
   avatarText: {
     fontSize: fontSizes.xl,
     fontWeight: '800',
-    color: colors.dark,
+    color: navy,
   },
   name: {
     fontSize: fontSizes.xl,

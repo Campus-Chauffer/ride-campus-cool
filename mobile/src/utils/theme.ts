@@ -41,6 +41,22 @@ export const darkColors = {
 
 export const getColors = (isDark: boolean) => isDark ? darkColors : colors;
 
+// Fixed, non-inverting brand navy — for text/icons on surfaces that are
+// deliberately the same in both themes (the brand-yellow `colors.primary`
+// buttons, avatar circles) rather than `colors.dark`, which flips to
+// near-white in dark mode. Text bound to colors.dark on one of those fixed
+// backgrounds reads fine in light mode but goes near-invisible once the
+// surface stops inverting along with it.
+export const navy = '#1A1A2E';
+
+// Fixed, non-inverting white — the counterpart to `navy` above, for text/
+// icons on fixed-color surfaces that are already dark enough to need white
+// rather than navy (e.g. colors.success badges). colors.white itself
+// inverts to navy in dark mode, which is correct for backgrounds that
+// invert alongside it but wrong for a badge that stays the same green in
+// both themes.
+export const white = '#FFFFFF';
+
 export const spacing = {
   xs: 4,
   sm: 8,

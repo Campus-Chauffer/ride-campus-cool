@@ -9,7 +9,7 @@ import { MapPin, X, Phone } from 'lucide-react-native';
 import { ridesAPI } from '../../services/api';
 import socketService from '../../services/socket';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, bottomPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, navy, white } from '../../utils/theme';
 
 const CAR_ICON = require('../../../assets/car-top.png');
 
@@ -275,7 +275,7 @@ export default function DriverFoundScreen({ trip, onRideStarted, onCancelled }: 
           {/* Call button */}
           {trip.driver_phone && (
             <TouchableOpacity style={styles.callBtn} onPress={callDriver}>
-              <Phone size={18} color={colors.dark} />
+              <Phone size={18} color={navy} />
             </TouchableOpacity>
           )}
 
@@ -306,8 +306,11 @@ const getStyles = (colors: any) => StyleSheet.create({
     minWidth: 44,
     ...shadows.sm,
   },
-  etaMapNumber: { fontSize: 14, fontWeight: '800', color: colors.white, lineHeight: 16 },
-  etaMapUnit: { fontSize: 9, fontWeight: '600', color: colors.white, lineHeight: 10 },
+  // etaMapBadge's background is the fixed success green in both themes, so
+  // its text is pinned to white rather than colors.white, which would
+  // invert to navy in dark mode.
+  etaMapNumber: { fontSize: 14, fontWeight: '800', color: white, lineHeight: 16 },
+  etaMapUnit: { fontSize: 9, fontWeight: '600', color: white, lineHeight: 10 },
   carIcon: { width: 44, height: 44 },
   pickupMarker: {
     width: 30, height: 30,
@@ -380,7 +383,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  driverAvatarText: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark },
+  driverAvatarText: { fontSize: fontSizes.lg, fontWeight: '800', color: navy },
   verifiedBadge: {
     position: 'absolute',
     bottom: 0, right: 0,
@@ -392,7 +395,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.white,
   },
-  verifiedTick: { fontSize: 9, fontWeight: '800', color: colors.white },
+  verifiedTick: { fontSize: 9, fontWeight: '800', color: white },
   driverMeta: { flex: 1 },
   driverName: { fontSize: fontSizes.md, fontWeight: '700', color: colors.dark },
   callBtn: {

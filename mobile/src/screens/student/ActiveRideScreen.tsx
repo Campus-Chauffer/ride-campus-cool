@@ -8,7 +8,7 @@ import { Phone, Flag } from 'lucide-react-native';
 import socketService from '../../services/socket';
 import { ridesAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy } from '../../utils/theme';
 
 const CAR_ICON = require('../../../assets/car-top.png');
 
@@ -151,7 +151,7 @@ export default function ActiveRideScreen({ trip }: Props) {
           </View>
           {trip.driver_phone && (
             <TouchableOpacity style={styles.callBtn} onPress={callDriver}>
-              <Phone size={16} color={colors.dark} />
+              <Phone size={16} color={navy} />
             </TouchableOpacity>
           )}
         </View>
@@ -185,7 +185,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   driverRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
   driverAvatar: { width: 44, height: 44, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
-  driverAvatarText: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark },
+  driverAvatarText: { fontSize: fontSizes.lg, fontWeight: '800', color: navy },
   driverName: { fontSize: fontSizes.md, fontWeight: '700', color: colors.dark },
   tripStatus: { fontSize: fontSizes.xs, color: colors.textMuted, marginTop: 2 },
   callBtn: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },

@@ -6,7 +6,7 @@ import {
 import { CheckCircle, MapPin, Phone, Clock, AlertTriangle } from 'lucide-react-native';
 import { driverAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, navy } from '../../utils/theme';
 
 interface Props {
   trip: any;
@@ -151,7 +151,7 @@ export default function ArrivedAtPickupScreen({ trip, onStartTrip, onCancelled }
           </View>
           {trip.passenger_phone && (
             <TouchableOpacity style={styles.callBtn} onPress={callPassenger}>
-              <Phone size={18} color={colors.dark} />
+              <Phone size={18} color={navy} />
             </TouchableOpacity>
           )}
         </View>
@@ -172,7 +172,7 @@ export default function ArrivedAtPickupScreen({ trip, onStartTrip, onCancelled }
           onPress={handleStartTrip}
           disabled={isStarting}
         >
-          <CheckCircle size={20} color={colors.dark} />
+          <CheckCircle size={20} color={navy} />
           <Text style={styles.startBtnText}>
             {isStarting ? 'Starting...' : 'Passenger Onboard — Start Trip'}
           </Text>
@@ -247,7 +247,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   passengerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   passengerAvatar: { width: 44, height: 44, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
-  passengerAvatarText: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark },
+  passengerAvatarText: { fontSize: fontSizes.lg, fontWeight: '800', color: navy },
   passengerName: { fontSize: fontSizes.md, fontWeight: '700', color: colors.dark },
   passengerLabel: { fontSize: fontSizes.xs, color: colors.textMuted },
   callBtn: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
@@ -255,5 +255,5 @@ const getStyles = (colors: any) => StyleSheet.create({
   warningText: { flex: 1, fontSize: fontSizes.xs, color: colors.textMuted },
   actionContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: spacing.lg, paddingBottom: bottomPadding, backgroundColor: colors.white },
   startBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.primary, padding: spacing.md, borderRadius: radius.full, ...shadows.md },
-  startBtnText: { fontSize: fontSizes.sm, fontWeight: '700', color: colors.dark },
+  startBtnText: { fontSize: fontSizes.sm, fontWeight: '700', color: navy },
 });
