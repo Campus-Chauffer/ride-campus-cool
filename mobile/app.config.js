@@ -60,9 +60,7 @@ export default {
           isAndroidForegroundServiceEnabled: true
         }
       ],
-      
       "expo-task-manager",
-      "expo-notifications",
       [
         "expo-build-properties",
         {

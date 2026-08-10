@@ -25,7 +25,14 @@ const requestOTP = async (req, res) => {
     const smsResult = await sendSMS(phone_number, message);
 
     if (!smsResult.success) {
+      // The OTP row above is still written and valid — this only means the
+      // text itself didn't go out (missing/invalid mNotify credentials, no
+      // balance, delivery failure). Previously this was swallowed into a
+      // "sent successfully" response, so a real SMS outage looked to every
+      // user like the app was simply broken, with nothing in the client to
+      // act on and no signal short of support complaints.
       console.warn(`SMS delivery issue for ${phone_number}, OTP: ${otp}`);
+      return res.status(502).json({ error: 'Could not send verification code. Please try again.' });
     }
 
     res.json({ message: 'OTP sent successfully' });
