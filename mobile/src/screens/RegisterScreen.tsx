@@ -276,6 +276,18 @@ export default function RegisterScreen({ route, navigation }: any) {
                 </View>
               </View>
 
+              <Text style={styles.consentText}>
+                By tapping "Create Account", you agree to our{' '}
+                <Text style={styles.consentLink} onPress={() => navigation.navigate('Legal', { type: 'terms' })}>
+                  Terms of Service
+                </Text>
+                {' '}and{' '}
+                <Text style={styles.consentLink} onPress={() => navigation.navigate('Legal', { type: 'privacy' })}>
+                  Privacy Policy
+                </Text>
+                .
+              </Text>
+
               <TouchableOpacity
                 style={[styles.btn, (loading || submitted) && styles.btnDisabled]}
                 onPress={register}
@@ -418,6 +430,18 @@ const getStyles = (colors: any) => StyleSheet.create({
     ...shadows.md,
   },
   btnDisabled: { opacity: 0.5 },
+  consentText: {
+    fontSize: fontSizes.xs,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+    lineHeight: 16,
+  },
+  consentLink: {
+    color: colors.dark,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
   // btn's background is the fixed brand yellow in both themes, so its text
   // is pinned to navy rather than colors.dark, which would invert to
   // near-white in dark mode and disappear against the still-yellow button.

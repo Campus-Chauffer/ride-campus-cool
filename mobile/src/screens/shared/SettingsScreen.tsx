@@ -106,7 +106,13 @@ export default function SettingsScreen({ navigation }: any) {
           <SettingRow
             icon={<Shield size={18} color={c.dark} />}
             label="Privacy Policy"
-            onPress={() => Alert.alert('Privacy Policy', 'Coming soon')}
+            onPress={() => navigation.navigate('Legal', { type: 'privacy' })}
+          />
+          <View style={[styles.rowDivider, { backgroundColor: c.gray2 }]} />
+          <SettingRow
+            icon={<Shield size={18} color={c.dark} />}
+            label="Terms of Service"
+            onPress={() => navigation.navigate('Legal', { type: 'terms' })}
           />
           <View style={[styles.rowDivider, { backgroundColor: c.gray2 }]} />
           <SettingRow

@@ -25,6 +25,7 @@ import EditProfileScreen from '../screens/shared/EditProfileScreen';
 import SettingsScreen from '../screens/shared/SettingsScreen';
 import RideHistoryScreen from '../screens/shared/RideHistoryScreen';
 import AnnouncementsScreen from '../screens/shared/AnnouncementsScreen';
+import LegalScreen from '../screens/shared/LegalScreen';
 import EarningsScreen from '../screens/driver/EarningsScreen';
 import { registerPushToken } from '../utils/registerPushToken';
 import * as Notifications from 'expo-notifications';
@@ -50,6 +51,7 @@ function AuthScreens() {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen name="Legal" component={LegalScreen} />
     </Stack.Navigator>
   );
 }
@@ -65,6 +67,7 @@ function StudentScreens() {
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="RideHistory" component={RideHistoryScreen} />
       <Stack.Screen name="Announcements" component={AnnouncementsScreen} />
+      <Stack.Screen name="Legal" component={LegalScreen} />
     </Stack.Navigator>
   );
 }
@@ -85,6 +88,7 @@ function DriverScreens({ initialRoute }: { initialRoute: string }) {
       <Stack.Screen name="RideHistory" component={RideHistoryScreen} />
       <Stack.Screen name="Earnings" component={EarningsScreen} />
       <Stack.Screen name="Announcements" component={AnnouncementsScreen} />
+      <Stack.Screen name="Legal" component={LegalScreen} />
     </Stack.Navigator>
   );
 }

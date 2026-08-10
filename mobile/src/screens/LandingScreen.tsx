@@ -97,7 +97,14 @@ export default function LandingScreen({ navigation }: any) {
         </TouchableOpacity>
 
         <Text style={styles.terms}>
-          By continuing you agree to our Terms of Service and Privacy Policy
+          By continuing you agree to our{' '}
+          <Text style={styles.termsLink} onPress={() => navigation.navigate('Legal', { type: 'terms' })}>
+            Terms of Service
+          </Text>
+          {' '}and{' '}
+          <Text style={styles.termsLink} onPress={() => navigation.navigate('Legal', { type: 'privacy' })}>
+            Privacy Policy
+          </Text>
         </Text>
       </ScrollView>
     </View>
@@ -235,5 +242,10 @@ const getStyles = (colors: any) => StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.md,
     lineHeight: 18,
+  },
+  termsLink: {
+    color: colors.dark,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 });
