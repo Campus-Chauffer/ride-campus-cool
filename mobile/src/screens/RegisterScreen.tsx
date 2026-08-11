@@ -68,6 +68,7 @@ export default function RegisterScreen({ route, navigation }: any) {
   setSubmitted(true);
   setLoading(true);
   try {
+    let accountAlreadyExisted = false;
     // Try to register
     try {
       await authAPI.register({
@@ -83,10 +84,27 @@ export default function RegisterScreen({ route, navigation }: any) {
       if (regErr.response?.data?.error !== 'Account already exists') {
         throw regErr;
       }
+      accountAlreadyExisted = true;
     }
 
-    // Always login after register attempt
+    // Always login after register attempt — this recovers gracefully from
+    // a network hiccup right after a successful registration (response
+    // lost, but the account was created). But if "already exists" fired
+    // because this phone number already has an account under a *different*
+    // role than the one just selected, logging in here would silently drop
+    // the user into that other role's home screen with zero indication
+    // anything was wrong — which is the exact "signed up as driver, ended
+    // up a student" bug. Only auto-login silently when the role matches;
+    // otherwise surface it as a real conflict.
     const loginRes = await authAPI.login(phone, password);
+    if (accountAlreadyExisted && loginRes.data.user.role !== role) {
+      setSubmitted(false);
+      Alert.alert(
+        'Account already exists',
+        `This phone number is already registered as a ${loginRes.data.user.role === 'driver' ? 'driver' : 'student'} account. Please sign in instead, or use a different phone number to register as a ${role === 'driver' ? 'driver' : 'student'}.`
+      );
+      return;
+    }
     await setAuth(loginRes.data.token, loginRes.data.user);
 
   } catch (err: any) {
