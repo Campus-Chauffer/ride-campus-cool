@@ -215,7 +215,13 @@ const forgotPassword = async (req, res) => {
     });
 
     console.log(`Password reset OTP for ${email}: ${otp}`);
-    res.json({ message: 'Reset code sent to your email' });
+    // The mobile client needs phone_number for the follow-up resetPassword
+    // call (which looks up the OTP by phone, not email) — omitting it here
+    // meant every reset attempt silently failed at the final step with
+    // "Invalid or expired code," even with a correct OTP, because the
+    // client was checking it against an empty phone number instead of the
+    // real one.
+    res.json({ message: 'Reset code sent to your email', phone_number: user.phone_number });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
