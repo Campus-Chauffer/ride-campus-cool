@@ -80,6 +80,9 @@ export default function DriverRegistrationScreen({ navigation }: any) {
     if (!licenseNumber) return Alert.alert('Required', 'Enter your license number');
     if (!licenseImage) return Alert.alert('Required', 'Upload your license image');
     if (!licenseExpiry) return Alert.alert('Required', 'Enter license expiry date');
+    if (!/^\d{2}\/\d{4}$/.test(licenseExpiry)) {
+      return Alert.alert('Invalid date', 'Enter the expiry date as MM/YYYY, e.g. 08/2027');
+    }
     if (!profilePhoto) return Alert.alert('Required', 'Upload a clear photo of your face');
     if (!allChecked) return Alert.alert('Required', 'Please confirm all vehicle requirements');
 

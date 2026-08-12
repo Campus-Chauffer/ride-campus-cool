@@ -19,13 +19,25 @@ const submitRegistration = async (req, res) => {
     profile_photo,
   } = req.body;
 
-  const formattedExpiry = license_expiry
-    ? `${license_expiry.split('/')[1]}-${license_expiry.split('/')[0]}-01`
-    : null;
-
   if (!ghana_card_number || !license_number || !vehicle_make || !vehicle_model || !plate_number) {
     return res.status(400).json({ error: 'All required fields must be filled' });
   }
+
+  // license_expiry is free text on the client (a placeholder of "MM/YYYY",
+  // nothing actually enforces the format) and this was blindly string-split
+  // into a date before inserting into a DATE column — any input that wasn't
+  // exactly two digits, a slash, and four digits produced either garbage or
+  // an outright invalid date, which Postgres rejects, surfacing as an opaque
+  // "Server error" with zero indication of what was actually wrong.
+  const expiryMatch = /^(\d{2})\/(\d{4})$/.exec(license_expiry || '');
+  if (!expiryMatch) {
+    return res.status(400).json({ error: 'License expiry must be in MM/YYYY format' });
+  }
+  const [, expiryMonth, expiryYear] = expiryMatch;
+  if (Number(expiryMonth) < 1 || Number(expiryMonth) > 12) {
+    return res.status(400).json({ error: 'License expiry month must be between 01 and 12' });
+  }
+  const formattedExpiry = `${expiryYear}-${expiryMonth}-01`;
 
   try {
     let driverResult = await pool.query(
@@ -83,6 +95,12 @@ const submitRegistration = async (req, res) => {
 
     res.json({ message: 'Registration submitted successfully' });
   } catch (err) {
+    // Postgres unique_violation — plate_number is UNIQUE, so this fires if
+    // the vehicle is already registered under another driver account,
+    // which previously also surfaced as an opaque "Server error."
+    if (err.code === '23505') {
+      return res.status(400).json({ error: 'This plate number is already registered to another driver' });
+    }
     console.error(err);
     res.status(500).json({ error: 'Server error' });
   }
