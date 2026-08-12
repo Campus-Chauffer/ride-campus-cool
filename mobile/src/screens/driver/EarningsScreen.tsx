@@ -4,7 +4,7 @@ import {
   SafeAreaView, ScrollView, ActivityIndicator,
   StatusBar, RefreshControl
 } from 'react-native';
-import { ArrowLeft, Wallet, Clock, CheckCircle, TrendingUp, RefreshCw } from 'lucide-react-native';
+import { ArrowLeft, Wallet, Clock, CheckCircle, TrendingUp, RefreshCw, Lock } from 'lucide-react-native';
 import { walletAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius } from '../../utils/theme';
@@ -109,8 +109,12 @@ export default function EarningsScreen({ navigation }: any) {
             styles.lockBadge,
             wallet?.is_locked ? styles.lockBadgeLocked : styles.lockBadgeUnlocked
           ]}>
+            {wallet?.is_locked
+              ? <Lock size={12} color={colors.white} strokeWidth={2.5} />
+              : <CheckCircle size={12} color={colors.white} strokeWidth={2.5} />
+            }
             <Text style={styles.lockBadgeText}>
-              {wallet?.is_locked ? '🔒 Locked' : '✅ Active'}
+              {wallet?.is_locked ? 'Locked' : 'Active'}
             </Text>
           </View>
         </View>
@@ -245,6 +249,9 @@ const getStyles = (colors: any) => StyleSheet.create({
     color: colors.white,
   },
   lockBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radius.full,

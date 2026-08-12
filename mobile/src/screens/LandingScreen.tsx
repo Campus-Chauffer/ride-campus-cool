@@ -3,7 +3,6 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   StatusBar, Dimensions, ScrollView
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'react-native';
 import { Car, GraduationCap } from 'lucide-react-native';
 import { useThemeStore } from '../store/themeStore';
@@ -22,10 +21,7 @@ export default function LandingScreen({ navigation }: any) {
       <StatusBar barStyle="light-content" />
 
       {/* Top dark section */}
-      <LinearGradient
-        colors={['#000000', '#000000']}
-        style={styles.topSection}
-      >
+      <View style={styles.topSection}>
         <View style={styles.logoContainer}>
           <Image
             source={require('../../assets/cc-logo.jpg')}
@@ -34,7 +30,7 @@ export default function LandingScreen({ navigation }: any) {
           <Text style={styles.appName}>Campus Chauffeur</Text>
           <Text style={styles.tagline}>Safe rides around UG Legon</Text>
         </View>
-      </LinearGradient>
+      </View>
 
       {/* Bottom white section */}
       <ScrollView
@@ -117,6 +113,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     minHeight: height * 0.38,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#000000',
   },
   logoContainer: { alignItems: 'center' },
   logoCircle: {

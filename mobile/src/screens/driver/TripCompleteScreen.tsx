@@ -3,7 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, StatusBar, ScrollView, TextInput, Alert, Dimensions
 } from 'react-native';
-import { Flag, CheckCircle } from 'lucide-react-native';
+import { Flag, CheckCircle, Star } from 'lucide-react-native';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, navy } from '../../utils/theme';
 
@@ -87,9 +87,12 @@ export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: P
             <View style={styles.starsRow}>
               {[1, 2, 3, 4, 5].map((star) => (
                 <TouchableOpacity key={star} onPress={() => setRating(star)} activeOpacity={0.7}>
-                  <Text style={[styles.starText, { color: star <= rating ? colors.primary : colors.gray2 }]}>
-                    ★
-                  </Text>
+                  <Star
+                    size={28}
+                    color={star <= rating ? colors.primary : colors.gray2}
+                    fill={star <= rating ? colors.primary : 'transparent'}
+                    strokeWidth={1.5}
+                  />
                 </TouchableOpacity>
               ))}
             </View>
@@ -201,7 +204,6 @@ const getStyles = (colors: any) => StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.sm,
   },
-  starText: { fontSize: 28 },
   commentInput: {
     width: '100%',
     backgroundColor: colors.gray,

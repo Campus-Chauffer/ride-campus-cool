@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { MapPin, X, Phone } from 'lucide-react-native';
+import { MapPin, X, Phone, Check } from 'lucide-react-native';
 import { ridesAPI } from '../../services/api';
 import socketService from '../../services/socket';
 import { useThemeStore } from '../../store/themeStore';
@@ -293,7 +293,7 @@ export default function DriverFoundScreen({ trip, onCancelled }: Props) {
               </View>
             )}
             <View style={styles.verifiedBadge}>
-              <Text style={styles.verifiedTick}>✓</Text>
+              <Check size={11} color={white} strokeWidth={3} />
             </View>
           </View>
 
@@ -424,7 +424,6 @@ const getStyles = (colors: any) => StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.white,
   },
-  verifiedTick: { fontSize: 9, fontWeight: '800', color: white },
   driverMeta: { flex: 1 },
   driverName: { fontSize: fontSizes.md, fontWeight: '700', color: colors.dark },
   callBtn: {

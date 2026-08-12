@@ -5,7 +5,7 @@ import {
   Alert, ActivityIndicator, StatusBar, Image
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { ArrowLeft, ChevronRight, Camera } from 'lucide-react-native';
+import { ArrowLeft, ChevronRight, Camera, Check } from 'lucide-react-native';
 import { driverRegistrationAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, navy, white } from '../../utils/theme';
@@ -95,7 +95,7 @@ export default function DriverVehicleScreen({ route, navigation }: any) {
         <>
           <Image source={{ uri: image }} style={styles.uploadedImage} />
           <View style={styles.uploadedBadge}>
-            <Text style={styles.uploadedBadgeText}>✓</Text>
+            <Check size={12} color={white} strokeWidth={3} />
           </View>
         </>
       ) : (
@@ -321,10 +321,6 @@ const getStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // uploadedBadge's background is the fixed success green in both themes,
-  // so its checkmark text is pinned to white rather than colors.white,
-  // which would invert to navy in dark mode.
-  uploadedBadgeText: { fontSize: 10, fontWeight: '700', color: white },
   submitBtn: {
     flexDirection: 'row',
     backgroundColor: colors.primary,

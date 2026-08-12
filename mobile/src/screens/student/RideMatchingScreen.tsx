@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView,
-  TouchableOpacity, Alert, Animated, StatusBar
+  TouchableOpacity, Alert, ActivityIndicator, StatusBar
 } from 'react-native';
 import { X, MapPin, Navigation } from 'lucide-react-native';
 import { ridesAPI } from '../../services/api';
@@ -24,9 +24,6 @@ export default function RideMatchingScreen({ route, navigation }: any) {
   const [phase, setPhase] = useState<Phase>('searching');
   const [currentTrip, setCurrentTrip] = useState(trip);
   const phaseRef = useRef<Phase>('searching');
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const pulseAnim2 = useRef(new Animated.Value(1)).current;
-  const pulseAnim3 = useRef(new Animated.Value(1)).current;
   const pollInterval = useRef<any>(null);
 
   const updatePhase = (newPhase: Phase) => {
@@ -35,27 +32,11 @@ export default function RideMatchingScreen({ route, navigation }: any) {
   };
 
   useEffect(() => {
-    startPulse();
     socketService.connect();
     socketService.joinRide(trip.id);
     startPolling();
     return () => clearInterval(pollInterval.current);
   }, []);
-
-  const startPulse = () => {
-    const pulse = (anim: Animated.Value, delay: number) => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(delay),
-          Animated.timing(anim, { toValue: 2.5, duration: 1500, useNativeDriver: true }),
-          Animated.timing(anim, { toValue: 1, duration: 0, useNativeDriver: true }),
-        ])
-      ).start();
-    };
-    pulse(pulseAnim, 0);
-    pulse(pulseAnim2, 500);
-    pulse(pulseAnim3, 1000);
-  };
 
   const startPolling = () => {
     pollInterval.current = setInterval(async () => {
@@ -120,12 +101,10 @@ export default function RideMatchingScreen({ route, navigation }: any) {
           </View>
 
           <View style={styles.pulseContainer}>
-            <Animated.View style={[styles.pulseRing, { transform: [{ scale: pulseAnim3 }], opacity: pulseAnim3.interpolate({ inputRange: [1, 2.5], outputRange: [0.15, 0] }) }]} />
-            <Animated.View style={[styles.pulseRing, { transform: [{ scale: pulseAnim2 }], opacity: pulseAnim2.interpolate({ inputRange: [1, 2.5], outputRange: [0.25, 0] }) }]} />
-            <Animated.View style={[styles.pulseRing, { transform: [{ scale: pulseAnim }], opacity: pulseAnim.interpolate({ inputRange: [1, 2.5], outputRange: [0.35, 0] }) }]} />
             <View style={styles.pulseCenter}>
               <Navigation size={28} color={colors.white} />
             </View>
+            <ActivityIndicator color={colors.white} style={styles.searchIndicator} />
           </View>
 
           <Text style={styles.title}>Finding your driver</Text>
@@ -206,12 +185,6 @@ const getStyles = (colors: any) => StyleSheet.create({
     height: 200,
     marginTop: spacing.xl,
   },
-  pulseRing: {
-    position: 'absolute',
-    width: 120, height: 120,
-    borderRadius: 60,
-    backgroundColor: colors.primary,
-  },
   pulseCenter: {
     width: 72, height: 72,
     borderRadius: 36,
@@ -219,6 +192,9 @@ const getStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     ...shadows.lg,
+  },
+  searchIndicator: {
+    marginTop: spacing.lg,
   },
   title: {
     fontSize: fontSizes.xl,

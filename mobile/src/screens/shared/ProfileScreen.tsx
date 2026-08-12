@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import {
   ArrowLeft, Star, Car, Phone, Mail,
-  Edit, ChevronRight, Award
+  Edit, ChevronRight, Award, GraduationCap
 } from 'lucide-react-native';
 import { profileAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
@@ -71,8 +71,12 @@ export default function ProfileScreen({ navigation }: any) {
           </View>
           <Text style={styles.name}>{user?.first_name} {user?.last_name}</Text>
           <View style={styles.roleBadge}>
+            {user?.role === 'driver'
+              ? <Car size={12} color="rgba(255,255,255,0.6)" />
+              : <GraduationCap size={12} color="rgba(255,255,255,0.6)" />
+            }
             <Text style={styles.roleText}>
-              {user?.role === 'driver' ? '🚗 Driver' : '🎓 Student'}
+              {user?.role === 'driver' ? 'Driver' : 'Student'}
             </Text>
           </View>
         </View>
@@ -203,6 +207,9 @@ const getStyles = (colors: any) => StyleSheet.create({
     marginBottom: spacing.xs,
   },
   roleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: 'rgba(255,255,255,0.08)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,

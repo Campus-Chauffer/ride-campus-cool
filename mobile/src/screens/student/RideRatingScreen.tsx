@@ -3,7 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, Alert, TextInput, StatusBar, ScrollView, Modal
 } from 'react-native';
-import { Star, Flag } from 'lucide-react-native';
+import { Star, Flag, Check } from 'lucide-react-native';
 import { useRideStore } from '../../store/rideStore';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, navy, white } from '../../utils/theme';
@@ -80,7 +80,7 @@ export default function RideRatingScreen({ route, navigation }: any) {
 
         <View style={styles.completeBadge}>
           <View style={styles.checkCircle}>
-            <Text style={styles.checkText}>✓</Text>
+            <Check size={36} color={white} strokeWidth={3} />
           </View>
           <Text style={styles.completeTitle}>Trip Complete</Text>
           <Text style={styles.completeSubtitle}>You've arrived at your destination</Text>
@@ -223,10 +223,6 @@ const getStyles = (colors: any) => StyleSheet.create({
     marginBottom: spacing.md,
     ...shadows.md,
   },
-  // checkCircle's background is the fixed success green in both themes, so
-  // its checkmark is pinned to white rather than colors.white, which would
-  // invert to navy in dark mode.
-  checkText: { fontSize: 32, color: white },
   completeTitle: { fontSize: fontSizes.xl, fontWeight: '800', color: colors.dark, marginBottom: spacing.xs },
   completeSubtitle: { fontSize: fontSizes.sm, color: colors.textMuted },
   // This is a fixed-dark "receipt" card by design (translucent-white label,

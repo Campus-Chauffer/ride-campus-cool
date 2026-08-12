@@ -114,7 +114,8 @@ export default function DriverRegistrationScreen({ navigation }: any) {
       )}
       {image && (
         <View style={styles.uploadedBadge}>
-          <Text style={styles.uploadedBadgeText}>✓ Uploaded</Text>
+          <Check size={11} color={white} strokeWidth={3} />
+          <Text style={styles.uploadedBadgeText}>Uploaded</Text>
         </View>
       )}
     </TouchableOpacity>
@@ -368,6 +369,9 @@ const getStyles = (colors: any) => StyleSheet.create({
     position: 'absolute',
     top: spacing.sm,
     right: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: colors.success,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
