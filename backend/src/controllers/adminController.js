@@ -215,12 +215,18 @@ const getUserRideHistory = async (req, res) => {
   }
 };
 
-// Get all users
+// Get all users. LEFT JOINs drivers so the admin UI can tell apart a
+// plain passenger from a dual-role account currently browsing as a
+// passenger — role alone only reflects the CURRENT active mode, not
+// whether the account also has an approved driver profile.
 const getAllUsers = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, phone_number, email, first_name, last_name, role, status, created_at
-       FROM users ORDER BY created_at DESC`
+      `SELECT u.id, u.phone_number, u.email, u.first_name, u.last_name,
+              u.role, u.status, u.created_at, d.approval_status as driver_status
+       FROM users u
+       LEFT JOIN drivers d ON d.user_id = u.id
+       ORDER BY u.created_at DESC`
     );
     res.json(result.rows);
   } catch (err) {

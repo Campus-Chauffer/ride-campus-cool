@@ -51,13 +51,19 @@ export default function Users() {
     }
   }
 
+  // A user "is a driver" for management purposes if they have an approved
+  // driver profile, independent of which mode (role) they're currently
+  // browsing in — a dual-role account switched to passenger mode still
+  // needs to show up wherever the admin is tracking driver counts.
+  const isApprovedDriver = (u) => u.driver_status === "approved";
+
   const filtered = users.filter((u) => {
     const matchFilter =
       filter === "all" ||
       (filter === "active" && u.status !== "blocked") ||
       (filter === "blocked" && u.status === "blocked") ||
       (filter === "student" && u.role === "passenger") ||
-      (filter === "driver" && u.role === "driver");
+      (filter === "driver" && isApprovedDriver(u));
     const q = search.toLowerCase();
     const matchSearch =
       !q ||
@@ -70,7 +76,7 @@ export default function Users() {
   const stats = [
     { label: "Total users", value: users.length },
     { label: "Students", value: users.filter((u) => u.role === "passenger").length },
-    { label: "Drivers", value: users.filter((u) => u.role === "driver").length },
+    { label: "Drivers", value: users.filter((u) => isApprovedDriver(u)).length },
     { label: "Blocked", value: users.filter((u) => u.status === "blocked").length },
   ];
 
@@ -191,7 +197,13 @@ export default function Users() {
                               : "bg-purple-500/10 text-purple-400"
                           }`}
                         >
-                          {user.role === "driver" ? "Driver" : user.role === "admin" ? "Admin" : "Student"}
+                          {user.role === "driver"
+                            ? "Driver"
+                            : user.role === "admin"
+                            ? "Admin"
+                            : isApprovedDriver(user)
+                            ? "Student · Driver"
+                            : "Student"}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -242,7 +254,11 @@ export default function Users() {
           <div className="w-80 flex-shrink-0 bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
             <div className="flex justify-between items-center px-5 py-4 border-b border-gray-800">
               <h2 className="text-white font-semibold">
-                {selected.role === "driver" ? "Driver" : "Student"} Profile
+                {selected.role === "driver"
+                  ? "Driver"
+                  : isApprovedDriver(selected)
+                  ? "Student · Driver"
+                  : "Student"} Profile
               </h2>
               <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-white transition">
                 <X size={18} />
@@ -274,7 +290,13 @@ export default function Users() {
                     selected.role === "driver" ? "bg-blue-500/10 text-blue-400" : "bg-purple-500/10 text-purple-400"
                   }`}
                 >
-                  {selected.role === "driver" ? "Driver" : selected.role === "admin" ? "Admin" : "Student"}
+                  {selected.role === "driver"
+                    ? "Driver"
+                    : selected.role === "admin"
+                    ? "Admin"
+                    : isApprovedDriver(selected)
+                    ? "Student · Driver"
+                    : "Student"}
                 </span>
                 <span
                   className={`text-xs font-medium px-2.5 py-1 rounded-full ${
