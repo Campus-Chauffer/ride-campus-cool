@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Animated } from 'react-native';
+import Sentry from './src/utils/sentry';
 import AppNavigator from './src/navigation/AppNavigator';
 import SplashScreen from './src/components/SplashScreen';
+import CrashFallbackScreen from './src/components/CrashFallbackScreen';
 import './src/utils/backgroundLocation'; // register background task on app start
 
 export default function App() {
@@ -21,7 +23,9 @@ export default function App() {
   }, []);
 
   return (
-    <>
+    <Sentry.ErrorBoundary
+      fallback={({ resetError }) => <CrashFallbackScreen onReset={resetError} />}
+    >
       <AppNavigator />
       {showSplash && (
         <Animated.View
@@ -34,6 +38,6 @@ export default function App() {
           <SplashScreen />
         </Animated.View>
       )}
-    </>
+    </Sentry.ErrorBoundary>
   );
 }

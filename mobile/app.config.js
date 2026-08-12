@@ -75,7 +75,8 @@ export default {
     extra: {
       eas: {
         projectId: "3b913f57-d8c6-403a-8928-ed3c917d4c61"
-      }
+      },
+      sentryDsn: process.env.SENTRY_DSN || null
     }
   }
 };

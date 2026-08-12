@@ -55,6 +55,32 @@ api.interceptors.response.use(
   }
 );
 
+// Report server-side (5xx) failures to Sentry with request context — these
+// represent actual backend bugs. 4xx (validation, auth) and plain network
+// errors are left alone: they're expected/common (especially on campus
+// wifi) and would just be noise against the free tier's event quota.
+// Dynamic import avoids a circular dependency, same as the 401 handler above.
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status >= 500) {
+      try {
+        const Sentry = require('../utils/sentry').default;
+        Sentry.captureException(error, {
+          contexts: {
+            request: {
+              url: error.config?.url,
+              method: error.config?.method,
+              status: error.response?.status,
+            },
+          },
+        });
+      } catch (e) {}
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const authAPI = {
   requestOTP: (phone_number: string) =>
     api.post('/auth/request-otp', { phone_number }),
