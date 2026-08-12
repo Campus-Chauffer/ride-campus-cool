@@ -1,21 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  SafeAreaView, StatusBar, ActivityIndicator
+  SafeAreaView, StatusBar, ActivityIndicator, Alert
 } from 'react-native';
-import { Clock, XCircle, LogOut } from 'lucide-react-native';
-import { driverRegistrationAPI } from '../../services/api';
+import { Clock, XCircle, LogOut, CheckCircle } from 'lucide-react-native';
+import { authAPI, driverRegistrationAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, shadows } from '../../utils/theme';
 
 export default function DriverPendingScreen({ navigation }: any) {
-  const { logout } = useAuthStore();
+  const { logout, user, setAuth } = useAuthStore();
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
   const styles = getStyles(colors);
   const [status, setStatus] = useState('pending');
   const [loading, setLoading] = useState(true);
+  const [switching, setSwitching] = useState(false);
+  // An existing passenger applying to become a driver keeps role='passenger'
+  // right up until they actually choose to switch modes — this screen is
+  // reachable from either the original driver-signup stack (which doesn't
+  // have that concept, role is 'driver' from the start) or the passenger
+  // stack applying for the first time, and they need different behavior on
+  // approval: the original flow auto-continues into DriverHome, but that
+  // route doesn't exist in the passenger stack, and a passenger shouldn't
+  // be dropped into driver mode without choosing to.
+  const isPassengerApplying = user?.role === 'passenger';
 
   useEffect(() => {
     checkStatus();
@@ -27,13 +37,25 @@ export default function DriverPendingScreen({ navigation }: any) {
     try {
       const res = await driverRegistrationAPI.getStatus();
       setStatus(res.data.approval_status);
-      if (res.data.approval_status === 'approved') {
+      if (res.data.approval_status === 'approved' && !isPassengerApplying) {
         navigation.replace('DriverHome');
       }
     } catch (err) {
       console.log('Status check error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const switchToDriverMode = async () => {
+    setSwitching(true);
+    try {
+      const res = await authAPI.switchRole('driver');
+      await setAuth(res.data.token, res.data.user);
+    } catch (err: any) {
+      Alert.alert('Error', err.response?.data?.error || 'Could not switch to driver mode');
+    } finally {
+      setSwitching(false);
     }
   };
 
@@ -82,6 +104,31 @@ export default function DriverPendingScreen({ navigation }: any) {
             {loading && (
               <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />
             )}
+          </>
+        )}
+
+        {status === 'approved' && isPassengerApplying && (
+          <>
+            <View style={styles.iconContainer}>
+              <CheckCircle size={48} color={colors.success} />
+            </View>
+            <Text style={styles.title}>You're Approved!</Text>
+            <Text style={styles.subtitle}>
+              Your driver application has been approved. Switch to driver mode whenever you're ready to start earning — you can always switch back.
+            </Text>
+            <TouchableOpacity
+              style={styles.switchBtn}
+              onPress={switchToDriverMode}
+              disabled={switching}
+            >
+              {switching
+                ? <ActivityIndicator color={navy} />
+                : <Text style={styles.switchBtnText}>Switch to Driver Mode</Text>
+              }
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Text style={styles.laterText}>Maybe later</Text>
+            </TouchableOpacity>
           </>
         )}
 
@@ -182,6 +229,28 @@ const getStyles = (colors: any) => StyleSheet.create({
   checkText: {
     fontSize: fontSizes.xs,
     color: 'rgba(255,255,255,0.3)',
+    textAlign: 'center',
+  },
+  switchBtn: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.full,
+    marginTop: spacing.sm,
+    ...shadows.md,
+  },
+  // switchBtn's background is the fixed brand yellow in both themes, so its
+  // text is pinned to navy rather than colors.dark, which would invert to
+  // near-white in dark mode and disappear against the still-yellow button.
+  switchBtnText: {
+    fontSize: fontSizes.md,
+    fontWeight: '700',
+    color: navy,
+  },
+  laterText: {
+    fontSize: fontSizes.sm,
+    color: 'rgba(255,255,255,0.4)',
+    marginTop: spacing.lg,
     textAlign: 'center',
   },
 });

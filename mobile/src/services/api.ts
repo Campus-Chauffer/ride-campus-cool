@@ -84,6 +84,9 @@ export const authAPI = {
 
   savePushToken: (push_token: string) =>
     api.post('/auth/push-token', { push_token }),
+
+  switchRole: (role: 'passenger' | 'driver') =>
+    api.patch('/auth/switch-role', { role }),
 };
 
 export const ridesAPI = {

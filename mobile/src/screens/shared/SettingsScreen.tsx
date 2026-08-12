@@ -1,27 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, ScrollView, Switch, StatusBar, Alert
 } from 'react-native';
 import {
   ArrowLeft, Bell, Moon, Shield,
-  HelpCircle, LogOut, ChevronRight, Info
+  HelpCircle, LogOut, ChevronRight, Info, Repeat
 } from 'lucide-react-native';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { authAPI, driverRegistrationAPI } from '../../services/api';
 
 export default function SettingsScreen({ navigation }: any) {
-  const { logout, user } = useAuthStore();
+  const { logout, user, setAuth } = useAuthStore();
   const { isDark, toggleTheme } = useThemeStore();
   const c = getColors(isDark);
   const [notifications, setNotifications] = useState(true);
+  const [hasApprovedDriverProfile, setHasApprovedDriverProfile] = useState(false);
+  const [switchingRole, setSwitchingRole] = useState(false);
+
+  useEffect(() => {
+    if (user?.role === 'passenger') {
+      driverRegistrationAPI.getStatus()
+        .then((res) => setHasApprovedDriverProfile(res.data.approval_status === 'approved'))
+        .catch(() => setHasApprovedDriverProfile(false));
+    }
+  }, [user?.role]);
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Logout', style: 'destructive', onPress: logout },
     ]);
+  };
+
+  const handleSwitchRole = (newRole: 'passenger' | 'driver') => {
+    Alert.alert(
+      newRole === 'driver' ? 'Switch to Driver Mode?' : 'Switch to Student Mode?',
+      newRole === 'driver'
+        ? "You'll go online and start seeing ride requests instead of booking rides."
+        : "You'll book rides instead of driving. You can switch back anytime.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Switch', onPress: async () => {
+            setSwitchingRole(true);
+            try {
+              const res = await authAPI.switchRole(newRole);
+              await setAuth(res.data.token, res.data.user);
+            } catch (err: any) {
+              Alert.alert('Error', err.response?.data?.error || 'Could not switch mode');
+            } finally {
+              setSwitchingRole(false);
+            }
+          }
+        },
+      ]
+    );
   };
 
   const Section = ({ title }: { title: string }) => (
@@ -124,6 +160,26 @@ export default function SettingsScreen({ navigation }: any) {
 
         <Section title="Account" />
         <View style={[styles.card, { backgroundColor: c.white }]}>
+          {user?.role === 'driver' && (
+            <>
+              <SettingRow
+                icon={<Repeat size={18} color={c.dark} />}
+                label="Switch to Student Mode"
+                onPress={() => !switchingRole && handleSwitchRole('passenger')}
+              />
+              <View style={[styles.rowDivider, { backgroundColor: c.gray2 }]} />
+            </>
+          )}
+          {user?.role === 'passenger' && hasApprovedDriverProfile && (
+            <>
+              <SettingRow
+                icon={<Repeat size={18} color={c.dark} />}
+                label="Switch to Driver Mode"
+                onPress={() => !switchingRole && handleSwitchRole('driver')}
+              />
+              <View style={[styles.rowDivider, { backgroundColor: c.gray2 }]} />
+            </>
+          )}
           <SettingRow
             icon={<LogOut size={18} color={c.error} />}
             label="Logout"

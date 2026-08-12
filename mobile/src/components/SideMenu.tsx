@@ -5,11 +5,12 @@ import {
 } from 'react-native';
 import {
   User, Clock, Wallet, Settings,
-  LogOut, ChevronRight, Megaphone
+  LogOut, ChevronRight, Megaphone, Car
 } from 'lucide-react-native';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows } from '../utils/theme';
+import { driverRegistrationAPI } from '../services/api';
 
 const { width } = Dimensions.get('window');
 const MENU_WIDTH = width * 0.78;
@@ -44,6 +45,22 @@ export default function SideMenu({ visible, onClose, navigation }: Props) {
   const navigate = (screen: string) => {
     onClose();
     setTimeout(() => navigation.navigate(screen), 250);
+  };
+
+  // A passenger applying to become a driver could be at any stage — never
+  // applied, applied and waiting, or already approved but hasn't switched
+  // modes yet — so route to wherever their existing application actually
+  // is instead of always starting a fresh one.
+  const handleBecomeDriver = async () => {
+    onClose();
+    try {
+      const res = await driverRegistrationAPI.getStatus();
+      const target = res.data.submission_date ? 'DriverPending' : 'DriverRegistration';
+      setTimeout(() => navigation.navigate(target), 250);
+    } catch (err) {
+      // No drivers row yet — brand new application
+      setTimeout(() => navigation.navigate('DriverRegistration'), 250);
+    }
   };
 
   const handleLogout = () => {
@@ -94,13 +111,14 @@ export default function SideMenu({ visible, onClose, navigation }: Props) {
             { icon: <User size={20} color={textColor} />, label: 'My Profile', screen: 'Profile' },
             { icon: <Clock size={20} color={textColor} />, label: 'Ride History', screen: 'RideHistory' },
             ...(isDriver ? [{ icon: <Wallet size={20} color={textColor} />, label: 'Earnings', screen: 'Earnings' }] : []),
+            ...(!isDriver ? [{ icon: <Car size={20} color={textColor} />, label: 'Become a Driver', onPress: handleBecomeDriver }] : []),
             { icon: <Megaphone size={20} color={textColor} />, label: 'Announcements', screen: 'Announcements' },
             { icon: <Settings size={20} color={textColor} />, label: 'Settings', screen: 'Settings' },
           ].map((item) => (
             <TouchableOpacity
-              key={item.screen}
+              key={item.label}
               style={styles.menuItem}
-              onPress={() => navigate(item.screen)}
+              onPress={() => item.onPress ? item.onPress() : navigate(item.screen!)}
               activeOpacity={0.7}
             >
               <View style={[styles.menuItemIcon, { backgroundColor: iconBg }]}>{item.icon}</View>

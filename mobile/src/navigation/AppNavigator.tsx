@@ -68,6 +68,12 @@ function StudentScreens() {
       <Stack.Screen name="RideHistory" component={RideHistoryScreen} />
       <Stack.Screen name="Announcements" component={AnnouncementsScreen} />
       <Stack.Screen name="Legal" component={LegalScreen} />
+      {/* Reused from the driver stack — a passenger applying to become a
+          driver goes through the same registration/vehicle/pending screens
+          without needing a separate account. */}
+      <Stack.Screen name="DriverRegistration" component={DriverRegistrationScreen} />
+      <Stack.Screen name="DriverVehicle" component={DriverVehicleScreen} />
+      <Stack.Screen name="DriverPending" component={DriverPendingScreen} />
     </Stack.Navigator>
   );
 }

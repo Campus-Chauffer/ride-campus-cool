@@ -28,13 +28,23 @@ const submitRegistration = async (req, res) => {
   }
 
   try {
-    const driverResult = await pool.query(
+    let driverResult = await pool.query(
       'SELECT * FROM drivers WHERE user_id = $1',
       [user_id]
     );
 
     if (driverResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Driver profile not found' });
+      // No drivers row yet — true for an existing passenger applying to
+      // become a driver for the first time, since that row was previously
+      // only ever created at initial signup when role='driver'. Create it
+      // (plus the wallet every driver needs) so the UPDATE below has
+      // something to act on, same as the original signup path does.
+      const created = await pool.query(
+        'INSERT INTO drivers (user_id) VALUES ($1) RETURNING *',
+        [user_id]
+      );
+      await pool.query('INSERT INTO wallets (driver_id) VALUES ($1)', [created.rows[0].id]);
+      driverResult = created;
     }
 
     await pool.query(

@@ -308,8 +308,52 @@ const updateProfile = async (req, res) => {
   }
 };
 
+// Switch between passenger and driver mode on the same account. Switching
+// to 'passenger' is always allowed — anyone can request rides. Switching to
+// 'driver' requires an approved drivers row for this user, so someone can't
+// grant themselves driver access by simply calling this endpoint before
+// their vehicle/documents have actually been reviewed.
+const switchRole = async (req, res) => {
+  const user_id = req.user.id;
+  const { role } = req.body;
+
+  if (role !== 'passenger' && role !== 'driver') {
+    return res.status(400).json({ error: 'Invalid role' });
+  }
+
+  try {
+    if (role === 'driver') {
+      const driverResult = await pool.query(
+        `SELECT approval_status FROM drivers WHERE user_id = $1`,
+        [user_id]
+      );
+      if (driverResult.rows.length === 0 || driverResult.rows[0].approval_status !== 'approved') {
+        return res.status(403).json({ error: 'You do not have an approved driver profile yet' });
+      }
+    }
+
+    const result = await pool.query(
+      `UPDATE users SET role = $1 WHERE id = $2
+       RETURNING id, phone_number, email, first_name, last_name, role, status`,
+      [role, user_id]
+    );
+    const user = result.rows[0];
+
+    const token = jwt.sign(
+      { id: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    res.json({ token, user });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 module.exports = {
   requestOTP, verifyOTP, register, login,
   forgotPassword, resetPassword,
-  getProfile, savePushToken, updateProfile
+  getProfile, savePushToken, updateProfile, switchRole
 };
