@@ -9,6 +9,7 @@ import socketService from '../../services/socket';
 import { ridesAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, navy } from '../../utils/theme';
+import { getBearing } from '../../utils/geo';
 
 const CAR_ICON = require('../../../assets/car-top.png');
 // Driver location updates arrive roughly every 4s (the driver's own share
@@ -26,11 +27,19 @@ export default function ActiveRideScreen({ trip }: Props) {
   const colors = getColors(isDark);
   const styles = getStyles(colors);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
-  const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const initialDriverLocation = trip.driver_lat && trip.driver_lng
+    ? { latitude: parseFloat(trip.driver_lat), longitude: parseFloat(trip.driver_lng) }
+    : null;
+  const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(initialDriverLocation);
   // Mirrors driverLocation but read inside a mount-only effect's closure, so
   // it always reflects the latest value instead of the one captured when
   // the effect first ran (state would be frozen at null there).
-  const driverLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const driverLocationRef = useRef<{ latitude: number; longitude: number } | null>(initialDriverLocation);
+  // Tracks the last position seen via the DB-polling fallback specifically
+  // (separate from driverLocationRef, which the socket path also writes to)
+  // so the bearing-from-consecutive-points heading calculation below always
+  // compares against a same-source previous point.
+  const fallbackLocationRef = useRef<{ latitude: number; longitude: number } | null>(initialDriverLocation);
   const [driverHeading, setDriverHeading] = useState(0);
   const [trackCarMarker, setTrackCarMarker] = useState(true);
   const mapRef = useRef<RNMapView>(null);
@@ -62,6 +71,34 @@ export default function ActiveRideScreen({ trip }: Props) {
       socketService.offDriverLocation();
     };
   }, []);
+
+  // Fallback driver-location source for whenever the socket hasn't
+  // delivered an update — this screen used to be 100% dependent on the
+  // socket for driver position, so on a connection that never established
+  // (plausible on a weak network, since the client only tries the websocket
+  // transport) the passenger would see no car marker at all for the entire
+  // trip. Piggyback on the trip prop instead, which the parent
+  // (RideMatchingScreen) already refreshes every 3s via its own status
+  // poll. The DB fallback only has lat/lng, not the driver's own reported
+  // heading, so derive a heading from the bearing between consecutive
+  // fallback points instead of leaving the icon frozen at rotation 0.
+  useEffect(() => {
+    if (trip.driver_lat && trip.driver_lng) {
+      const dLat = parseFloat(trip.driver_lat);
+      const dLng = parseFloat(trip.driver_lng);
+      const prev = fallbackLocationRef.current;
+      if (prev && (Math.abs(prev.latitude - dLat) > 0.00001 || Math.abs(prev.longitude - dLng) > 0.00001)) {
+        setDriverHeading(getBearing(prev.latitude, prev.longitude, dLat, dLng));
+      }
+      const coord = { latitude: dLat, longitude: dLng };
+      fallbackLocationRef.current = coord;
+      if (carMarkerRef.current && driverLocationRef.current) {
+        carMarkerRef.current.animateMarkerToCoordinate(coord, MARKER_ANIMATION_MS);
+      }
+      driverLocationRef.current = coord;
+      setDriverLocation(coord);
+    }
+  }, [trip.driver_lat, trip.driver_lng]);
 
   // Same jank-avoidance as DriverFoundScreen: the car icon only visually
   // changes when heading updates, so only track view changes briefly

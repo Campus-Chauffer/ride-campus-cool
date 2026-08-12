@@ -10,6 +10,7 @@ import { ridesAPI } from '../../services/api';
 import socketService from '../../services/socket';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, navy, white } from '../../utils/theme';
+import { getBearing } from '../../utils/geo';
 
 const CAR_ICON = require('../../../assets/car-top.png');
 // Driver location updates arrive roughly every 4s (the driver's own share
@@ -39,6 +40,11 @@ export default function DriverFoundScreen({ trip, onCancelled }: Props) {
   // it always reflects the latest value instead of the one captured when
   // the effect first ran (state would be frozen at its initial value there).
   const driverLocationRef = useRef<any>(initialDriverLocation);
+  // Tracks the last position seen via the DB-polling fallback specifically
+  // (separate from driverLocationRef, which the socket path also writes to)
+  // so the bearing-from-consecutive-points heading calculation below always
+  // compares against a same-source previous point.
+  const fallbackLocationRef = useRef<any>(initialDriverLocation);
   const [driverHeading, setDriverHeading] = useState(0);
   const [routeCoords, setRouteCoords] = useState<any[]>([]);
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
@@ -95,6 +101,16 @@ export default function DriverFoundScreen({ trip, onCancelled }: Props) {
     if (trip.driver_lat && trip.driver_lng) {
       const dLat = parseFloat(trip.driver_lat);
       const dLng = parseFloat(trip.driver_lng);
+      const prev = fallbackLocationRef.current;
+      // Only the socket payload carries the driver's own reported heading —
+      // this DB fallback only has lat/lng, so derive a heading from the
+      // bearing between consecutive fallback points instead of leaving the
+      // icon frozen at whatever rotation it last had (0 if the socket never
+      // connected at all), which is what "stuck facing one direction" was.
+      if (prev && (Math.abs(prev.lat - dLat) > 0.00001 || Math.abs(prev.lng - dLng) > 0.00001)) {
+        setDriverHeading(getBearing(prev.lat, prev.lng, dLat, dLng));
+      }
+      fallbackLocationRef.current = { lat: dLat, lng: dLng };
       moveDriverMarker(dLat, dLng);
       setDriverLocation({ lat: dLat, lng: dLng });
       if (userLocationRef.current) {
