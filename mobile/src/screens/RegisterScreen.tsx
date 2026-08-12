@@ -96,7 +96,27 @@ export default function RegisterScreen({ route, navigation }: any) {
     // anything was wrong — which is the exact "signed up as driver, ended
     // up a student" bug. Only auto-login silently when the role matches;
     // otherwise surface it as a real conflict.
-    const loginRes = await authAPI.login(phone, password);
+    let loginRes;
+    try {
+      loginRes = await authAPI.login(phone, password);
+    } catch (loginErr: any) {
+      // A login failure only reaches here as part of the "already exists"
+      // fallback — someone trying to sign up, not sign in, so the raw
+      // "Incorrect password" from the login endpoint is misleading (they
+      // never chose to log in, and likely typed a different password than
+      // whatever the existing account already has). Say what's actually
+      // going on instead.
+      if (accountAlreadyExisted) {
+        setSubmitted(false);
+        Alert.alert(
+          'Account already exists',
+          'An account with this phone number or email already exists. Please sign in instead, or use a different phone number and email to register a new account.'
+        );
+        return;
+      }
+      throw loginErr;
+    }
+
     if (accountAlreadyExisted && loginRes.data.user.role !== role) {
       setSubmitted(false);
       Alert.alert(
