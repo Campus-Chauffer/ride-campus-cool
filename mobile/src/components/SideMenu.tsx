@@ -1,16 +1,16 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  Animated, Dimensions, TouchableWithoutFeedback,
+  Animated, Dimensions, TouchableWithoutFeedback, Alert,
 } from 'react-native';
 import {
   User, Clock, Wallet, Settings,
-  LogOut, ChevronRight, Megaphone, Car
+  LogOut, ChevronRight, Megaphone, Car, Repeat
 } from 'lucide-react-native';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows } from '../utils/theme';
-import { driverRegistrationAPI } from '../services/api';
+import { authAPI, driverRegistrationAPI } from '../services/api';
 
 const { width } = Dimensions.get('window');
 const MENU_WIDTH = width * 0.78;
@@ -22,11 +22,12 @@ interface Props {
 }
 
 export default function SideMenu({ visible, onClose, navigation }: Props) {
-  const { user, logout } = useAuthStore();
+  const { user, logout, setAuth } = useAuthStore();
   const { isDark } = useThemeStore();
   const c = getColors(isDark);
   const slideAnim = useRef(new Animated.Value(-MENU_WIDTH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [switchingRole, setSwitchingRole] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -66,6 +67,37 @@ export default function SideMenu({ visible, onClose, navigation }: Props) {
   const handleLogout = () => {
     onClose();
     setTimeout(() => logout(), 250);
+  };
+
+  // This used to only live inside Settings, two taps deep from here — a
+  // driver with no reason to go looking in Settings would have no way of
+  // knowing a way back to passenger mode existed at all. Surfacing it
+  // directly in the menu makes it visible the moment a driver opens it.
+  const handleSwitchToStudent = () => {
+    onClose();
+    setTimeout(() => {
+      Alert.alert(
+        'Switch to Student Mode?',
+        "You'll book rides instead of driving. You can switch back anytime.",
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Switch', onPress: async () => {
+              if (switchingRole) return;
+              setSwitchingRole(true);
+              try {
+                const res = await authAPI.switchRole('passenger');
+                await setAuth(res.data.token, res.data.user);
+              } catch (err: any) {
+                Alert.alert('Error', err.response?.data?.error || 'Could not switch mode');
+              } finally {
+                setSwitchingRole(false);
+              }
+            }
+          },
+        ]
+      );
+    }, 250);
   };
 
   if (!visible) return null;
@@ -111,6 +143,7 @@ export default function SideMenu({ visible, onClose, navigation }: Props) {
             { icon: <User size={20} color={textColor} />, label: 'My Profile', screen: 'Profile' },
             { icon: <Clock size={20} color={textColor} />, label: 'Ride History', screen: 'RideHistory' },
             ...(isDriver ? [{ icon: <Wallet size={20} color={textColor} />, label: 'Earnings', screen: 'Earnings' }] : []),
+            ...(isDriver ? [{ icon: <Repeat size={20} color={textColor} />, label: 'Switch to Student Mode', onPress: handleSwitchToStudent }] : []),
             ...(!isDriver ? [{ icon: <Car size={20} color={textColor} />, label: 'Become a Driver', onPress: handleBecomeDriver }] : []),
             { icon: <Megaphone size={20} color={textColor} />, label: 'Announcements', screen: 'Announcements' },
             { icon: <Settings size={20} color={textColor} />, label: 'Settings', screen: 'Settings' },
