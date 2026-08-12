@@ -95,6 +95,39 @@ const getRideHistory = async (req, res) => {
   }
 };
 
+// Get a single trip's current status. Same row shape as getRideHistory, but
+// scoped to one trip instead of the passenger's entire ride history — used
+// for the mobile app's in-ride status polling (every 3s while a ride is
+// active), where fetching the whole growing history table on every tick is
+// unnecessary weight that hurts most exactly when the network is weakest.
+const getTripStatus = async (req, res) => {
+  const passenger_id = req.user.id;
+  const { trip_id } = req.params;
+  try {
+    const result = await pool.query(
+      `SELECT t.*,
+              u.first_name as driver_first_name,
+              u.last_name as driver_last_name,
+              u.phone_number as driver_phone,
+              u.profile_photo as driver_photo,
+              d.user_id as driver_user_id,
+              d.vehicle_make, d.vehicle_model, d.vehicle_color, d.plate_number,
+              d.current_lat as driver_lat, d.current_lng as driver_lng
+       FROM trips t
+       LEFT JOIN drivers d ON t.driver_id = d.id
+       LEFT JOIN users u ON d.user_id = u.id
+       WHERE t.id = $1 AND t.passenger_id = $2`,
+      [trip_id, passenger_id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 // Cancel a ride
 const cancelRide = async (req, res) => {
   const { trip_id } = req.params;
@@ -327,6 +360,6 @@ const isWithinCampus = (lat, lng) => {
 };
 
 module.exports = {
-  requestRide, getRideHistory, cancelRide, getDirections,
+  requestRide, getRideHistory, getTripStatus, cancelRide, getDirections,
   getGeocode, getPlaceAutocomplete, getPlaceDetails,
 };

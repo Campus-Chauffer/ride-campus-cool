@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const {
-  requestRide, getRideHistory, cancelRide, getDirections,
+  requestRide, getRideHistory, getTripStatus, cancelRide, getDirections,
   getGeocode, getPlaceAutocomplete, getPlaceDetails,
 } = require('../controllers/ridesController');
 const { authenticate } = require('../middleware/auth');
@@ -22,6 +22,7 @@ const rideLimiter = rateLimit({
 
 router.post('/request', authenticate, rideLimiter, requestRide);
 router.get('/history', authenticate, getRideHistory);
+router.get('/status/:trip_id', authenticate, getTripStatus);
 router.delete('/cancel/:trip_id', authenticate, cancelRide);
 router.get('/directions', authenticate, getDirections);
 router.get('/geocode', authenticate, getGeocode);

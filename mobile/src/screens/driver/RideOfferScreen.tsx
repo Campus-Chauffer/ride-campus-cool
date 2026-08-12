@@ -10,9 +10,13 @@ import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, androidTopPadding } from '../../utils/theme';
 
 const { width } = Dimensions.get('window');
-const SLIDER_WIDTH = width - spacing.lg * 2 - 32;
+// Fallback estimate used only until the track's real width is measured —
+// the previous fixed SLIDER_WIDTH guessed the track's width instead of
+// measuring it, and was off by enough that the thumb visibly stopped short
+// of the track's right edge instead of reaching it.
+const FALLBACK_SLIDER_WIDTH = width - spacing.lg * 2;
 const THUMB_SIZE = 56;
-const MAX_SLIDE = SLIDER_WIDTH - THUMB_SIZE;
+const TRACK_PADDING = 4;
 
 interface Props {
   trip: any;
@@ -27,19 +31,24 @@ export default function RideOfferScreen({ trip, onAccepted, onDeclined, timer }:
   const styles = getStyles(colors);
   const slideX = useRef(new Animated.Value(0)).current;
   const [accepted, setAccepted] = useState(false);
+  const [trackWidth, setTrackWidth] = useState(FALLBACK_SLIDER_WIDTH);
+  const maxSlide = Math.max(trackWidth - THUMB_SIZE - TRACK_PADDING * 2, 0);
+  const maxSlideRef = useRef(maxSlide);
+  maxSlideRef.current = maxSlide;
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gs) => {
-        const newX = Math.max(0, Math.min(gs.dx, MAX_SLIDE));
+        const newX = Math.max(0, Math.min(gs.dx, maxSlideRef.current));
         slideX.setValue(newX);
       },
       onPanResponderRelease: (_, gs) => {
-        if (gs.dx >= MAX_SLIDE * 0.85) {
+        const max = maxSlideRef.current;
+        if (gs.dx >= max * 0.85) {
           Animated.spring(slideX, {
-            toValue: MAX_SLIDE,
+            toValue: max,
             useNativeDriver: false,
           }).start(() => {
             setAccepted(true);
@@ -57,12 +66,12 @@ export default function RideOfferScreen({ trip, onAccepted, onDeclined, timer }:
   ).current;
 
   const sliderColor = slideX.interpolate({
-    inputRange: [0, MAX_SLIDE],
+    inputRange: [0, Math.max(maxSlide, 1)],
     outputRange: [colors.gray2, colors.success],
   });
 
   const textOpacity = slideX.interpolate({
-    inputRange: [0, MAX_SLIDE * 0.5],
+    inputRange: [0, Math.max(maxSlide, 1) * 0.5],
     outputRange: [1, 0],
   });
 
@@ -127,7 +136,10 @@ export default function RideOfferScreen({ trip, onAccepted, onDeclined, timer }:
 
       {/* Slide to accept */}
       <View style={styles.sliderContainer}>
-        <Animated.View style={[styles.sliderTrack, { backgroundColor: sliderColor }]}>
+        <Animated.View
+          style={[styles.sliderTrack, { backgroundColor: sliderColor }]}
+          onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}
+        >
           <Animated.Text style={[styles.sliderText, { opacity: textOpacity }]}>
             Slide to accept →
           </Animated.Text>

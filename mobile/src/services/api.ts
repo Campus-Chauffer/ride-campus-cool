@@ -101,6 +101,8 @@ export const ridesAPI = {
 
   getHistory: () => api.get('/rides/history'),
 
+  getTripStatus: (trip_id: number) => api.get(`/rides/status/${trip_id}`),
+
   cancelRide: (trip_id: number) =>
     api.delete(`/rides/cancel/${trip_id}`),
 

@@ -20,11 +20,10 @@ const MARKER_ANIMATION_MS = 2500;
 
 interface Props {
   trip: any;
-  onRideStarted: () => void;
   onCancelled: () => void;
 }
 
-export default function DriverFoundScreen({ trip, onRideStarted, onCancelled }: Props) {
+export default function DriverFoundScreen({ trip, onCancelled }: Props) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
   const styles = getStyles(colors);
@@ -45,7 +44,6 @@ export default function DriverFoundScreen({ trip, onRideStarted, onCancelled }: 
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
   const [etaText, setEtaText] = useState<string | null>(null);
   const [trackCarMarker, setTrackCarMarker] = useState(true);
-  const pollInterval = useRef<any>(null);
   const directionsRequestId = useRef(0);
 
   // Glides the car icon to its new position instead of letting the
@@ -61,7 +59,6 @@ export default function DriverFoundScreen({ trip, onRideStarted, onCancelled }: 
 
   useEffect(() => {
     getUserLocation();
-    pollTripStatus();
 
     socketService.onDriverLocation((data) => {
       const { latitude, longitude, heading } = data;
@@ -81,10 +78,30 @@ export default function DriverFoundScreen({ trip, onRideStarted, onCancelled }: 
     });
 
     return () => {
-      clearInterval(pollInterval.current);
       socketService.offDriverLocation();
     };
   }, []);
+
+  // Fallback driver-location source for whenever the socket hasn't delivered
+  // an update yet — piggybacks on the trip prop, which the parent
+  // (RideMatchingScreen) already refreshes every 3s via its own status poll,
+  // instead of running a second independent poll of the same data here. This
+  // screen used to run its own 3s getHistory() poll in parallel with the
+  // parent's, doubling request load right when a driver is en route — the
+  // worst possible time to double up on a weak connection, and the parent's
+  // poll is also the only place that ever checks for the 'arrived' status,
+  // so the duplicate poll here was pure waste, not redundancy.
+  useEffect(() => {
+    if (trip.driver_lat && trip.driver_lng) {
+      const dLat = parseFloat(trip.driver_lat);
+      const dLng = parseFloat(trip.driver_lng);
+      moveDriverMarker(dLat, dLng);
+      setDriverLocation({ lat: dLat, lng: dLng });
+      if (userLocationRef.current) {
+        getDirections(dLat, dLng, userLocationRef.current.lat, userLocationRef.current.lng);
+      }
+    }
+  }, [trip.driver_lat, trip.driver_lng]);
 
   useEffect(() => {
     if (userLocation && driverLocation) {
@@ -121,38 +138,11 @@ export default function DriverFoundScreen({ trip, onRideStarted, onCancelled }: 
     }
   };
 
-  const pollTripStatus = () => {
-    pollInterval.current = setInterval(async () => {
-      try {
-        const res = await ridesAPI.getHistory();
-        const currentTrip = res.data.find((t: any) => t.id === trip.id);
-        if (!currentTrip) return;
-
-        if (currentTrip.status === 'in_progress') {
-          clearInterval(pollInterval.current);
-          onRideStarted();
-          return;
-        }
-
-        if (currentTrip.driver_lat && currentTrip.driver_lng) {
-          const dLat = parseFloat(currentTrip.driver_lat);
-          const dLng = parseFloat(currentTrip.driver_lng);
-          moveDriverMarker(dLat, dLng);
-          setDriverLocation({ lat: dLat, lng: dLng });
-          if (userLocationRef.current) {
-            getDirections(dLat, dLng, userLocationRef.current.lat, userLocationRef.current.lng);
-          }
-        }
-      } catch (err) {
-        console.log('Poll error:', err);
-      }
-    }, 3000);
-  };
-
   const getDirections = async (fromLat: number, fromLng: number, toLat: number, toLng: number) => {
-    // Requests fire from three places (socket updates, the 3s poll, and the
-    // userLocation effect) and can resolve out of order on a slow network —
-    // guard against an older response clobbering a newer one's route/ETA.
+    // Requests fire from three places (socket updates, the trip-prop fallback
+    // effect, and the userLocation effect) and can resolve out of order on a
+    // slow network — guard against an older response clobbering a newer one's
+    // route/ETA.
     const requestId = ++directionsRequestId.current;
     try {
       const res = await ridesAPI.getDirections(fromLat, fromLng, toLat, toLng);

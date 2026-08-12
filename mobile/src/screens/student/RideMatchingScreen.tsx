@@ -60,8 +60,8 @@ export default function RideMatchingScreen({ route, navigation }: any) {
   const startPolling = () => {
     pollInterval.current = setInterval(async () => {
       try {
-        const res = await ridesAPI.getHistory();
-        const updated = res.data.find((r: any) => r.id === trip.id);
+        const res = await ridesAPI.getTripStatus(trip.id);
+        const updated = res.data;
         if (!updated) return;
         setCurrentTrip(updated);
 
@@ -163,7 +163,6 @@ export default function RideMatchingScreen({ route, navigation }: any) {
       {phase === 'driver_found' && (
         <DriverFoundScreen
           trip={currentTrip}
-          onRideStarted={() => updatePhase('in_progress')}
           onCancelled={() => navigation.goBack()}
         />
       )}
