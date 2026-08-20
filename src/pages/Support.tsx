@@ -22,8 +22,8 @@ const FAQS = [
     a: "After a ride, you can rate your driver or passenger and leave a comment. For anything more serious, use the report option in the app, or email us directly with the trip details (date, time, and driver/passenger name if known) so we can look into it.",
   },
   {
-    q: "How do I delete my account?",
-    a: "Email us at the address below with your registered phone number and we'll process the deletion request, in line with our Privacy Policy.",
+    q: "How do I delete my Campus Chauffeur account?",
+    a: "Email us at campuschauffeur1@gmail.com from the address on your account, or include your registered phone number, with the subject \"Delete my account.\" We'll process the request and delete your profile information — name, email, phone number, profile photo, and (for drivers) verification documents. Completed ride and payment records are kept for a limited period afterward for legal, dispute-resolution, and fraud-prevention purposes, as described in our Privacy Policy, and are deleted once that period ends.",
   },
   {
     q: "I'm a driver — how does commission and payout work?",
