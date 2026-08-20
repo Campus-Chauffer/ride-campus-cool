@@ -5,10 +5,15 @@ CREATE TABLE IF NOT EXISTS users (
   first_name VARCHAR(100),
   last_name VARCHAR(100),
   role VARCHAR(20) DEFAULT 'passenger',
+  -- 'active' | 'blocked' | 'pending_deletion' | 'deleted'. pending_deletion
+  -- accounts have already been anonymized (see requestAccountDeletion in
+  -- authController.js) and sit for 30 days before schedulePurgeDeletedAccounts
+  -- finalizes them to 'deleted'.
   status VARCHAR(20) DEFAULT 'active',
   password_hash VARCHAR(255),
   push_token TEXT,
   profile_photo TEXT,
+  deletion_requested_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW()
 );
 

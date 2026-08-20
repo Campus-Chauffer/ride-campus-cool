@@ -57,10 +57,23 @@ export default function Users() {
   // needs to show up wherever the admin is tracking driver counts.
   const isApprovedDriver = (u) => u.driver_status === "approved";
 
+  // A deleted/pending-deletion account is neither "active" nor "blocked" —
+  // was previously falling through to a plain !== "blocked" check and
+  // showing as a misleadingly normal "Active" user, right when accurate
+  // visibility into these accounts matters most (fraud/dispute review
+  // during their 30-day retention window).
+  const STATUS_BADGES = {
+    active: { label: "Active", className: "bg-green-500/10 text-green-400" },
+    blocked: { label: "Blocked", className: "bg-red-500/10 text-red-400" },
+    pending_deletion: { label: "Pending Deletion", className: "bg-yellow-500/10 text-yellow-400" },
+    deleted: { label: "Deleted", className: "bg-gray-500/10 text-gray-400" },
+  };
+  const statusBadge = (status) => STATUS_BADGES[status] || STATUS_BADGES.active;
+
   const filtered = users.filter((u) => {
     const matchFilter =
       filter === "all" ||
-      (filter === "active" && u.status !== "blocked") ||
+      (filter === "active" && u.status === "active") ||
       (filter === "blocked" && u.status === "blocked") ||
       (filter === "student" && u.role === "passenger") ||
       (filter === "driver" && isApprovedDriver(u));
@@ -208,17 +221,16 @@ export default function Users() {
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                            user.status === "blocked"
-                              ? "bg-red-500/10 text-red-400"
-                              : "bg-green-500/10 text-green-400"
-                          }`}
+                          className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusBadge(user.status).className}`}
                         >
-                          {user.status === "blocked" ? "Blocked" : "Active"}
+                          {statusBadge(user.status).label}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-500 text-xs">{formatDate(user.created_at)}</td>
                       <td className="px-4 py-3">
+                        {(user.status === "pending_deletion" || user.status === "deleted") ? (
+                          <span className="text-gray-600 text-xs">—</span>
+                        ) : (
                         <button
                           onClick={(e) => { e.stopPropagation(); toggleBlock(user); }}
                           disabled={actioningId === user.id}
@@ -240,6 +252,7 @@ export default function Users() {
                             </>
                           )}
                         </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -299,11 +312,9 @@ export default function Users() {
                     : "Student"}
                 </span>
                 <span
-                  className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                    selected.status === "blocked" ? "bg-red-500/10 text-red-400" : "bg-green-500/10 text-green-400"
-                  }`}
+                  className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusBadge(selected.status).className}`}
                 >
-                  {selected.status === "blocked" ? "Blocked" : "Active"}
+                  {statusBadge(selected.status).label}
                 </span>
               </div>
 
@@ -321,7 +332,7 @@ export default function Users() {
                 <RideHistoryPanel userId={selected.id} />
               </div>
 
-              {selected.role !== "admin" && (
+              {selected.role !== "admin" && selected.status !== "pending_deletion" && selected.status !== "deleted" && (
                 <button
                   onClick={() => toggleBlock(selected)}
                   disabled={actioningId === selected.id}

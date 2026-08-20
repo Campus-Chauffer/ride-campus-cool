@@ -30,7 +30,7 @@ const reportsRoutes = require('./routes/reports');
 const ratingsRoutes = require('./routes/ratings');
 const driverRegistrationRoutes = require('./routes/driverRegistration');
 const announcementsRoutes = require('./routes/announcements');
-const { scheduleDailyLockout, scheduleNightWarning } = require('./utils/scheduler');
+const { scheduleDailyLockout, scheduleNightWarning, schedulePurgeDeletedAccounts } = require('./utils/scheduler');
 const pool = require('./db/pool');
 
 const app = express();
@@ -151,5 +151,6 @@ server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   scheduleDailyLockout();
   scheduleNightWarning();
-  console.log('Scheduled jobs running: 4AM lockout, 11PM warning');
+  schedulePurgeDeletedAccounts();
+  console.log('Scheduled jobs running: 4AM lockout, 11PM warning, 3AM deletion purge');
 });

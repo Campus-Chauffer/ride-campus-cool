@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import {
   ArrowLeft, Bell, Moon, Shield,
-  HelpCircle, LogOut, ChevronRight, Info, Repeat
+  HelpCircle, LogOut, ChevronRight, Info, Repeat, Trash2
 } from 'lucide-react-native';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
@@ -19,6 +19,7 @@ export default function SettingsScreen({ navigation }: any) {
   const [notifications, setNotifications] = useState(true);
   const [hasApprovedDriverProfile, setHasApprovedDriverProfile] = useState(false);
   const [switchingRole, setSwitchingRole] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     if (user?.role === 'passenger') {
@@ -53,6 +54,29 @@ export default function SettingsScreen({ navigation }: any) {
               Alert.alert('Error', err.response?.data?.error || 'Could not switch mode');
             } finally {
               setSwitchingRole(false);
+            }
+          }
+        },
+      ]
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Your Account?',
+      "This immediately removes your name, contact info, and photo, and signs you out everywhere — this can't be undone. Ride and payment records are kept for up to 30 days for fraud and dispute investigations, then fully deleted.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Account', style: 'destructive', onPress: async () => {
+            setDeletingAccount(true);
+            try {
+              await authAPI.deleteAccount();
+              await logout();
+            } catch (err: any) {
+              Alert.alert('Error', err.response?.data?.error || 'Could not delete account. Please try again.');
+            } finally {
+              setDeletingAccount(false);
             }
           }
         },
@@ -184,6 +208,13 @@ export default function SettingsScreen({ navigation }: any) {
             icon={<LogOut size={18} color={c.error} />}
             label="Logout"
             onPress={handleLogout}
+            danger
+          />
+          <View style={[styles.rowDivider, { backgroundColor: c.gray2 }]} />
+          <SettingRow
+            icon={<Trash2 size={18} color={c.error} />}
+            label={deletingAccount ? 'Deleting…' : 'Delete Account'}
+            onPress={() => !deletingAccount && handleDeleteAccount()}
             danger
           />
         </View>

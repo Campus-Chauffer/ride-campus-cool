@@ -154,6 +154,9 @@ const login = async (req, res) => {
     if (user.status === 'blocked') {
       return res.status(403).json({ error: 'Account blocked. Contact support.' });
     }
+    if (user.status === 'pending_deletion' || user.status === 'deleted') {
+      return res.status(403).json({ error: 'This account has been deleted.' });
+    }
 
     const token = jwt.sign(
       { id: user.id, role: user.role },
@@ -352,8 +355,52 @@ const switchRole = async (req, res) => {
   }
 };
 
+// Request account deletion. Anonymizes personal info immediately (so the
+// account is unusable and unidentifiable right away) but doesn't hard-delete
+// it — trips/ledger/reports reference this row via foreign keys, and other
+// parties' ride history + any open reports need to survive. The account sits
+// as 'pending_deletion' for 30 days (schedulePurgeDeletedAccounts in
+// scheduler.js) before the last sensitive traces — driver verification
+// documents — are purged, giving a window to investigate any in-flight
+// scam/fraud report tied to the account before that evidence disappears.
+const requestAccountDeletion = async (req, res) => {
+  const user_id = req.user.id;
+  try {
+    const userResult = await pool.query('SELECT id FROM users WHERE id = $1', [user_id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+
+    // phone_number is NOT NULL + UNIQUE, so it can't just be cleared —
+    // "del-<id>" is guaranteed unique (ids are unique) and well under the
+    // column's 20-char limit, and no longer resembles a real phone number.
+    const anonymizedPhone = `del-${user_id}`;
+
+    await pool.query(
+      `UPDATE users SET
+        first_name = 'Deleted',
+        last_name = 'User',
+        email = NULL,
+        phone_number = $1,
+        password_hash = NULL,
+        push_token = NULL,
+        profile_photo = NULL,
+        status = 'pending_deletion',
+        deletion_requested_at = NOW()
+       WHERE id = $2`,
+      [anonymizedPhone, user_id]
+    );
+
+    res.json({ message: 'Account deleted. Any remaining data will be fully removed within 30 days.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 module.exports = {
   requestOTP, verifyOTP, register, login,
   forgotPassword, resetPassword,
-  getProfile, savePushToken, updateProfile, switchRole
+  getProfile, savePushToken, updateProfile, switchRole,
+  requestAccountDeletion
 };

@@ -128,13 +128,16 @@ export default function PrivacyPolicy() {
         <h2>4. Data Retention</h2>
         <p>
           We retain account and ride data for as long as your account is
-          active, and for a reasonable period afterward as needed for
-          record-keeping, dispute resolution, fraud prevention, and to comply
-          with legal obligations. Driver verification documents are retained
-          for the duration of your registration as a driver and for a period
-          afterward as required for safety and compliance record-keeping. You
-          may request deletion of your account and associated data as
-          described in Section 6.
+          active. When you request account deletion, your name, contact
+          details, and profile photo are anonymized immediately and you're
+          signed out everywhere. Ride and payment history, and (for drivers)
+          verification documents, are kept for up to 30 days afterward
+          specifically to preserve evidence for any in-progress fraud,
+          safety, or dispute investigation tied to the account, after which
+          they are permanently deleted. Completed ride and payment records
+          belonging to the other party in a trip (e.g. a driver's copy of a
+          ride with a deleted passenger) are retained as part of that other
+          user's own account history.
         </p>
 
         <h2>5. Data Security</h2>
@@ -155,7 +158,7 @@ export default function PrivacyPolicy() {
         <ul>
           <li>Access the personal information we hold about you</li>
           <li>Request correction of inaccurate or incomplete information</li>
-          <li>Request deletion of your account and personal information, subject to our legitimate need to retain certain records (e.g. completed ride and payment history) as described in Section 4</li>
+          <li>Request deletion of your account and personal information — available directly in the app under Settings, or by contacting us — subject to our legitimate need to retain certain records for a limited period as described in Section 4</li>
           <li>Withdraw consent to location access at any time via your device settings — note that this will prevent you from requesting or fulfilling rides while location access is disabled</li>
         </ul>
         <p>

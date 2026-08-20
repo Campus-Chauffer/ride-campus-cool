@@ -81,4 +81,41 @@ const scheduleNightWarning = () => {
   });
 };
 
-module.exports = { scheduleDailyLockout, scheduleNightWarning };
+// Finalizes account deletions once their 30-day anonymization window has
+// passed. Personal info on the users row is already scrubbed the moment
+// deletion is requested (authController.requestAccountDeletion) — this only
+// deals with what's still identifiable/sensitive at that point: a driver's
+// verification documents, kept intact for 30 days specifically so an
+// in-flight scam/fraud report against the account still has evidence to
+// investigate, then purged once that window closes.
+const schedulePurgeDeletedAccounts = () => {
+  cron.schedule('0 3 * * *', async () => {
+    console.log('Running account deletion purge...');
+    try {
+      const dueResult = await pool.query(
+        `SELECT id FROM users
+         WHERE status = 'pending_deletion'
+         AND deletion_requested_at <= NOW() - INTERVAL '30 days'`
+      );
+
+      for (const user of dueResult.rows) {
+        await pool.query(
+          `UPDATE drivers SET
+            ghana_card_number = NULL, ghana_card_image = NULL,
+            license_number = NULL, license_image = NULL,
+            vehicle_front_image = NULL, vehicle_side_image = NULL,
+            vehicle_back_image = NULL
+           WHERE user_id = $1`,
+          [user.id]
+        );
+        await pool.query(`UPDATE users SET status = 'deleted' WHERE id = $1`, [user.id]);
+      }
+
+      console.log(`Deletion purge complete. ${dueResult.rows.length} account(s) finalized.`);
+    } catch (err) {
+      console.error('Deletion purge error:', err);
+    }
+  });
+};
+
+module.exports = { scheduleDailyLockout, scheduleNightWarning, schedulePurgeDeletedAccounts };

@@ -23,7 +23,7 @@ const FAQS = [
   },
   {
     q: "How do I delete my Campus Chauffeur account?",
-    a: "Email us at campuschauffeur1@gmail.com from the address on your account, or include your registered phone number, with the subject \"Delete my account.\" We'll process the request and delete your profile information — name, email, phone number, profile photo, and (for drivers) verification documents. Completed ride and payment records are kept for a limited period afterward for legal, dispute-resolution, and fraud-prevention purposes, as described in our Privacy Policy, and are deleted once that period ends.",
+    a: "In the app, go to Settings and tap \"Delete Account.\" Your name, contact info, and photo are removed immediately and you're signed out everywhere. If you can't access the app, email us at campuschauffeur1@gmail.com with your registered phone number and we'll process it for you. Either way, ride and payment records (and, for drivers, verification documents) are kept for up to 30 days afterward to protect against scams and fraud in case a report is still under investigation, then permanently deleted.",
   },
   {
     q: "I'm a driver — how does commission and payout work?",

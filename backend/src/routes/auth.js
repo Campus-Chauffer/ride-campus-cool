@@ -3,7 +3,8 @@ const router = express.Router();
 const {
   requestOTP, verifyOTP, register, login,
   forgotPassword, resetPassword,
-  getProfile, savePushToken, updateProfile, switchRole
+  getProfile, savePushToken, updateProfile, switchRole,
+  requestAccountDeletion
 } = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
 
@@ -17,5 +18,6 @@ router.get('/profile', authenticate, getProfile);
 router.post('/push-token', authenticate, savePushToken);
 router.patch('/profile', authenticate, updateProfile);
 router.patch('/switch-role', authenticate, switchRole);
+router.delete('/account', authenticate, requestAccountDeletion);
 
 module.exports = router;

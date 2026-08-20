@@ -113,6 +113,8 @@ export const authAPI = {
 
   switchRole: (role: 'passenger' | 'driver') =>
     api.patch('/auth/switch-role', { role }),
+
+  deleteAccount: () => api.delete('/auth/account'),
 };
 
 export const ridesAPI = {
