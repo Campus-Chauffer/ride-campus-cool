@@ -127,11 +127,13 @@ export default function Drivers() {
 
   const filtered = drivers.filter((d) => {
     if (filter === "all") return true;
+    if (filter === "online") return d.is_online;
     return d.approval_status === filter;
   });
 
   const stats = [
     { label: "Total drivers", value: drivers.length },
+    { label: "Online now", value: drivers.filter((d) => d.is_online).length },
     { label: "Pending review", value: drivers.filter((d) => d.approval_status === "pending").length },
     { label: "Approved", value: drivers.filter((d) => d.approval_status === "approved").length },
     { label: "Blocked", value: drivers.filter((d) => d.approval_status === "blocked").length },
@@ -149,7 +151,7 @@ export default function Drivers() {
         <p className="text-gray-500 text-sm mt-1">Review and manage driver applications</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {stats.map((s) => (
           <div key={s.label} className="bg-gray-900 rounded-xl p-5 border border-gray-800">
             <p className="text-gray-500 text-xs mb-1.5">{s.label}</p>
@@ -175,6 +177,7 @@ export default function Drivers() {
         <select value={filter} onChange={(e) => setFilter(e.target.value)}
           className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400/50 transition">
           <option value="all">All drivers</option>
+          <option value="online">Online now</option>
           <option value="pending">Pending review</option>
           <option value="approved">Approved</option>
           <option value="blocked">Blocked</option>
@@ -211,12 +214,23 @@ export default function Drivers() {
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-yellow-400/10 rounded-full flex items-center justify-center flex-shrink-0">
-                            <User size={14} className="text-yellow-400" />
+                          <div className="relative flex-shrink-0">
+                            <div className="w-8 h-8 bg-yellow-400/10 rounded-full flex items-center justify-center">
+                              <User size={14} className="text-yellow-400" />
+                            </div>
+                            {driver.is_online && (
+                              <span
+                                className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-gray-900"
+                                title="Online"
+                              />
+                            )}
                           </div>
                           <div>
                             <p className="text-white font-medium">{driver.first_name} {driver.last_name}</p>
-                            <p className="text-gray-500 text-xs">{driver.phone_number}</p>
+                            <p className="text-gray-500 text-xs flex items-center gap-1.5">
+                              {driver.phone_number}
+                              {driver.is_online && <span className="text-green-400 font-medium">· Online</span>}
+                            </p>
                           </div>
                         </div>
                       </td>
@@ -306,9 +320,15 @@ export default function Drivers() {
                 </div>
               </div>
 
-              <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${APPROVAL_STYLES[selected.approval_status] || "bg-gray-500/10 text-gray-400"}`}>
-                {selected.approval_status || "—"}
-              </span>
+              <div className="flex gap-2">
+                <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${APPROVAL_STYLES[selected.approval_status] || "bg-gray-500/10 text-gray-400"}`}>
+                  {selected.approval_status || "—"}
+                </span>
+                <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${selected.is_online ? "bg-green-500/10 text-green-400" : "bg-gray-500/10 text-gray-400"}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${selected.is_online ? "bg-green-400" : "bg-gray-500"}`} />
+                  {selected.is_online ? "Online" : "Offline"}
+                </span>
+              </div>
 
               {editing ? (
                 /* Edit form — covers everything an admin might need to fill
