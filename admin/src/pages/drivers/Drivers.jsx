@@ -13,6 +13,28 @@ const EDITABLE_FIELDS = [
   { key: "license_expiry", label: "License Expiry", type: "date" },
 ];
 
+// Same fields the mobile registration flow collects (DriverRegistrationScreen
+// / DriverVehicleScreen), stored as base64 data URIs — the admin edit form
+// re-encodes an uploaded file client-side the same way the app does, so no
+// backend change was needed beyond accepting these column names too.
+const IMAGE_FIELDS = [
+  { key: "profile_photo", label: "Driver Face Photo" },
+  { key: "ghana_card_image", label: "Ghana Card" },
+  { key: "license_image", label: "Driver's License" },
+  { key: "vehicle_front_image", label: "Vehicle Front" },
+  { key: "vehicle_side_image", label: "Vehicle Side" },
+  { key: "vehicle_back_image", label: "Vehicle Back" },
+];
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 // The API returns license_expiry as a full ISO timestamp — <input type="date">
 // needs just the YYYY-MM-DD portion, otherwise it renders blank.
 function toDateInputValue(value) {
@@ -81,6 +103,19 @@ export default function Drivers() {
       setError(err.response?.data?.error || "Failed to update driver profile.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  // Only fields the admin actually replaces end up in editForm — an untouched
+  // image is simply absent from the request, so the existing one on file is
+  // left alone rather than being re-sent (or worse, accidentally cleared).
+  async function handleImageChange(key, file) {
+    if (!file) return;
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setEditForm((prev) => ({ ...prev, [key]: dataUrl }));
+    } catch (err) {
+      setError("Could not read that image file.");
     }
   }
 
@@ -352,6 +387,39 @@ export default function Drivers() {
                       </div>
                     ))}
                   </div>
+
+                  <div className="flex items-center gap-2 mt-5 mb-3">
+                    <FileText size={14} className="text-yellow-400" />
+                    <p className="text-white font-medium text-sm">Documents & Photos</p>
+                  </div>
+                  <div className="space-y-3">
+                    {IMAGE_FIELDS.map(({ key, label }) => {
+                      const preview = editForm[key] || selected[key];
+                      return (
+                        <div key={key}>
+                          <label className="text-gray-500 text-xs block mb-1.5">{label}</label>
+                          {preview ? (
+                            <img
+                              src={preview}
+                              alt={label}
+                              className="w-full h-24 object-cover rounded-lg border border-gray-800 mb-1.5"
+                            />
+                          ) : (
+                            <div className="bg-gray-800/60 rounded-lg h-24 flex items-center justify-center text-gray-500 text-xs mb-1.5">
+                              Not uploaded
+                            </div>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageChange(key, e.target.files?.[0])}
+                            className="w-full text-xs text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-gray-800 file:text-gray-300 hover:file:bg-gray-700 file:cursor-pointer cursor-pointer"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+
                   <div className="flex gap-2 mt-4">
                     <button
                       onClick={saveDriverEdits}

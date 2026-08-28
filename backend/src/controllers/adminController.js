@@ -44,28 +44,50 @@ const approveDriver = async (req, res) => {
 const EDITABLE_DRIVER_FIELDS = [
   'vehicle_make', 'vehicle_model', 'vehicle_color', 'plate_number',
   'ghana_card_number', 'license_number', 'license_expiry',
+  'ghana_card_image', 'license_image',
+  'vehicle_front_image', 'vehicle_side_image', 'vehicle_back_image',
 ];
 
 const updateDriverProfile = async (req, res) => {
   const { driver_id } = req.params;
+  // profile_photo lives on users, not drivers (same as the mobile
+  // registration flow — driverRegistrationController.js writes it there
+  // too), so it's handled as a separate query below rather than folded
+  // into the drivers UPDATE.
+  const { profile_photo, ...driverFields } = req.body;
 
-  const updates = Object.keys(req.body).filter((key) => EDITABLE_DRIVER_FIELDS.includes(key));
-  if (updates.length === 0) {
+  const updates = Object.keys(driverFields).filter((key) => EDITABLE_DRIVER_FIELDS.includes(key));
+  if (updates.length === 0 && profile_photo === undefined) {
     return res.status(400).json({ error: 'No editable fields provided' });
   }
 
-  const setClause = updates.map((field, i) => `${field} = $${i + 1}`).join(', ');
-  const values = updates.map((field) => req.body[field] || null);
-
   try {
-    const result = await pool.query(
-      `UPDATE drivers SET ${setClause} WHERE id = $${updates.length + 1} RETURNING *`,
-      [...values, driver_id]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Driver not found' });
+    let driver;
+    if (updates.length > 0) {
+      const setClause = updates.map((field, i) => `${field} = $${i + 1}`).join(', ');
+      const values = updates.map((field) => driverFields[field] || null);
+      const result = await pool.query(
+        `UPDATE drivers SET ${setClause} WHERE id = $${updates.length + 1} RETURNING *`,
+        [...values, driver_id]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Driver not found' });
+      }
+      driver = result.rows[0];
+    } else {
+      const existing = await pool.query('SELECT * FROM drivers WHERE id = $1', [driver_id]);
+      if (existing.rows.length === 0) {
+        return res.status(404).json({ error: 'Driver not found' });
+      }
+      driver = existing.rows[0];
     }
-    res.json({ message: 'Driver profile updated', driver: result.rows[0] });
+
+    if (profile_photo !== undefined) {
+      await pool.query('UPDATE users SET profile_photo = $1 WHERE id = $2', [profile_photo || null, driver.user_id]);
+      driver = { ...driver, profile_photo };
+    }
+
+    res.json({ message: 'Driver profile updated', driver });
   } catch (err) {
     if (err.code === '23505') {
       return res.status(400).json({ error: 'This plate number is already registered to another driver' });
