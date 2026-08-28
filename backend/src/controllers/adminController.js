@@ -36,6 +36,45 @@ const approveDriver = async (req, res) => {
   }
 };
 
+// Edit a driver's profile fields. Available regardless of approval status —
+// meant for an admin filling in or correcting info a driver skipped or got
+// wrong during registration (e.g. a missing plate number), not just a
+// pre-approval review step. Only touches fields explicitly provided, so an
+// admin can fill in one missing field without needing to resend everything.
+const EDITABLE_DRIVER_FIELDS = [
+  'vehicle_make', 'vehicle_model', 'vehicle_color', 'plate_number',
+  'ghana_card_number', 'license_number', 'license_expiry',
+];
+
+const updateDriverProfile = async (req, res) => {
+  const { driver_id } = req.params;
+
+  const updates = Object.keys(req.body).filter((key) => EDITABLE_DRIVER_FIELDS.includes(key));
+  if (updates.length === 0) {
+    return res.status(400).json({ error: 'No editable fields provided' });
+  }
+
+  const setClause = updates.map((field, i) => `${field} = $${i + 1}`).join(', ');
+  const values = updates.map((field) => req.body[field] || null);
+
+  try {
+    const result = await pool.query(
+      `UPDATE drivers SET ${setClause} WHERE id = $${updates.length + 1} RETURNING *`,
+      [...values, driver_id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Driver not found' });
+    }
+    res.json({ message: 'Driver profile updated', driver: result.rows[0] });
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(400).json({ error: 'This plate number is already registered to another driver' });
+    }
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 // Block a driver
 const blockDriver = async (req, res) => {
   const { driver_id } = req.params;
@@ -601,7 +640,7 @@ const getDriverActivity = async (req, res) => {
 
 
 module.exports = {
-  getAllDrivers, approveDriver, blockDriver,
+  getAllDrivers, approveDriver, blockDriver, updateDriverProfile,
   getAllTrips, getRevenueSummary,
   getAllUsers, blockUser, updateConfig,
   getAllReports, updateReport, getAllConfig,

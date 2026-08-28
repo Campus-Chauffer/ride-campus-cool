@@ -1,7 +1,24 @@
 import { useState, useEffect } from "react";
-import { RefreshCw, CheckCircle, Ban, X, FileText, Car, User, MapPin } from "lucide-react";
+import { RefreshCw, CheckCircle, Ban, X, FileText, Car, User, MapPin, Pencil } from "lucide-react";
 import api from "../../api";
 import RideHistoryPanel from "../../components/RideHistoryPanel";
+
+const EDITABLE_FIELDS = [
+  { key: "vehicle_make", label: "Make" },
+  { key: "vehicle_model", label: "Model" },
+  { key: "vehicle_color", label: "Color" },
+  { key: "plate_number", label: "Plate" },
+  { key: "ghana_card_number", label: "Ghana Card No." },
+  { key: "license_number", label: "License No." },
+  { key: "license_expiry", label: "License Expiry", type: "date" },
+];
+
+// The API returns license_expiry as a full ISO timestamp — <input type="date">
+// needs just the YYYY-MM-DD portion, otherwise it renders blank.
+function toDateInputValue(value) {
+  if (!value) return "";
+  return String(value).slice(0, 10);
+}
 
 const APPROVAL_STYLES = {
   approved: "bg-green-500/10 text-green-400",
@@ -35,8 +52,37 @@ export default function Drivers() {
   const [selected, setSelected] = useState(null);
   const [actioningId, setActioningId] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({});
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => { fetchDrivers(); }, []);
+
+  function startEditing() {
+    const form = {};
+    EDITABLE_FIELDS.forEach(({ key, type }) => {
+      form[key] = type === "date" ? toDateInputValue(selected[key]) : (selected[key] || "");
+    });
+    setEditForm(form);
+    setEditing(true);
+  }
+
+  async function saveDriverEdits() {
+    try {
+      setSaving(true);
+      setError(null);
+      const res = await api.patch(`/admin/drivers/${selected.id}`, editForm);
+      const updated = res.data.driver;
+      setDrivers((prev) => prev.map((d) => d.id === selected.id ? { ...d, ...updated } : d));
+      setSelected((prev) => ({ ...prev, ...updated }));
+      setEditing(false);
+      setSuccessMsg("Driver profile updated.");
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to update driver profile.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function fetchDrivers() {
     try {
@@ -160,7 +206,7 @@ export default function Drivers() {
                   {filtered.map((driver, i) => (
                     <tr
                       key={driver.id}
-                      onClick={() => setSelected(driver)}
+                      onClick={() => { setSelected(driver); setEditing(false); }}
                       className={`border-b border-gray-800/50 hover:bg-gray-800/30 transition cursor-pointer ${i === filtered.length - 1 ? "border-none" : ""} ${selected?.id === driver.id ? "bg-gray-800/40" : ""}`}
                     >
                       <td className="px-4 py-3">
@@ -223,9 +269,19 @@ export default function Drivers() {
             {/* Panel header */}
             <div className="flex justify-between items-center px-5 py-4 border-b border-gray-800">
               <h2 className="text-white font-semibold">Driver Profile</h2>
-              <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-white transition">
-                <X size={18} />
-              </button>
+              <div className="flex items-center gap-3">
+                {!editing && (
+                  <button
+                    onClick={startEditing}
+                    className="flex items-center gap-1.5 text-xs font-medium text-yellow-400 hover:text-yellow-300 transition"
+                  >
+                    <Pencil size={13} /> Edit
+                  </button>
+                )}
+                <button onClick={() => { setSelected(null); setEditing(false); }} className="text-gray-500 hover:text-white transition">
+                  <X size={18} />
+                </button>
+              </div>
             </div>
 
             <div className="p-5 space-y-6 overflow-y-auto max-h-[75vh]">
@@ -254,46 +310,87 @@ export default function Drivers() {
                 {selected.approval_status || "—"}
               </span>
 
-              {/* Vehicle info */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Car size={14} className="text-yellow-400" />
-                  <p className="text-white font-medium text-sm">Vehicle Details</p>
+              {editing ? (
+                /* Edit form — covers everything an admin might need to fill
+                   in or correct after the fact (vehicle + document fields),
+                   whether or not the driver's already approved. */
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Pencil size={14} className="text-yellow-400" />
+                    <p className="text-white font-medium text-sm">Edit Driver Info</p>
+                  </div>
+                  <div className="space-y-3">
+                    {EDITABLE_FIELDS.map(({ key, label, type }) => (
+                      <div key={key}>
+                        <label className="text-gray-500 text-xs block mb-1">{label}</label>
+                        <input
+                          type={type || "text"}
+                          value={editForm[key] || ""}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, [key]: e.target.value }))}
+                          className="w-full bg-gray-800/60 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400/50 transition"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <button
+                      onClick={saveDriverEdits}
+                      disabled={saving}
+                      className="flex-1 py-2 text-sm font-semibold bg-yellow-400/10 text-yellow-400 hover:bg-yellow-400/20 rounded-lg transition disabled:opacity-50"
+                    >
+                      {saving ? "Saving…" : "Save Changes"}
+                    </button>
+                    <button
+                      onClick={() => setEditing(false)}
+                      disabled={saving}
+                      className="flex-1 py-2 text-sm font-semibold bg-gray-800 text-gray-400 hover:text-white rounded-lg transition disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
-                <div className="space-y-2 text-sm">
-                  {[
-                    ["Make", selected.vehicle_make],
-                    ["Model", selected.vehicle_model],
-                    ["Color", selected.vehicle_color],
-                    ["Plate", selected.plate_number],
-                  ].map(([label, value]) => (
-                    <div key={label} className="flex justify-between">
-                      <span className="text-gray-500">{label}</span>
-                      <span className="text-white">{value || "—"}</span>
+              ) : (
+                <>
+                  {/* Vehicle info */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Car size={14} className="text-yellow-400" />
+                      <p className="text-white font-medium text-sm">Vehicle Details</p>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div className="space-y-2 text-sm">
+                      {[
+                        ["Make", selected.vehicle_make],
+                        ["Model", selected.vehicle_model],
+                        ["Color", selected.vehicle_color],
+                        ["Plate", selected.plate_number],
+                      ].map(([label, value]) => (
+                        <div key={label} className="flex justify-between">
+                          <span className="text-gray-500">{label}</span>
+                          <span className="text-white">{value || "—"}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
-              {/* Documents */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <FileText size={14} className="text-yellow-400" />
-                  <p className="text-white font-medium text-sm">Documents</p>
-                </div>
-                <div className="space-y-2 text-sm mb-4">
-                  {[
-                    ["Ghana Card No.", selected.ghana_card_number],
-                    ["License No.", selected.license_number],
-                    ["License Expiry", formatDate(selected.license_expiry)],
-                    ["Submitted", formatDate(selected.submission_date)],
-                  ].map(([label, value]) => (
-                    <div key={label} className="flex justify-between">
-                      <span className="text-gray-500">{label}</span>
-                      <span className="text-white">{value || "—"}</span>
+                  {/* Documents */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <FileText size={14} className="text-yellow-400" />
+                      <p className="text-white font-medium text-sm">Documents</p>
                     </div>
-                  ))}
-                </div>
+                    <div className="space-y-2 text-sm mb-4">
+                      {[
+                        ["Ghana Card No.", selected.ghana_card_number],
+                        ["License No.", selected.license_number],
+                        ["License Expiry", formatDate(selected.license_expiry)],
+                        ["Submitted", formatDate(selected.submission_date)],
+                      ].map(([label, value]) => (
+                        <div key={label} className="flex justify-between">
+                          <span className="text-gray-500">{label}</span>
+                          <span className="text-white">{value || "—"}</span>
+                        </div>
+                      ))}
+                    </div>
 
                 {/* Document images */}
                 <div className="space-y-3">
@@ -366,6 +463,8 @@ export default function Drivers() {
                   </button>
                 )}
               </div>
+                </>
+              )}
             </div>
           </div>
         )}

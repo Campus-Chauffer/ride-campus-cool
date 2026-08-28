@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { adminAuth } = require('../middleware/adminAuth');
 const {
-  getAllDrivers, approveDriver, blockDriver,
+  getAllDrivers, approveDriver, blockDriver, updateDriverProfile,
   getAllTrips, getRevenueSummary,
   getAllUsers, blockUser, updateConfig,
   getAllReports, updateReport, getAllConfig,
@@ -14,6 +14,7 @@ const { createAnnouncement, getAnnouncementsAdmin } = require('../controllers/an
 router.get('/drivers', adminAuth, getAllDrivers);
 router.patch('/drivers/:driver_id/approve', adminAuth, approveDriver);
 router.patch('/drivers/:driver_id/block', adminAuth, blockDriver);
+router.patch('/drivers/:driver_id', adminAuth, updateDriverProfile);
 router.get('/trips', adminAuth, getAllTrips);
 router.get('/revenue', adminAuth, getRevenueSummary);
 router.get('/users', adminAuth, getAllUsers);
