@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, Text } from 'react-native';
+import { View, ActivityIndicator, Text, Vibration } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useAuthStore } from '../store/authStore';
@@ -33,13 +33,32 @@ import { createNavigationContainerRef } from '@react-navigation/native';
 
 export const navigationRef = createNavigationContainerRef();
 
+// Real-time ride-progress events (driver found, arrived, trip started/
+// completed, a new offer for a driver) already drive an immediate in-app
+// screen transition the moment the app detects them — a full banner
+// notification on top of that, while the app is already open and showing
+// exactly this, is redundant. These still get a sound + explicit vibration
+// (below) so the user notices even if they're not looking at the screen,
+// just not the banner/notification-list entry. Anything NOT in this list
+// (rating reminders, wallet lockout warnings, announcements) has no
+// dedicated screen reacting to it, so it keeps the normal full presentation.
+const RIDE_LIFECYCLE_NOTIFICATION_TYPES = new Set([
+  'ride_request', 'driver_found', 'driver_arrived',
+  'trip_started', 'trip_completed_passenger', 'trip_completed_driver',
+]);
+
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
+  handleNotification: async (notification) => {
+    const isRideLifecycle = RIDE_LIFECYCLE_NOTIFICATION_TYPES.has(
+      notification.request.content.data?.type as string
+    );
+    return {
+      shouldShowBanner: !isRideLifecycle,
+      shouldShowList: !isRideLifecycle,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    };
+  },
 });
 
 const Stack = createStackNavigator();
@@ -119,6 +138,23 @@ function AppScreens() {
       setIsOffline(!state.isConnected);
     });
     return () => unsubscribe();
+  }, []);
+
+  // Explicit vibration for ride-lifecycle events on top of the sound the
+  // notification handler above already allows through. addNotificationReceivedListener
+  // only fires while the app is actually running in the foreground — a
+  // backgrounded/killed app never runs this JS, but doesn't need to, since
+  // the OS presents the notification itself (banner, sound, and vibration
+  // via the notification channel's own default) without any app code
+  // involved at all.
+  useEffect(() => {
+    const subscription = Notifications.addNotificationReceivedListener((notification) => {
+      const type = notification.request.content.data?.type;
+      if (RIDE_LIFECYCLE_NOTIFICATION_TYPES.has(type as string)) {
+        Vibration.vibrate(type === 'ride_request' ? [0, 300, 150, 300] : 300);
+      }
+    });
+    return () => subscription.remove();
   }, []);
 
   // Tapping an admin-announcement push opens the in-app announcements list.
