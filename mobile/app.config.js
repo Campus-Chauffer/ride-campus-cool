@@ -48,7 +48,12 @@ export default {
     },
     plugins: [
       "expo-secure-store",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "sounds": ["./assets/sounds/car_horn.wav"]
+        }
+      ],
       "expo-font",
       [
         "expo-location",

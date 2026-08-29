@@ -2,6 +2,17 @@ const { Expo } = require('expo-server-sdk');
 
 const expo = new Expo();
 
+// Mirrors RIDE_LIFECYCLE_NOTIFICATION_TYPES in mobile/src/navigation/AppNavigator.tsx
+// — these get the distinct car-horn sound (bundled via the expo-notifications
+// config plugin, see app.config.js) rather than the phone's default
+// notification tone, since they're the events a driver/passenger most needs
+// to notice immediately (a new offer with a countdown to accept, a driver
+// arriving, etc.). Keep this list in sync with the client's if either changes.
+const RIDE_LIFECYCLE_TYPES = new Set([
+  'ride_request', 'driver_found', 'driver_arrived',
+  'trip_started', 'trip_completed_passenger', 'trip_completed_driver',
+]);
+
 const sendPushNotification = async (pushToken, title, body, data = {}) => {
   if (!pushToken || !Expo.isExpoPushToken(pushToken)) {
     console.log(`Invalid or missing push token: ${pushToken}`);
@@ -10,7 +21,7 @@ const sendPushNotification = async (pushToken, title, body, data = {}) => {
 
   const message = {
     to: pushToken,
-    sound: 'default',
+    sound: RIDE_LIFECYCLE_TYPES.has(data.type) ? 'car_horn.wav' : 'default',
     title,
     body,
     data,
