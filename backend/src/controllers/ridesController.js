@@ -95,6 +95,38 @@ const getRideHistory = async (req, res) => {
   }
 };
 
+// Pricing fields relevant to fare estimation — a subset of the full config
+// table (which also holds unrelated settings like the wallet lockout
+// threshold) that's safe to expose to any logged-in user, since it's the
+// same math requestRide already applies once a ride is actually requested.
+const PRICING_CONFIG_KEYS = [
+  'lower_distance_km', 'upper_distance_km',
+  'day_lower_flat', 'night_lower_flat',
+  'day_upper_flat', 'night_upper_flat',
+  'base_fare', 'price_per_km',
+  'night_start', 'night_end',
+];
+
+// Live fare-estimate pricing for the mobile app's home screen. Without this,
+// the pre-request fare estimate has to hardcode its own copy of these
+// numbers, which then silently drifts out of sync with whatever an admin
+// sets in the config table — the actual charged fare from requestRide
+// already reads this table live, only the client-side preview didn't.
+const getPricingConfig = async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT key, value FROM config WHERE key = ANY($1)',
+      [PRICING_CONFIG_KEYS]
+    );
+    const pricing = {};
+    result.rows.forEach((row) => { pricing[row.key] = parseFloat(row.value); });
+    res.json(pricing);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 // Get a single trip's current status. Same row shape as getRideHistory, but
 // scoped to one trip instead of the passenger's entire ride history — used
 // for the mobile app's in-ride status polling (every 3s while a ride is
@@ -361,5 +393,5 @@ const isWithinCampus = (lat, lng) => {
 
 module.exports = {
   requestRide, getRideHistory, getTripStatus, cancelRide, getDirections,
-  getGeocode, getPlaceAutocomplete, getPlaceDetails,
+  getGeocode, getPlaceAutocomplete, getPlaceDetails, getPricingConfig,
 };

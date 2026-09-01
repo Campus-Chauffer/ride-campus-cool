@@ -19,21 +19,35 @@ const { height } = Dimensions.get('window');
 const COLLAPSED_HEIGHT = height * 0.32;
 const EXPANDED_HEIGHT = height * 0.78;
 
-// Pricing logic mirrors backend
-const calculateFare = (distanceKm: number, isNight: boolean): number => {
-  const SHORT_DIST = 0.7;
-  const LONG_DIST = 4.0;
-  const BASE_FARE = 8;
-  const PER_KM = 3;
-  const DAY_SHORT = 10, NIGHT_SHORT = 13;
-  const DAY_LONG = 19, NIGHT_LONG = 20;
+// Fallback pricing — only used until the live values load from
+// GET /rides/pricing (or if that fetch fails), so the estimate still works
+// on a cold start or flaky connection. This used to be the ONLY source of
+// truth for the pre-request estimate shown here, permanently out of sync
+// with whatever an admin sets in the config table — the actual fare
+// requestRide charges already read that table live; only this preview
+// didn't, so an admin's pricing change would silently never show up here
+// short of shipping a whole new app build.
+const DEFAULT_PRICING = {
+  lower_distance_km: 0.7,
+  upper_distance_km: 4.0,
+  base_fare: 8,
+  price_per_km: 3,
+  day_lower_flat: 10,
+  night_lower_flat: 13,
+  day_upper_flat: 19,
+  night_upper_flat: 20,
+  night_start: 23,
+  night_end: 5,
+};
 
-  if (distanceKm <= SHORT_DIST) return isNight ? NIGHT_SHORT : DAY_SHORT;
-  if (distanceKm >= LONG_DIST) return isNight ? NIGHT_LONG : DAY_LONG;
-  const fare = BASE_FARE + distanceKm * PER_KM;
-  const min = isNight ? NIGHT_SHORT : DAY_SHORT;
-  const max = isNight ? NIGHT_LONG : DAY_LONG;
-  return Math.round(Math.min(Math.max(fare, min), max));
+const calculateFare = (distanceKm: number, isNight: boolean, pricing: typeof DEFAULT_PRICING): number => {
+  const shortFlat = isNight ? pricing.night_lower_flat : pricing.day_lower_flat;
+  const longFlat = isNight ? pricing.night_upper_flat : pricing.day_upper_flat;
+
+  if (distanceKm <= pricing.lower_distance_km) return shortFlat;
+  if (distanceKm >= pricing.upper_distance_km) return longFlat;
+  const fare = pricing.base_fare + distanceKm * pricing.price_per_km;
+  return Math.round(Math.min(Math.max(fare, shortFlat), longFlat));
 };
 
 const getDistanceKm = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
@@ -115,6 +129,7 @@ export default function StudentHomeScreen({ navigation }: any) {
   const [pinRegion, setPinRegion] = useState<Region | null>(null);
   const [reverseGeoLoading, setReverseGeoLoading] = useState(false);
   const [estimatedFare, setEstimatedFare] = useState<number | null>(null);
+  const [pricing, setPricing] = useState(DEFAULT_PRICING);
   const searchTimeout = useRef<any>(null);
   const pickupSearchTimeout = useRef<any>(null);
 
@@ -159,21 +174,24 @@ export default function StudentHomeScreen({ navigation }: any) {
 
   const isNight = (() => {
     const hour = new Date().getHours();
-    return hour >= 23 || hour < 5;
+    return hour >= pricing.night_start || hour < pricing.night_end;
   })();
 
   useEffect(() => {
     const origin = selectedPickup || userLocation;
     if (origin && selectedDest) {
       const dist = getDistanceKm(origin.lat, origin.lng, selectedDest.lat, selectedDest.lng);
-      setEstimatedFare(calculateFare(dist, isNight));
+      setEstimatedFare(calculateFare(dist, isNight, pricing));
     } else {
       setEstimatedFare(null);
     }
-  }, [selectedPickup, selectedDest, userLocation]);
+  }, [selectedPickup, selectedDest, userLocation, pricing]);
 
   useEffect(() => {
     getUserLocation();
+    ridesAPI.getPricing()
+      .then((res) => setPricing((prev) => ({ ...prev, ...res.data })))
+      .catch(() => {}); // keep DEFAULT_PRICING on failure — estimate still works, just possibly stale
   }, []);
 
   const getUserLocation = async () => {

@@ -134,6 +134,8 @@ export const ridesAPI = {
   cancelRide: (trip_id: number) =>
     api.delete(`/rides/cancel/${trip_id}`),
 
+  getPricing: () => api.get('/rides/pricing'),
+
   getDirections: (origin_lat: number, origin_lng: number, dest_lat: number, dest_lng: number) =>
     api.get('/rides/directions', { params: { origin_lat, origin_lng, dest_lat, dest_lng } }),
 
