@@ -1,4 +1,5 @@
 const pool = require('../db/pool');
+const { takeDriverOffline } = require('./driversController');
 
 // Get all drivers
 const getAllDrivers = async (req, res) => {
@@ -101,14 +102,20 @@ const updateDriverProfile = async (req, res) => {
 const blockDriver = async (req, res) => {
   const { driver_id } = req.params;
   try {
-    await pool.query(
-      `UPDATE drivers SET approval_status = 'blocked', is_online = FALSE WHERE id = $1`,
-      [driver_id]
-    );
-    await pool.query(
-      `UPDATE users SET status = 'blocked' WHERE id = (SELECT user_id FROM drivers WHERE id = $1)`,
-      [driver_id]
-    );
+    const driverResult = await pool.query('SELECT user_id FROM drivers WHERE id = $1', [driver_id]);
+    if (driverResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Driver not found' });
+    }
+    const { user_id } = driverResult.rows[0];
+
+    // Reuses the same cleanup switchRole/logout use — this used to just set
+    // is_online = FALSE inline, leaving any in_progress trip stuck forever
+    // (the driver has no way to complete it once blocked) and the open
+    // driver_sessions row never closed.
+    await takeDriverOffline(user_id);
+
+    await pool.query(`UPDATE drivers SET approval_status = 'blocked' WHERE id = $1`, [driver_id]);
+    await pool.query(`UPDATE users SET status = 'blocked' WHERE id = $1`, [user_id]);
     res.json({ message: 'Driver blocked' });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
@@ -303,6 +310,15 @@ const blockUser = async (req, res) => {
   // re-blocked the user instead of restoring them.
   const status = req.body.action === 'unblock' ? 'active' : 'blocked';
   try {
+    if (status === 'blocked') {
+      // This is the Users page, not the Drivers page — a dual-role account
+      // currently browsing as a passenger can still have an approved,
+      // possibly-online driver profile attached. Without this, blocking
+      // them here left that driver profile untouched: still eligible for
+      // ride dispatch and still showing online, on an account that's
+      // supposed to be blocked from using the app at all.
+      await takeDriverOffline(user_id);
+    }
     await pool.query(
       `UPDATE users SET status = $1 WHERE id = $2`,
       [status, user_id]

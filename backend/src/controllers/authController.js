@@ -394,6 +394,12 @@ const requestAccountDeletion = async (req, res) => {
       return res.status(404).json({ error: 'Account not found' });
     }
 
+    // If this account has a driver profile that's currently online, take it
+    // offline first — otherwise it stays eligible for ride dispatch and
+    // shows online on the admin dashboard indefinitely, same as the
+    // switchRole/logout/blockDriver cases.
+    await takeDriverOffline(user_id);
+
     // phone_number is NOT NULL + UNIQUE, so it can't just be cleared —
     // "del-<id>" is guaranteed unique (ids are unique) and well under the
     // column's 20-char limit, and no longer resembles a real phone number.
