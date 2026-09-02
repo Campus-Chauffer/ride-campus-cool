@@ -4,7 +4,7 @@ const {
   requestOTP, verifyOTP, register, login,
   forgotPassword, resetPassword,
   getProfile, savePushToken, updateProfile, switchRole,
-  requestAccountDeletion
+  requestAccountDeletion, logout
 } = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
 
@@ -19,5 +19,6 @@ router.post('/push-token', authenticate, savePushToken);
 router.patch('/profile', authenticate, updateProfile);
 router.patch('/switch-role', authenticate, switchRole);
 router.delete('/account', authenticate, requestAccountDeletion);
+router.post('/logout', authenticate, logout);
 
 module.exports = router;

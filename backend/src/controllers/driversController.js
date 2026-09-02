@@ -56,46 +56,52 @@ const goOnline = async (req, res) => {
   }
 };
 
+// Shared by the explicit "go offline" toggle AND switchRole (authController.js)
+// when a driver switches to passenger mode — that switch used to leave
+// is_online untouched, so a driver who went online, then switched to
+// passenger without toggling off first, stayed "online" forever: visible as
+// online on the admin dashboard indefinitely, and still eligible to be
+// dispatched ride offers by dispatchController.js despite having no driver
+// screen open to ever see or accept one.
+const takeDriverOffline = async (user_id) => {
+  const driverResult = await pool.query(
+    'SELECT id FROM drivers WHERE user_id = $1', [user_id]
+  );
+  const driver_id = driverResult.rows[0]?.id;
+  if (!driver_id) return;
+
+  // Auto-complete any stuck in_progress trip for this driver
+  await pool.query(
+    `UPDATE trips SET status = 'completed'
+     WHERE driver_id = $1 AND status = 'in_progress'`,
+    [driver_id]
+  );
+
+  await pool.query(
+    'UPDATE drivers SET is_online = FALSE WHERE id = $1', [driver_id]
+  );
+
+  // Close the most recent open session for this driver. Plain UPDATE
+  // doesn't support ORDER BY/LIMIT in Postgres, so target the row via a
+  // subquery instead.
+  await pool.query(
+    `UPDATE driver_sessions
+     SET went_offline_at = NOW()
+     WHERE id = (
+       SELECT id FROM driver_sessions
+       WHERE driver_id = $1 AND went_offline_at IS NULL
+       ORDER BY went_online_at DESC
+       LIMIT 1
+     )`,
+    [driver_id]
+  );
+};
+
 // Driver goes offline
 const goOffline = async (req, res) => {
   const user_id = req.user.id;
   try {
-    // Get driver id
-    const driverResult = await pool.query(
-      'SELECT id FROM drivers WHERE user_id = $1', [user_id]
-    );
-    const driver_id = driverResult.rows[0]?.id;
-
-    // Auto-complete any stuck in_progress trip for this driver
-    if (driver_id) {
-      await pool.query(
-        `UPDATE trips SET status = 'completed'
-         WHERE driver_id = $1 AND status = 'in_progress'`,
-        [driver_id]
-      );
-    }
-
-    await pool.query(
-      'UPDATE drivers SET is_online = FALSE WHERE user_id = $1', [user_id]
-    );
-
-    // Close the most recent open session for this driver. Plain UPDATE
-    // doesn't support ORDER BY/LIMIT in Postgres, so target the row via a
-    // subquery instead — this previously threw a syntax error on every
-    // call, making /drivers/offline 500 unconditionally.
-    if (driver_id) {
-      await pool.query(
-        `UPDATE driver_sessions
-         SET went_offline_at = NOW()
-         WHERE id = (
-           SELECT id FROM driver_sessions
-           WHERE driver_id = $1 AND went_offline_at IS NULL
-           ORDER BY went_online_at DESC
-           LIMIT 1
-         )`,
-        [driver_id]
-      );
-    }
+    await takeDriverOffline(user_id);
     res.json({ message: 'You are now offline' });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
@@ -462,4 +468,4 @@ const getWaitFare = async (req, res) => {
 };
 
 
-module.exports = { goOnline, goOffline, updateLocation, checkOffers, acceptOffer, startTrip, arrivedAtPickup,getWaitFare,  completeTrip };
+module.exports = { goOnline, goOffline, updateLocation, checkOffers, acceptOffer, startTrip, arrivedAtPickup,getWaitFare,  completeTrip, takeDriverOffline };

@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { sendRatingReminder } = require('../utils/email');
 const { sendSMS } = require('../utils/sms');
+const { takeDriverOffline } = require('./driversController');
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -335,6 +336,14 @@ const switchRole = async (req, res) => {
       }
     }
 
+    // Switching away from driver mode used to leave is_online untouched —
+    // a driver who went online and then switched to passenger without
+    // toggling off first stayed "online" indefinitely, since they'd never
+    // open the driver screen again to do it themselves.
+    if (role === 'passenger') {
+      await takeDriverOffline(user_id);
+    }
+
     const result = await pool.query(
       `UPDATE users SET role = $1 WHERE id = $2
        RETURNING id, phone_number, email, first_name, last_name, role, status`,
@@ -349,6 +358,20 @@ const switchRole = async (req, res) => {
     );
 
     res.json({ token, user });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Logging out was previously purely a client-side action (clear the local
+// token/storage) with no server call at all — a driver who hit Logout while
+// online, instead of toggling offline first, would stay "online" forever
+// for the exact same reason switchRole did before the fix above.
+const logout = async (req, res) => {
+  try {
+    await takeDriverOffline(req.user.id);
+    res.json({ message: 'Logged out' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -402,5 +425,5 @@ module.exports = {
   requestOTP, verifyOTP, register, login,
   forgotPassword, resetPassword,
   getProfile, savePushToken, updateProfile, switchRole,
-  requestAccountDeletion
+  requestAccountDeletion, logout
 };
