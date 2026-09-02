@@ -92,6 +92,14 @@ const authLimiter = rateLimit({
 app.use(globalLimiter);
 app.use('/api/auth/request-otp', authLimiter);
 app.use('/api/auth/login', authLimiter);
+// A 6-digit OTP is only 1,000,000 possibilities — verify-otp and
+// reset-password both accept one, and neither was previously covered by
+// anything tighter than the generic global limiter (120/min), which is
+// loose enough to make brute-forcing a single OTP within its validity
+// window a realistic attack rather than a theoretical one.
+app.use('/api/auth/verify-otp', authLimiter);
+app.use('/api/auth/forgot-password', authLimiter);
+app.use('/api/auth/reset-password', authLimiter);
 
 app.set('io', io);
 
