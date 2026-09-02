@@ -30,7 +30,7 @@ const reportsRoutes = require('./routes/reports');
 const ratingsRoutes = require('./routes/ratings');
 const driverRegistrationRoutes = require('./routes/driverRegistration');
 const announcementsRoutes = require('./routes/announcements');
-const { scheduleDailyLockout, scheduleNightWarning, schedulePurgeDeletedAccounts } = require('./utils/scheduler');
+const { scheduleDailyLockout, scheduleNightWarning, schedulePurgeDeletedAccounts, scheduleStaleOnlineCleanup } = require('./utils/scheduler');
 const pool = require('./db/pool');
 
 const app = express();
@@ -140,7 +140,7 @@ io.on('connection', (socket) => {
     // uptime instead of degrading gracefully.
     try {
       await pool.query(
-        `UPDATE drivers SET current_lat = $1, current_lng = $2
+        `UPDATE drivers SET current_lat = $1, current_lng = $2, location_updated_at = NOW()
          WHERE id = (SELECT driver_id FROM trips WHERE id = $3)`,
         [latitude, longitude, rideId]
       );
@@ -160,5 +160,6 @@ server.listen(PORT, () => {
   scheduleDailyLockout();
   scheduleNightWarning();
   schedulePurgeDeletedAccounts();
-  console.log('Scheduled jobs running: 4AM lockout, 11PM warning, 3AM deletion purge');
+  scheduleStaleOnlineCleanup();
+  console.log('Scheduled jobs running: 4AM lockout, 11PM warning, 3AM deletion purge, stale-online cleanup every 10min');
 });

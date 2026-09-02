@@ -37,6 +37,12 @@ CREATE TABLE IF NOT EXISTS drivers (
   is_online BOOLEAN DEFAULT FALSE,
   current_lat DECIMAL(10,8),
   current_lng DECIMAL(11,8),
+  -- Set alongside current_lat/current_lng on every write (goOnline,
+  -- updateLocation, the driver:location socket handler). Lets
+  -- scheduleStaleOnlineCleanup (scheduler.js) tell a driver who's still
+  -- actually pinging apart from one whose app crashed/died while online —
+  -- is_online alone can't distinguish those.
+  location_updated_at TIMESTAMP,
   ghana_card_number VARCHAR(50),
   ghana_card_image TEXT,
   license_number VARCHAR(50),

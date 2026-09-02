@@ -38,7 +38,7 @@ const goOnline = async (req, res) => {
     }
 
     await pool.query(
-      `UPDATE drivers SET is_online = TRUE, current_lat = $1, current_lng = $2 
+      `UPDATE drivers SET is_online = TRUE, current_lat = $1, current_lng = $2, location_updated_at = NOW()
        WHERE user_id = $3`,
       [lat, lng, user_id]
     );
@@ -114,7 +114,7 @@ const updateLocation = async (req, res) => {
   const user_id = req.user.id;
   try {
     await pool.query(
-      'UPDATE drivers SET current_lat = $1, current_lng = $2 WHERE user_id = $3',
+      'UPDATE drivers SET current_lat = $1, current_lng = $2, location_updated_at = NOW() WHERE user_id = $3',
       [lat, lng, user_id]
     );
     res.json({ message: 'Location updated' });

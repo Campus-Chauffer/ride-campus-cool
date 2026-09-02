@@ -1,6 +1,42 @@
 const cron = require('node-cron');
 const pool = require('../db/pool');
 const { sendPushNotification } = require('./notifications');
+const { takeDriverOffline } = require('../controllers/driversController');
+
+// A driver's location gets refreshed at least every ~2 minutes while online
+// (the foreground poll and the background-location task both run on that
+// interval — see mobile's DriverHomeScreen and utils/backgroundLocation.ts),
+// so 20 minutes of silence is generously past any single missed ping and
+// means the app most likely crashed, was force-quit, or the phone died
+// without ever calling goOffline. takeDriverOffline handles the same
+// cleanup (auto-complete a stuck trip, close the session) as every other
+// path that ends a driver's online status.
+const STALE_ONLINE_THRESHOLD_MINUTES = 20;
+
+const scheduleStaleOnlineCleanup = () => {
+  cron.schedule('*/10 * * * *', async () => {
+    try {
+      const staleResult = await pool.query(
+        `SELECT d.id as driver_id, d.user_id
+         FROM drivers d
+         WHERE d.is_online = TRUE
+         AND d.location_updated_at IS NOT NULL
+         AND d.location_updated_at < NOW() - ($1 || ' minutes')::interval`,
+        [STALE_ONLINE_THRESHOLD_MINUTES]
+      );
+
+      for (const driver of staleResult.rows) {
+        await takeDriverOffline(driver.user_id);
+      }
+
+      if (staleResult.rows.length > 0) {
+        console.log(`Stale-online cleanup: auto-offlined ${staleResult.rows.length} driver(s).`);
+      }
+    } catch (err) {
+      console.error('Stale-online cleanup error:', err);
+    }
+  });
+};
 
 // Lock all drivers at 4AM daily
 const scheduleDailyLockout = () => {
@@ -118,4 +154,4 @@ const schedulePurgeDeletedAccounts = () => {
   });
 };
 
-module.exports = { scheduleDailyLockout, scheduleNightWarning, schedulePurgeDeletedAccounts };
+module.exports = { scheduleDailyLockout, scheduleNightWarning, schedulePurgeDeletedAccounts, scheduleStaleOnlineCleanup };
