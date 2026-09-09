@@ -3,12 +3,12 @@ import { RefreshCw, Save } from "lucide-react";
 import api from "../../api";
 
 const CONFIG_FIELDS = [
-  { key: "flat_rate_short", label: "Flat rate under 0.7km (day)", description: "Fixed fare for trips shorter than 0.7km during the day", prefix: "₵" },
-  { key: "flat_rate_short_night", label: "Flat rate under 0.7km (night)", description: "Fixed fare for trips shorter than 0.7km between 11PM–5AM", prefix: "₵" },
+  { key: "day_lower_flat", label: "Flat rate under 0.7km (day)", description: "Fixed fare for trips shorter than 0.7km during the day", prefix: "₵" },
+  { key: "night_lower_flat", label: "Flat rate under 0.7km (night)", description: "Fixed fare for trips shorter than 0.7km between 11PM–5AM", prefix: "₵" },
   { key: "base_fare", label: "Base fare (0.7km–4km)", description: "Starting fare for mid-distance trips", prefix: "₵" },
-  { key: "per_km_rate", label: "Per km rate (0.7km–4km)", description: "Added per kilometre on top of base fare", prefix: "₵" },
-  { key: "flat_rate_long_day", label: "Flat rate over 4km (day)", description: "Fixed fare for trips longer than 4km during the day", prefix: "₵" },
-  { key: "flat_rate_long_night", label: "Flat rate over 4km (night)", description: "Fixed fare for trips longer than 4km between 11PM–5AM", prefix: "₵" },
+  { key: "price_per_km", label: "Per km rate (0.7km–4km)", description: "Added per kilometre on top of base fare", prefix: "₵" },
+  { key: "day_upper_flat", label: "Flat rate over 4km (day)", description: "Fixed fare for trips longer than 4km during the day", prefix: "₵" },
+  { key: "night_upper_flat", label: "Flat rate over 4km (night)", description: "Fixed fare for trips longer than 4km between 11PM–5AM", prefix: "₵" },
   { key: "commission_rate", label: "Commission rate", description: "Percentage of each fare taken as platform commission", prefix: "%" },
   { key: "lockout_threshold", label: "Lockout threshold", description: "Outstanding balance at which a driver gets locked out", prefix: "₵" },
 ];
@@ -63,9 +63,9 @@ export default function Config() {
   }
 
   const summaryRows = [
-    { label: "Under 0.7km", value: `Day ₵${values["flat_rate_short"] || "—"}  ·  Night ₵${values["flat_rate_short_night"] || "—"}` },
-    { label: "0.7km – 4km", value: `₵${values["base_fare"] || "—"} base + ₵${values["per_km_rate"] || "—"}/km` },
-    { label: "Over 4km", value: `Day ₵${values["flat_rate_long_day"] || "—"}  ·  Night ₵${values["flat_rate_long_night"] || "—"}` },
+    { label: "Under 0.7km", value: `Day ₵${values["day_lower_flat"] || "—"}  ·  Night ₵${values["night_lower_flat"] || "—"}` },
+    { label: "0.7km – 4km", value: `₵${values["base_fare"] || "—"} base + ₵${values["price_per_km"] || "—"}/km` },
+    { label: "Over 4km", value: `Day ₵${values["day_upper_flat"] || "—"}  ·  Night ₵${values["night_upper_flat"] || "—"}` },
     { label: "Commission", value: `${values["commission_rate"] || "—"}%  ·  Lockout at ₵${values["lockout_threshold"] || "—"}` },
   ];
 
