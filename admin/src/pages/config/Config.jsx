@@ -13,6 +13,20 @@ const CONFIG_FIELDS = [
   { key: "lockout_threshold", label: "Lockout threshold", description: "Outstanding balance at which a driver gets locked out", prefix: "₵" },
 ];
 
+// Powers the in-app "update available" prompt (see checkVersion in
+// appController.js). ios_update_url should point at the TestFlight join
+// link during beta, then get swapped to the real App Store URL after
+// launch — that's the whole reason it lives here instead of being
+// hardcoded in the app.
+const UPDATE_FIELDS = [
+  { key: "ios_latest_build", label: "iOS latest build number", description: "Users on a build below this see the update prompt. Find the build number in EAS after each build.", type: "number" },
+  { key: "ios_update_url", label: "iOS update link", description: "Where the update button sends iOS users — your TestFlight join link during beta, the App Store link after launch", type: "text" },
+  { key: "android_latest_build", label: "Android latest build (version code)", description: "Users on a build below this see the update prompt. Find the version code in EAS after each build.", type: "number" },
+  { key: "android_update_url", label: "Android update link", description: "Where the update button sends Android users — the Play Store listing URL", type: "text" },
+];
+
+const ALL_FIELDS = [...CONFIG_FIELDS, ...UPDATE_FIELDS];
+
 export default function Config() {
   const [values, setValues] = useState({});
   const [original, setOriginal] = useState({});
@@ -44,14 +58,14 @@ export default function Config() {
   }
 
   function hasChanges() {
-    return CONFIG_FIELDS.some((f) => String(values[f.key] ?? "") !== String(original[f.key] ?? ""));
+    return ALL_FIELDS.some((f) => String(values[f.key] ?? "") !== String(original[f.key] ?? ""));
   }
 
   async function handleSave() {
     try {
       setSaving(true);
       setError(null);
-      const changed = CONFIG_FIELDS.filter((f) => String(values[f.key] ?? "") !== String(original[f.key] ?? ""));
+      const changed = ALL_FIELDS.filter((f) => String(values[f.key] ?? "") !== String(original[f.key] ?? ""));
       await Promise.all(changed.map((f) => api.patch("/admin/config", { key: f.key, value: values[f.key] })));
       setOriginal({ ...values });
       setSuccessMsg(`${changed.length} setting${changed.length > 1 ? "s" : ""} updated successfully.`);
@@ -117,6 +131,34 @@ export default function Config() {
                       className={`w-24 bg-gray-800/60 border rounded-lg px-3 py-2 text-white text-sm text-right focus:outline-none transition ${changed ? "border-yellow-400/60" : "border-gray-800 focus:border-yellow-400/50"}`}
                     />
                   </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-gray-800 bg-gray-800/40">
+              <p className="text-white font-medium text-sm">App update prompt</p>
+            </div>
+            {UPDATE_FIELDS.map((field, i) => {
+              const changed = String(values[field.key] ?? "") !== String(original[field.key] ?? "");
+              return (
+                <div
+                  key={field.key}
+                  className={`flex items-center justify-between px-5 py-4 gap-4 flex-wrap ${i < UPDATE_FIELDS.length - 1 ? "border-b border-gray-800" : ""}`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-medium">{field.label}</p>
+                    <p className="text-gray-500 text-xs mt-0.5">{field.description}</p>
+                  </div>
+                  <input
+                    type={field.type === "number" ? "number" : "text"}
+                    {...(field.type === "number" ? { step: "1", min: "0" } : {})}
+                    value={values[field.key] ?? ""}
+                    placeholder={field.type === "text" ? "https://…" : ""}
+                    onChange={(e) => { setValues((prev) => ({ ...prev, [field.key]: e.target.value })); setSuccessMsg(null); }}
+                    className={`${field.type === "number" ? "w-24 text-right" : "w-64"} bg-gray-800/60 border rounded-lg px-3 py-2 text-white text-sm focus:outline-none transition ${changed ? "border-yellow-400/60" : "border-gray-800 focus:border-yellow-400/50"}`}
+                  />
                 </div>
               );
             })}

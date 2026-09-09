@@ -205,4 +205,8 @@ export const announcementsAPI = {
   getAll: () => api.get('/announcements'),
 };
 
+export const appAPI = {
+  checkVersion: () => api.get('/app/version-check'),
+};
+
 export default api;

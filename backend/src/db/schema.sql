@@ -163,5 +163,13 @@ INSERT INTO config (key, value) VALUES
   ('day_upper_flat', '19'),
   ('night_upper_flat', '20'),
   ('base_fare', '8'),
-  ('price_per_km', '3')
+  ('price_per_km', '3'),
+  -- Read by checkVersion() in appController.js to power the in-app "update
+  -- available" prompt. latestBuild starts at 1 (below any real build number
+  -- EAS will produce) so a fresh database never nags anyone until these are
+  -- deliberately raised to match a real release via the admin dashboard.
+  ('ios_latest_build', '1'),
+  ('ios_update_url', ''),
+  ('android_latest_build', '1'),
+  ('android_update_url', 'https://play.google.com/store/apps/details?id=com.campuschauffeur.app')
 ON CONFLICT (key) DO NOTHING;

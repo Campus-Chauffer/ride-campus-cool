@@ -30,6 +30,7 @@ const reportsRoutes = require('./routes/reports');
 const ratingsRoutes = require('./routes/ratings');
 const driverRegistrationRoutes = require('./routes/driverRegistration');
 const announcementsRoutes = require('./routes/announcements');
+const appRoutes = require('./routes/app');
 const { scheduleDailyLockout, scheduleNightWarning, schedulePurgeDeletedAccounts, scheduleStaleOnlineCleanup } = require('./utils/scheduler');
 const pool = require('./db/pool');
 
@@ -112,6 +113,7 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/ratings', ratingsRoutes);
 app.use('/api/driver-registration', driverRegistrationRoutes);
 app.use('/api/announcements', announcementsRoutes);
+app.use('/api/app', appRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Campus Chauffeur API running' });

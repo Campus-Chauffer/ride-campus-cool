@@ -4,6 +4,7 @@ import Sentry from './src/utils/sentry';
 import AppNavigator from './src/navigation/AppNavigator';
 import SplashScreen from './src/components/SplashScreen';
 import CrashFallbackScreen from './src/components/CrashFallbackScreen';
+import UpdateModal from './src/components/UpdateModal';
 import './src/utils/backgroundLocation'; // register background task on app start
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
       fallback={({ resetError }) => <CrashFallbackScreen onReset={resetError} />}
     >
       <AppNavigator />
+      <UpdateModal />
       {showSplash && (
         <Animated.View
           style={{
