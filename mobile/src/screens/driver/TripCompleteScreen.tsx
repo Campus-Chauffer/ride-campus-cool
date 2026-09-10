@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  SafeAreaView, StatusBar, ScrollView, TextInput, Alert, Dimensions
+  SafeAreaView, StatusBar, ScrollView, TextInput, Alert, Dimensions, Modal
 } from 'react-native';
 import { Flag, CheckCircle, Star } from 'lucide-react-native';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, navy } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, navy, white } from '../../utils/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -13,7 +13,7 @@ interface Props {
   trip: any;
   onDone: () => void;
   onRate: (rating: number, comment: string) => void;
-  onReport: () => void;
+  onReport: (description: string) => void;
 }
 
 export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: Props) {
@@ -23,6 +23,9 @@ export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: P
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [reportModal, setReportModal] = useState(false);
+  const [reportText, setReportText] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
 
  const fare = parseFloat(trip.fare) || 0;
   const commission = parseFloat(trip.commission) || 0;
@@ -32,6 +35,21 @@ export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: P
     if (rating === 0) return Alert.alert('Rate passenger', 'Please select a star rating');
     onRate(rating, comment);
     setSubmitted(true);
+  };
+
+  const submitReport = async () => {
+    if (!reportText.trim()) return Alert.alert('Required', 'Please describe the issue');
+    setReportSubmitting(true);
+    try {
+      await onReport(reportText.trim());
+      setReportModal(false);
+      setReportText('');
+      Alert.alert('Report submitted', 'Thank you. Our team will review your report.');
+    } catch (err) {
+      Alert.alert('Error', 'Could not submit report. Please try again.');
+    } finally {
+      setReportSubmitting(false);
+    }
   };
 
   return (
@@ -117,7 +135,7 @@ export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: P
         )}
 
         {/* Actions */}
-        <TouchableOpacity style={styles.reportBtn} onPress={onReport}>
+        <TouchableOpacity style={styles.reportBtn} onPress={() => setReportModal(true)}>
           <Flag size={14} color={colors.error} />
           <Text style={styles.reportBtnText}>Report this passenger</Text>
         </TouchableOpacity>
@@ -126,6 +144,45 @@ export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: P
           <Text style={styles.doneBtnText}>Back to Home</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Report modal */}
+      <Modal visible={reportModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Report Passenger</Text>
+            <Text style={styles.modalSubtitle}>
+              Describe what happened. Our team will review within 24 hours.
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Describe the issue..."
+              placeholderTextColor={colors.gray3}
+              value={reportText}
+              onChangeText={setReportText}
+              multiline
+              numberOfLines={4}
+              autoFocus
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => { setReportModal(false); setReportText(''); }}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalSubmitBtn, reportSubmitting && styles.submitBtnDisabled]}
+                onPress={submitReport}
+                disabled={reportSubmitting}
+              >
+                <Text style={styles.modalSubmitText}>
+                  {reportSubmitting ? 'Submitting...' : 'Submit Report'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -225,6 +282,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
     ...shadows.sm,
   },
+  submitBtnDisabled: { opacity: 0.5 },
   // submitBtn's background is the fixed brand yellow in both themes, so its
   // text is pinned to navy rather than colors.dark, which would invert to
   // near-white in dark mode and disappear against the still-yellow button.
@@ -233,6 +291,19 @@ const getStyles = (colors: any) => StyleSheet.create({
     fontWeight: '700',
     color: navy,
   },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalCard: { backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, paddingBottom: spacing.xxl },
+  modalTitle: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark, marginBottom: spacing.xs },
+  modalSubtitle: { fontSize: fontSizes.sm, color: colors.textMuted, marginBottom: spacing.lg, lineHeight: 20 },
+  modalInput: { backgroundColor: colors.gray, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.gray2, padding: spacing.md, fontSize: fontSizes.sm, color: colors.dark, minHeight: 100, textAlignVertical: 'top', marginBottom: spacing.lg },
+  modalActions: { flexDirection: 'row', gap: spacing.sm },
+  modalCancelBtn: { flex: 1, padding: spacing.md, borderRadius: radius.full, borderWidth: 1.5, borderColor: colors.gray2, alignItems: 'center' },
+  modalCancelText: { fontSize: fontSizes.sm, fontWeight: '600', color: colors.textMuted },
+  modalSubmitBtn: { flex: 1, padding: spacing.md, borderRadius: radius.full, backgroundColor: colors.error, alignItems: 'center' },
+  // modalSubmitBtn's background is the fixed error red in both themes, so
+  // its text is pinned to white rather than colors.white, which would
+  // invert to navy in dark mode.
+  modalSubmitText: { fontSize: fontSizes.sm, fontWeight: '700', color: white },
   ratedCard: {
     flexDirection: 'row',
     alignItems: 'center',

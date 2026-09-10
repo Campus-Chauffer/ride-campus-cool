@@ -12,7 +12,7 @@ import RideOfferScreen from './RideOfferScreen';
 import ToPickupScreen from './ToPickupScreen';
 import ActiveRideDriverScreen from './ActiveRideDriverScreen';
 import TripCompleteScreen from './TripCompleteScreen';
-import { driverAPI, ratingsAPI } from '../../services/api';
+import { driverAPI, ratingsAPI, reportsAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useRideStore } from '../../store/rideStore';
 import { useThemeStore } from '../../store/themeStore';
@@ -318,11 +318,19 @@ export default function DriverHomeScreen({ navigation }: any) {
     }
   };
 
-  const handleReport = () => {
-    Alert.alert('Report Passenger', 'Are you sure you want to report this passenger?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Report', style: 'destructive', onPress: () => {} },
-    ]);
+  // TripCompleteScreen's own report modal already collects the description
+  // and confirms submission — this used to be a confirm-only Alert whose
+  // "Report" button did nothing at all, so no driver report ever reached
+  // the backend (and none ever showed up in the admin dashboard).
+  const handleReport = async (description: string) => {
+    const trip = activeTripRef.current;
+    if (!trip) return;
+    await reportsAPI.submit({
+      reported_id: trip.passenger_id,
+      trip_id: trip.id,
+      type: 'passenger',
+      description,
+    });
   };
 
   const handleDone = () => {

@@ -206,6 +206,11 @@ export const announcementsAPI = {
   getAll: () => api.get('/announcements'),
 };
 
+export const reportsAPI = {
+  submit: (data: { reported_id: number; trip_id?: number; type: string; description: string }) =>
+    api.post('/reports', data),
+};
+
 export const appAPI = {
   checkVersion: () => api.get('/app/version-check'),
 };
