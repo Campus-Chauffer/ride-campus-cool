@@ -77,4 +77,40 @@ const sendRideReceipt = async (email, firstName, trip) => {
   }
 };
 
-module.exports = { sendRatingReminder, sendRideReceipt };
+// Sent to the OLD address whenever an account's email is changed — the one
+// notification a hijacked account can't suppress, since the attacker only
+// controls the new address. Lets the real owner catch an unauthorized
+// change even if they never open the app again after losing access.
+const sendEmailChangedAlert = async (oldEmail, firstName, newEmail) => {
+  if (!oldEmail) return;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
+      <div style="background: #FFB800; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="color: #1A1A2E; margin: 0;">🚗 Campus Chauffeur</h1>
+      </div>
+      <div style="background: #f5f5f5; padding: 24px; border-radius: 0 0 8px 8px;">
+        <h2 style="color: #1A1A2E;">Hi ${firstName},</h2>
+        <p style="color: #555;">The email address on your Campus Chauffeur account was just changed to <strong>${newEmail}</strong>.</p>
+        <p style="color: #555;"><strong>If you made this change, you can ignore this email.</strong></p>
+        <p style="color: #555;">If you didn't make this change, someone else may have access to your account. Contact us immediately at campuschauffeur1@gmail.com and change your password from the app's login screen using "Forgot Password."</p>
+        <hr style="border: 1px solid #e0e0e0; margin: 20px 0;">
+        <p style="color: #999; font-size: 11px; text-align: center;">Campus Chauffeur — Safe rides around UG Legon</p>
+      </div>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: `Campus Chauffeur <${process.env.EMAIL_USER}>`,
+      to: oldEmail,
+      subject: 'Your Campus Chauffeur account email was changed',
+      html,
+    });
+    console.log(`Email-change alert sent to ${oldEmail}`);
+  } catch (err) {
+    console.error('Email error:', err);
+  }
+};
+
+module.exports = { sendRatingReminder, sendRideReceipt, sendEmailChangedAlert };

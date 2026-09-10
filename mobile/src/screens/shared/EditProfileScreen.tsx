@@ -18,23 +18,38 @@ export default function EditProfileScreen({ navigation }: any) {
   const [firstName, setFirstName] = useState(user?.first_name || '');
   const [lastName, setLastName] = useState(user?.last_name || '');
   const [email, setEmail] = useState(user?.email || '');
+  const [currentPassword, setCurrentPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  // Email doubles as the account's only recovery channel (that's where a
+  // "Forgot Password" reset code goes), so changing it needs proof you're
+  // actually signed in as yourself right now, not just holding a valid
+  // session — otherwise a stolen/guessed login could quietly redirect
+  // recovery to an address the real owner never sees.
+  const emailChanging = email !== (user?.email || '');
 
   const save = async () => {
     if (!firstName || !lastName) {
       return Alert.alert('Required', 'First and last name are required');
     }
+    if (emailChanging && !currentPassword) {
+      return Alert.alert('Current password required', 'Enter your current password to change your email');
+    }
     setLoading(true);
     try {
-      const res = await profileAPI.updateProfile({ first_name: firstName, last_name: lastName, email });
+      const res = await profileAPI.updateProfile({
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        ...(emailChanging ? { current_password: currentPassword } : {}),
+      });
       const currentToken = await import('@react-native-async-storage/async-storage')
   .then(m => m.default.getItem('token'));
 await setAuth(currentToken || '', { ...user!, ...res.data });
       Alert.alert('Success', 'Profile updated', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
-    } catch (err) {
-      Alert.alert('Error', 'Could not update profile');
+    } catch (err: any) {
+      Alert.alert('Error', err.response?.data?.error || 'Could not update profile');
     } finally {
       setLoading(false);
     }
@@ -94,8 +109,23 @@ await setAuth(currentToken || '', { ...user!, ...res.data });
             keyboardType="email-address"
             placeholder="your@email.com"
             placeholderTextColor={colors.gray3}
+            autoCapitalize="none"
           />
         </View>
+
+        {emailChanging && (
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Current Password</Text>
+            <TextInput
+              style={styles.input}
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              placeholder="Required to change your email"
+              placeholderTextColor={colors.gray3}
+              secureTextEntry
+            />
+          </View>
+        )}
 
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Phone Number</Text>

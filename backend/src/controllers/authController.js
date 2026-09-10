@@ -1,7 +1,7 @@
 const pool = require('../db/pool');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { sendRatingReminder } = require('../utils/email');
+const { sendRatingReminder, sendEmailChangedAlert } = require('../utils/email');
 const { sendSMS } = require('../utils/sms');
 const { takeDriverOffline } = require('./driversController');
 
@@ -294,20 +294,53 @@ const savePushToken = async (req, res) => {
 
 // Update profile
 const updateProfile = async (req, res) => {
-  const { first_name, last_name, email } = req.body;
+  const { first_name, last_name, email, current_password } = req.body;
   const user_id = req.user.id;
 
   try {
+    const existing = await pool.query(
+      'SELECT email, first_name, password_hash FROM users WHERE id = $1',
+      [user_id]
+    );
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const oldEmail = existing.rows[0].email;
+    const emailChanging = email !== undefined && email !== null && email !== oldEmail;
+
+    // Email doubles as the only channel for account recovery (forgot-password
+    // sends its OTP there), so changing it used to require nothing but a
+    // valid session token — anyone who got hold of one (a leaked/guessed
+    // login, a stolen token) could silently redirect recovery to an email
+    // they control, then take the account over for good later. Requiring
+    // the current password here closes that off the same way most apps
+    // gate an email/recovery change, without touching name-only edits.
+    if (emailChanging) {
+      if (!current_password) {
+        return res.status(400).json({ error: 'Current password is required to change your email' });
+      }
+      const validPassword = await bcrypt.compare(current_password, existing.rows[0].password_hash);
+      if (!validPassword) {
+        return res.status(401).json({ error: 'Incorrect password' });
+      }
+    }
+
     const result = await pool.query(
-      `UPDATE users SET 
+      `UPDATE users SET
         first_name = COALESCE($1, first_name),
         last_name = COALESCE($2, last_name),
         email = COALESCE($3, email)
        WHERE id = $4 RETURNING id, first_name, last_name, email, phone_number, role`,
       [first_name, last_name, email, user_id]
     );
+
+    if (emailChanging && oldEmail) {
+      sendEmailChangedAlert(oldEmail, existing.rows[0].first_name, email).catch(() => {});
+    }
+
     res.json(result.rows[0]);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Server error' });
   }
 };
