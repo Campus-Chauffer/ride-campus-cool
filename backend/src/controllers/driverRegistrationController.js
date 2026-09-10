@@ -124,4 +124,41 @@ const getRegistrationStatus = async (req, res) => {
   }
 };
 
-module.exports = { submitRegistration, getRegistrationStatus };
+// Full previously-submitted registration, for the "update your application"
+// flow reached from DriverPendingScreen — separate from getRegistrationStatus
+// (which is polled every 30s and stays lean) since this carries every
+// uploaded document image and would be wasteful to fetch on a timer.
+const getRegistrationDraft = async (req, res) => {
+  const user_id = req.user.id;
+  try {
+    const result = await pool.query(
+      `SELECT d.ghana_card_number, d.ghana_card_image,
+              d.license_number, d.license_image, d.license_expiry,
+              d.vehicle_make, d.vehicle_model, d.vehicle_color, d.plate_number,
+              d.vehicle_front_image, d.vehicle_side_image, d.vehicle_back_image,
+              d.vehicle_checklist, u.profile_photo
+       FROM drivers d
+       JOIN users u ON d.user_id = u.id
+       WHERE d.user_id = $1`,
+      [user_id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Driver not found' });
+    }
+    const draft = result.rows[0];
+    // license_expiry is stored as a DATE (YYYY-MM-01) but the form's input
+    // and validation both expect MM/YYYY — same conversion the mobile form
+    // itself sends on submit, just reversed.
+    if (draft.license_expiry) {
+      const d = new Date(draft.license_expiry);
+      const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+      draft.license_expiry = `${month}/${d.getUTCFullYear()}`;
+    }
+    res.json(draft);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+module.exports = { submitRegistration, getRegistrationStatus, getRegistrationDraft };

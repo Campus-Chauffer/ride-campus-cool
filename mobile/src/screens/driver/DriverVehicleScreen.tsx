@@ -14,15 +14,15 @@ export default function DriverVehicleScreen({ route, navigation }: any) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
   const styles = getStyles(colors);
-  const docData = route.params;
+  const { draft, ...docData } = route.params;
 
-  const [vehicleMake, setVehicleMake] = useState('');
-  const [vehicleModel, setVehicleModel] = useState('');
-  const [vehicleColor, setVehicleColor] = useState('');
-  const [plateNumber, setPlateNumber] = useState('');
-  const [frontImage, setFrontImage] = useState('');
-  const [sideImage, setSideImage] = useState('');
-  const [backImage, setBackImage] = useState('');
+  const [vehicleMake, setVehicleMake] = useState(draft?.vehicle_make || '');
+  const [vehicleModel, setVehicleModel] = useState(draft?.vehicle_model || '');
+  const [vehicleColor, setVehicleColor] = useState(draft?.vehicle_color || '');
+  const [plateNumber, setPlateNumber] = useState(draft?.plate_number || '');
+  const [frontImage, setFrontImage] = useState(draft?.vehicle_front_image || '');
+  const [sideImage, setSideImage] = useState(draft?.vehicle_side_image || '');
+  const [backImage, setBackImage] = useState(draft?.vehicle_back_image || '');
   const [loading, setLoading] = useState(false);
 
   const showImageOptions = (setter: (uri: string) => void) => {

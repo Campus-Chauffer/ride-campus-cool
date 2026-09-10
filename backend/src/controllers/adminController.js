@@ -37,6 +37,35 @@ const approveDriver = async (req, res) => {
   }
 };
 
+// Revert an approved driver back to pending review — e.g. undoing an
+// accidental approval of a profile that's still missing info. Takes them
+// offline first (same cleanup as blockDriver) since a driver who isn't
+// currently approved shouldn't be able to receive ride offers, and their
+// own submitRegistration endpoint already resets approval_status to
+// 'pending' on any resubmission, so this just needs to get them back into
+// that state without waiting for a resubmission that may never come.
+const unapproveDriver = async (req, res) => {
+  const { driver_id } = req.params;
+  try {
+    const driverResult = await pool.query('SELECT user_id FROM drivers WHERE id = $1', [driver_id]);
+    if (driverResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Driver not found' });
+    }
+    const { user_id } = driverResult.rows[0];
+
+    await takeDriverOffline(user_id);
+
+    const result = await pool.query(
+      `UPDATE drivers SET approval_status = 'pending' WHERE id = $1 RETURNING *`,
+      [driver_id]
+    );
+    res.json({ message: 'Driver moved back to pending review', driver: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 // Edit a driver's profile fields. Available regardless of approval status —
 // meant for an admin filling in or correcting info a driver skipped or got
 // wrong during registration (e.g. a missing plate number), not just a
@@ -678,7 +707,7 @@ const getDriverActivity = async (req, res) => {
 
 
 module.exports = {
-  getAllDrivers, approveDriver, blockDriver, updateDriverProfile,
+  getAllDrivers, approveDriver, blockDriver, unapproveDriver, updateDriverProfile,
   getAllTrips, getRevenueSummary,
   getAllUsers, blockUser, updateConfig,
   getAllReports, updateReport, getAllConfig,

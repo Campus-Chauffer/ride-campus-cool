@@ -17,6 +17,7 @@ export default function DriverPendingScreen({ navigation }: any) {
   const [status, setStatus] = useState('pending');
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
+  const [loadingDraft, setLoadingDraft] = useState(false);
   // An existing passenger applying to become a driver keeps role='passenger'
   // right up until they actually choose to switch modes — this screen is
   // reachable from either the original driver-signup stack (which doesn't
@@ -44,6 +45,18 @@ export default function DriverPendingScreen({ navigation }: any) {
       console.log('Status check error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const updateApplication = async () => {
+    setLoadingDraft(true);
+    try {
+      const res = await driverRegistrationAPI.getDraft();
+      navigation.navigate('DriverRegistration', { draft: res.data });
+    } catch (err) {
+      Alert.alert('Error', 'Could not load your application. Please try again.');
+    } finally {
+      setLoadingDraft(false);
     }
   };
 
@@ -104,6 +117,16 @@ export default function DriverPendingScreen({ navigation }: any) {
             {loading && (
               <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />
             )}
+            <TouchableOpacity
+              style={styles.updateBtn}
+              onPress={updateApplication}
+              disabled={loadingDraft}
+            >
+              {loadingDraft
+                ? <ActivityIndicator color={colors.primary} />
+                : <Text style={styles.updateBtnText}>Missing something? Update your application</Text>
+              }
+            </TouchableOpacity>
           </>
         )}
 
@@ -251,6 +274,16 @@ const getStyles = (colors: any) => StyleSheet.create({
     fontSize: fontSizes.sm,
     color: 'rgba(255,255,255,0.4)',
     marginTop: spacing.lg,
+    textAlign: 'center',
+  },
+  updateBtn: {
+    marginTop: spacing.lg,
+    padding: spacing.sm,
+  },
+  updateBtnText: {
+    fontSize: fontSizes.sm,
+    color: colors.primary,
+    fontWeight: '600',
     textAlign: 'center',
   },
 });

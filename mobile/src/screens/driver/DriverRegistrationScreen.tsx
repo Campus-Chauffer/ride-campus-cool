@@ -17,17 +17,22 @@ const CHECKLIST_ITEMS = [
   { id: 'phone', label: 'I have a phone mount for safe navigation' },
 ];
 
-export default function DriverRegistrationScreen({ navigation }: any) {
+export default function DriverRegistrationScreen({ route, navigation }: any) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
   const styles = getStyles(colors);
-  const [ghanaCardNumber, setGhanaCardNumber] = useState('');
-  const [ghanaCardImage, setGhanaCardImage] = useState('');
-  const [licenseNumber, setLicenseNumber] = useState('');
-  const [licenseImage, setLicenseImage] = useState('');
-  const [licenseExpiry, setLicenseExpiry] = useState('');
-  const [checklist, setChecklist] = useState<Record<string, boolean>>({});
-  const [profilePhoto, setProfilePhoto] = useState('');
+  // Reached either fresh (no draft — a brand-new applicant) or from
+  // DriverPendingScreen's "Update your application" button, which fetches
+  // everything previously submitted so a driver only has to fix or add
+  // what's actually missing instead of redoing the whole form.
+  const draft = route.params?.draft;
+  const [ghanaCardNumber, setGhanaCardNumber] = useState(draft?.ghana_card_number || '');
+  const [ghanaCardImage, setGhanaCardImage] = useState(draft?.ghana_card_image || '');
+  const [licenseNumber, setLicenseNumber] = useState(draft?.license_number || '');
+  const [licenseImage, setLicenseImage] = useState(draft?.license_image || '');
+  const [licenseExpiry, setLicenseExpiry] = useState(draft?.license_expiry || '');
+  const [checklist, setChecklist] = useState<Record<string, boolean>>(draft?.vehicle_checklist || {});
+  const [profilePhoto, setProfilePhoto] = useState(draft?.profile_photo || '');
 
   const allChecked = CHECKLIST_ITEMS.every(item => checklist[item.id]);
 
@@ -94,6 +99,7 @@ export default function DriverRegistrationScreen({ navigation }: any) {
       license_expiry: licenseExpiry,
       vehicle_checklist: checklist,
       profile_photo: profilePhoto,
+      draft,
     });
   };
 
@@ -127,7 +133,12 @@ export default function DriverRegistrationScreen({ navigation }: any) {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backBtn}
-          onPress={() => navigation.navigate('Landing')}
+          // This screen only ever lives inside StudentScreens or DriverScreens
+          // (both post-login stacks) — neither registers a 'Landing' route,
+          // so navigating there by name always threw. goBack() works whether
+          // this is the very first screen in the stack (a no-op then) or
+          // reached mid-stack from DriverPendingScreen's edit flow.
+          onPress={() => navigation.goBack()}
         >
           <ArrowLeft size={22} color={colors.dark} />
         </TouchableOpacity>

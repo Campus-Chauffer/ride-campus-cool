@@ -187,6 +187,7 @@ export const walletAPI = {
 export const driverRegistrationAPI = {
   submit: (data: any) => api.post('/driver-registration/submit', data),
   getStatus: () => api.get('/driver-registration/status'),
+  getDraft: () => api.get('/driver-registration/draft'),
 };
 
 export const profileAPI = {

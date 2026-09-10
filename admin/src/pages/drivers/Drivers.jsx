@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { RefreshCw, CheckCircle, Ban, X, FileText, Car, User, MapPin, Pencil } from "lucide-react";
+import { RefreshCw, CheckCircle, Ban, X, FileText, Car, User, MapPin, Pencil, RotateCcw } from "lucide-react";
 import api from "../../api";
 import RideHistoryPanel from "../../components/RideHistoryPanel";
 
@@ -141,6 +141,24 @@ export default function Drivers() {
       setSuccessMsg("Driver approved successfully.");
     } catch (err) {
       setError("Failed to approve driver.");
+    } finally {
+      setActioningId(null);
+    }
+  }
+
+  // Reverts an approved driver back to pending review — for undoing an
+  // accidental approval (e.g. a profile that's still missing documents).
+  // The driver's own app already routes them to the "under review" screen
+  // and lets them update their application from there once this lands.
+  async function unapproveDriver(driverId) {
+    try {
+      setActioningId(driverId);
+      await api.patch(`/admin/drivers/${driverId}/unapprove`);
+      setDrivers((prev) => prev.map((d) => d.id === driverId ? { ...d, approval_status: "pending" } : d));
+      if (selected?.id === driverId) setSelected((prev) => ({ ...prev, approval_status: "pending" }));
+      setSuccessMsg("Driver moved back to pending review.");
+    } catch (err) {
+      setError("Failed to unapprove driver.");
     } finally {
       setActioningId(null);
     }
@@ -291,6 +309,15 @@ export default function Drivers() {
                               className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 transition disabled:opacity-50"
                             >
                               <CheckCircle size={12} /> Approve
+                            </button>
+                          )}
+                          {driver.approval_status === "approved" && (
+                            <button
+                              onClick={() => unapproveDriver(driver.id)}
+                              disabled={actioningId === driver.id}
+                              className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 transition disabled:opacity-50"
+                            >
+                              <RotateCcw size={12} /> Unapprove
                             </button>
                           )}
                           {driver.approval_status !== "blocked" && (
@@ -539,6 +566,15 @@ export default function Drivers() {
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold bg-green-500/10 text-green-400 hover:bg-green-500/20 rounded-lg transition disabled:opacity-50"
                   >
                     <CheckCircle size={14} /> Approve
+                  </button>
+                )}
+                {selected.approval_status === "approved" && (
+                  <button
+                    onClick={() => unapproveDriver(selected.id)}
+                    disabled={actioningId === selected.id}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 rounded-lg transition disabled:opacity-50"
+                  >
+                    <RotateCcw size={14} /> Unapprove
                   </button>
                 )}
                 {selected.approval_status !== "blocked" && (
