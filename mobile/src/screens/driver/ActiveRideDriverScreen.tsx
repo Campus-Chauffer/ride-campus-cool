@@ -10,8 +10,13 @@ import socketService from '../../services/socket';
 import { ridesAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, navy } from '../../utils/theme';
+import { shouldRefreshRoute } from '../../utils/geo';
 
-const LOCATION_SHARE_INTERVAL_MS = 4000;
+// Below this, GPS-derived heading is a known-unreliable reading (it's
+// largely Doppler-derived and gets noisy near-stationary) rather than
+// something worth smoothing after the fact — better to just not transmit
+// it and let the passenger's marker keep its last real heading.
+const MIN_HEADING_SPEED_MPS = 1;
 
 interface Props {
   trip: any;
@@ -25,27 +30,24 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
   const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   const routeRequestId = useRef(0);
+  const lastRouteFetchAt = useRef<number | null>(null);
+  const lastRouteFetchOrigin = useRef<{ latitude: number; longitude: number } | null>(null);
 
   // Same as ToPickupScreen: this screen is the location source for the
   // to-destination leg, broadcasting our GPS position over the socket so
   // the passenger's map follows us live.
   useEffect(() => {
     let cancelled = false;
+    let subscription: Location.LocationSubscription | null = null;
+    let lastGoodHeading = 0;
 
-    const applyLocation = (coords: { latitude: number; longitude: number; heading?: number | null }) => {
+    const applyLocation = (coords: { latitude: number; longitude: number; heading?: number | null; speed?: number | null }) => {
       if (cancelled) return;
-      const { latitude, longitude, heading } = coords;
+      const { latitude, longitude, heading, speed } = coords;
+      const headingReliable = heading != null && heading >= 0 && (speed == null || speed >= MIN_HEADING_SPEED_MPS);
+      if (headingReliable) lastGoodHeading = heading as number;
       setDriverLocation({ latitude, longitude });
-      socketService.sendLocation(trip.id, latitude, longitude, heading || 0);
-    };
-
-    const shareLocation = async () => {
-      try {
-        const loc = await Location.getCurrentPositionAsync({});
-        applyLocation(loc.coords);
-      } catch (err) {
-        console.log('Location share error:', err);
-      }
+      socketService.sendLocation(trip.id, latitude, longitude, lastGoodHeading);
     };
 
     // Race a cached fix in parallel with the first accurate one so the map
@@ -54,12 +56,21 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
       if (cached) applyLocation(cached.coords);
     }).catch(() => {});
 
-    shareLocation();
-    const interval = setInterval(shareLocation, LOCATION_SHARE_INTERVAL_MS);
+    // A continuous GPS stream instead of polling getCurrentPositionAsync on
+    // a timer — the OS pushes a fresh fix roughly every 2s (or every 5m
+    // moved, whichever comes first) instead of every reading paying the
+    // latency of a fresh cold fix.
+    Location.watchPositionAsync(
+      { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 2000, distanceInterval: 5 },
+      (loc) => applyLocation(loc.coords)
+    ).then((sub) => {
+      if (cancelled) { sub.remove(); return; }
+      subscription = sub;
+    }).catch((err) => console.log('Location watch error:', err));
 
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      subscription?.remove();
     };
   }, []);
 
@@ -69,6 +80,12 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
 
   async function fetchRoute() {
     if (!driverLocation) return;
+    // Location updates now arrive continuously rather than every 4s, but a
+    // route recalculation is a paid Directions API call — only actually
+    // refetch on a time/distance cadence, independent of raw ping frequency.
+    if (!shouldRefreshRoute(lastRouteFetchAt.current, lastRouteFetchOrigin.current, driverLocation)) return;
+    lastRouteFetchAt.current = Date.now();
+    lastRouteFetchOrigin.current = driverLocation;
     const requestId = ++routeRequestId.current;
     try {
       const res = await ridesAPI.getDirections(

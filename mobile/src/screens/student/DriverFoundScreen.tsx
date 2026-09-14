@@ -10,14 +10,16 @@ import { ridesAPI } from '../../services/api';
 import socketService from '../../services/socket';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, navy, white } from '../../utils/theme';
-import { getBearing } from '../../utils/geo';
+import { getBearing, haversineMeters, snapToRoute, shouldRefreshRoute } from '../../utils/geo';
 
 const CAR_ICON = require('../../../assets/car-top.png');
-// Driver location updates arrive roughly every 4s (the driver's own share
-// interval) — animating the marker over most of that window makes it glide
-// continuously instead of snapping in place, without lagging behind the
-// next update.
-const MARKER_ANIMATION_MS = 2500;
+// The driver's location now streams continuously rather than arriving on a
+// fixed 4s cycle, so the glide duration is computed per-update from how
+// long it's actually been since the last one (see moveDriverMarker) —
+// these just bound that to something that always looks like motion, never
+// an instant snap or a multi-second crawl if updates come in unevenly.
+const MIN_ANIMATION_MS = 400;
+const MAX_ANIMATION_MS = 3000;
 
 interface Props {
   trip: any;
@@ -51,16 +53,32 @@ export default function DriverFoundScreen({ trip, onCancelled }: Props) {
   const [etaText, setEtaText] = useState<string | null>(null);
   const [trackCarMarker, setTrackCarMarker] = useState(true);
   const directionsRequestId = useRef(0);
+  const routeCoordsRef = useRef<any[]>([]);
+  const lastMarkerUpdateAtRef = useRef<number>(Date.now());
+  const lastRouteFetchAt = useRef<number | null>(null);
+  const lastRouteFetchOrigin = useRef<{ latitude: number; longitude: number } | null>(null);
+
+  useEffect(() => { routeCoordsRef.current = routeCoords; }, [routeCoords]);
 
   // Glides the car icon to its new position instead of letting the
-  // coordinate prop change snap it there instantly. Falls back to a plain
-  // state update (instant placement) the first time, since there's nothing
-  // to animate from yet.
+  // coordinate prop change snap it there instantly. Snaps the raw GPS point
+  // onto the already-drawn route polyline first, so the car rides the
+  // street line instead of floating off it between pings, and animates
+  // over however long it's actually been since the last update (clamped)
+  // instead of a duration tied to a fixed poll cycle that no longer exists.
+  // Falls back to a plain state update (instant placement) the first time,
+  // since there's nothing to animate from yet. Returns the snapped point so
+  // callers can keep driverLocation state consistent with what's on screen.
   const moveDriverMarker = (lat: number, lng: number) => {
+    const snapped = snapToRoute({ latitude: lat, longitude: lng }, routeCoordsRef.current);
     if (carMarkerRef.current && driverLocationRef.current) {
-      carMarkerRef.current.animateMarkerToCoordinate({ latitude: lat, longitude: lng }, MARKER_ANIMATION_MS);
+      const now = Date.now();
+      const duration = Math.max(MIN_ANIMATION_MS, Math.min(MAX_ANIMATION_MS, now - lastMarkerUpdateAtRef.current));
+      carMarkerRef.current.animateMarkerToCoordinate(snapped, duration);
+      lastMarkerUpdateAtRef.current = now;
     }
-    driverLocationRef.current = { lat, lng };
+    driverLocationRef.current = { lat: snapped.latitude, lng: snapped.longitude };
+    return snapped;
   };
 
   useEffect(() => {
@@ -68,8 +86,8 @@ export default function DriverFoundScreen({ trip, onCancelled }: Props) {
 
     socketService.onDriverLocation((data) => {
       const { latitude, longitude, heading } = data;
-      moveDriverMarker(latitude, longitude);
-      setDriverLocation({ lat: latitude, lng: longitude });
+      const snapped = moveDriverMarker(latitude, longitude);
+      setDriverLocation({ lat: snapped.latitude, lng: snapped.longitude });
       setDriverHeading(heading || 0);
       if (userLocationRef.current) {
         getDirections(latitude, longitude, userLocationRef.current.lat, userLocationRef.current.lng);
@@ -107,12 +125,15 @@ export default function DriverFoundScreen({ trip, onCancelled }: Props) {
       // bearing between consecutive fallback points instead of leaving the
       // icon frozen at whatever rotation it last had (0 if the socket never
       // connected at all), which is what "stuck facing one direction" was.
-      if (prev && (Math.abs(prev.lat - dLat) > 0.00001 || Math.abs(prev.lng - dLng) > 0.00001)) {
+      // Gated on a real distance moved (not a raw degree epsilon) since a
+      // bearing computed between two nearly-identical points is just GPS
+      // noise, not an actual direction change.
+      if (prev && haversineMeters(prev.lat, prev.lng, dLat, dLng) > 3) {
         setDriverHeading(getBearing(prev.lat, prev.lng, dLat, dLng));
       }
       fallbackLocationRef.current = { lat: dLat, lng: dLng };
-      moveDriverMarker(dLat, dLng);
-      setDriverLocation({ lat: dLat, lng: dLng });
+      const snapped = moveDriverMarker(dLat, dLng);
+      setDriverLocation({ lat: snapped.latitude, lng: snapped.longitude });
       if (userLocationRef.current) {
         getDirections(dLat, dLng, userLocationRef.current.lat, userLocationRef.current.lng);
       }
@@ -156,9 +177,16 @@ export default function DriverFoundScreen({ trip, onCancelled }: Props) {
 
   const getDirections = async (fromLat: number, fromLng: number, toLat: number, toLng: number) => {
     // Requests fire from three places (socket updates, the trip-prop fallback
-    // effect, and the userLocation effect) and can resolve out of order on a
-    // slow network — guard against an older response clobbering a newer one's
-    // route/ETA.
+    // effect, and the userLocation effect), now potentially every couple of
+    // seconds since location streams continuously — but a route
+    // recalculation is a paid Directions API call, so only actually refetch
+    // on a time/distance cadence regardless of how often those call sites fire.
+    const origin = { latitude: fromLat, longitude: fromLng };
+    if (!shouldRefreshRoute(lastRouteFetchAt.current, lastRouteFetchOrigin.current, origin)) return;
+    lastRouteFetchAt.current = Date.now();
+    lastRouteFetchOrigin.current = origin;
+    // Guard against an older response clobbering a newer one's route/ETA
+    // when requests still resolve out of order on a slow network.
     const requestId = ++directionsRequestId.current;
     try {
       const res = await ridesAPI.getDirections(fromLat, fromLng, toLat, toLng);
