@@ -8,7 +8,7 @@ import { CheckCircle, MapPin, Phone, Clock, AlertTriangle } from 'lucide-react-n
 import { driverAPI } from '../../services/api';
 import socketService from '../../services/socket';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, navy } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, navy, mutedOnDark } from '../../utils/theme';
 
 // Below this, GPS-derived heading is a known-unreliable reading — better to
 // keep transmitting the last reliable heading than forward jitter.
@@ -23,7 +23,7 @@ interface Props {
 export default function ArrivedAtPickupScreen({ trip, onStartTrip, onCancelled }: Props) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   const [waitSeconds, setWaitSeconds] = useState(0);
   const [currentFare, setCurrentFare] = useState(parseFloat(trip.fare));
   const [waitPenalty, setWaitPenalty] = useState(0);
@@ -225,7 +225,7 @@ export default function ArrivedAtPickupScreen({ trip, onStartTrip, onCancelled }
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white, paddingTop: androidTopPadding },
   header: {
     backgroundColor: colors.dark,
@@ -242,7 +242,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     marginBottom: spacing.sm,
   },
   arrivedTitle: { fontSize: fontSizes.xl, fontWeight: '800', color: colors.white },
-  arrivedSubtitle: { fontSize: fontSizes.sm, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: spacing.xs },
+  arrivedSubtitle: { fontSize: fontSizes.sm, color: mutedOnDark(isDark, 0.5), textAlign: 'center', marginTop: spacing.xs },
   timerCard: {
     margin: spacing.lg,
     marginBottom: spacing.sm,

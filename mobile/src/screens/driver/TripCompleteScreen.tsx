@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Flag, CheckCircle, Star } from 'lucide-react-native';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, navy, white } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, navy, white, mutedOnDark } from '../../utils/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -19,7 +19,7 @@ interface Props {
 export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: Props) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -187,7 +187,7 @@ export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: P
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.dark, paddingTop: androidTopPadding },
   scroll: { padding: spacing.md, paddingBottom: bottomPadding, flexGrow: 1, justifyContent: 'center' },
   header: {
@@ -213,23 +213,23 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   subtitle: {
     fontSize: fontSizes.xs,
-    color: 'rgba(255,255,255,0.4)',
+    color: mutedOnDark(isDark, 0.4),
     textAlign: 'center',
     lineHeight: 18,
     paddingHorizontal: spacing.md,
   },
   earningsCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: mutedOnDark(isDark, 0.05),
     borderRadius: radius.lg,
     padding: spacing.sm,
     marginBottom: spacing.sm,
   },
   earningsRow: { flexDirection: 'row', justifyContent: 'space-between' },
   earningsItem: { flex: 1, alignItems: 'center' },
-  earningsDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.1)' },
+  earningsDivider: { width: 1, backgroundColor: mutedOnDark(isDark, 0.1) },
   earningsLabel: {
     fontSize: fontSizes.xs,
-    color: 'rgba(255,255,255,0.4)',
+    color: mutedOnDark(isDark, 0.4),
     marginBottom: 4,
     textAlign: 'center',
   },
@@ -333,7 +333,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     color: colors.error,
   },
   doneBtn: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: mutedOnDark(isDark, 0.1),
     padding: spacing.md,
     borderRadius: radius.full,
     alignItems: 'center',

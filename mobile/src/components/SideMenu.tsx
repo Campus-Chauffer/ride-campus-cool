@@ -9,7 +9,7 @@ import {
 } from 'lucide-react-native';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows } from '../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy } from '../utils/theme';
 import { authAPI, driverRegistrationAPI } from '../services/api';
 
 const { width } = Dimensions.get('window');
@@ -120,8 +120,12 @@ export default function SideMenu({ visible, onClose, navigation }: Props) {
         {/* Profile section */}
         <View style={[styles.profileSection, { borderBottomColor: dividerColor }]}>
           <TouchableOpacity onPress={() => navigate('Profile')} style={styles.profileRow}>
+            {/* avatar's background is the fixed brand yellow in both themes, so
+                its initials are pinned to navy rather than c.dark, which would
+                invert to near-white in dark mode and disappear against the
+                still-yellow circle. */}
             <View style={[styles.avatar, { backgroundColor: c.primary }]}>
-              <Text style={[styles.avatarText, { color: c.dark }]}>
+              <Text style={[styles.avatarText, { color: navy }]}>
                 {user?.first_name?.[0]}{user?.last_name?.[0]}
               </Text>
             </View>

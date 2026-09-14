@@ -11,7 +11,7 @@ import DriverFoundScreen from './DriverFoundScreen';
 import ActiveRideScreen from './ActiveRideScreen';
 import DriverArrivedScreen from './DriverArrivedScreen';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, mutedOnDark } from '../../utils/theme';
 
 type Phase = 'searching' | 'driver_found' | 'driver_arrived' | 'in_progress' | 'completed';
 
@@ -20,7 +20,7 @@ export default function RideMatchingScreen({ route, navigation }: any) {
   const { clearRide } = useRideStore();
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   const [phase, setPhase] = useState<Phase>('searching');
   const [currentTrip, setCurrentTrip] = useState(trip);
   const phaseRef = useRef<Phase>('searching');
@@ -185,7 +185,7 @@ export default function RideMatchingScreen({ route, navigation }: any) {
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1 },
   searchContainer: { flex: 1, backgroundColor: colors.dark },
   header: {
@@ -196,7 +196,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   closeBtn: {
     width: 40, height: 40,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: mutedOnDark(isDark, 0.1),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -229,12 +229,12 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   subtitle: {
     fontSize: fontSizes.sm,
-    color: 'rgba(255,255,255,0.5)',
+    color: mutedOnDark(isDark, 0.5),
     textAlign: 'center',
     marginBottom: spacing.xl,
   },
   tripCard: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: mutedOnDark(isDark, 0.08),
     borderRadius: radius.lg,
     padding: spacing.md,
     marginHorizontal: spacing.lg,
@@ -253,14 +253,14 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   tripLine: {
     width: 1, height: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: mutedOnDark(isDark, 0.2),
     marginLeft: 4,
     marginVertical: 2,
   },
   tripInfo: { flex: 1 },
   tripLabel: {
     fontSize: fontSizes.xs,
-    color: 'rgba(255,255,255,0.4)',
+    color: mutedOnDark(isDark, 0.4),
     fontWeight: '500',
   },
   tripAddress: {
@@ -282,7 +282,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   fareLabel: {
     fontSize: fontSizes.sm,
-    color: 'rgba(255,255,255,0.6)',
+    color: mutedOnDark(isDark, 0.6),
     fontWeight: '500',
   },
   fareValue: {
@@ -295,13 +295,13 @@ const getStyles = (colors: any) => StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.full,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: mutedOnDark(isDark, 0.2),
     alignItems: 'center',
     marginBottom: spacing.xs,
   },
   cancelText: {
     fontSize: fontSizes.sm,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.6)',
+    color: mutedOnDark(isDark, 0.6),
   },
 });

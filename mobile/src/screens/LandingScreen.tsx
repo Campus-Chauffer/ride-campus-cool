@@ -6,7 +6,7 @@ import {
 import { Image } from 'react-native';
 import { Car, GraduationCap } from 'lucide-react-native';
 import { useThemeStore } from '../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy } from '../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, white } from '../utils/theme';
 
 const { height } = Dimensions.get('window');
 
@@ -127,10 +127,14 @@ const getStyles = (colors: any) => StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(255,184,0,0.3)',
   },
+  // topSection's background is a fixed black in both themes (not colors.dark),
+  // so appName/tagline are pinned to the fixed white export rather than
+  // colors.white, which would invert to navy in dark mode and go
+  // near-invisible against the still-black section.
   appName: {
     fontSize: fontSizes.xxl,
     fontWeight: '800',
-    color: colors.white,
+    color: white,
     letterSpacing: -0.5,
     marginBottom: spacing.xs,
   },

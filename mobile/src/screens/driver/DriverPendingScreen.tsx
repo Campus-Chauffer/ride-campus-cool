@@ -7,13 +7,13 @@ import { Clock, XCircle, LogOut, CheckCircle } from 'lucide-react-native';
 import { authAPI, driverRegistrationAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, navy, shadows } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, shadows, mutedOnDark } from '../../utils/theme';
 
 export default function DriverPendingScreen({ navigation }: any) {
   const { logout, user, setAuth } = useAuthStore();
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   const [status, setStatus] = useState('pending');
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
@@ -81,7 +81,7 @@ export default function DriverPendingScreen({ navigation }: any) {
           style={styles.logoutBtn}
           onPress={() => logout()}
         >
-          <LogOut size={18} color='rgba(255,255,255,0.6)' />
+          <LogOut size={18} color={mutedOnDark(isDark, 0.6)} />
         </TouchableOpacity>
       </View>
 
@@ -171,7 +171,7 @@ export default function DriverPendingScreen({ navigation }: any) {
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.dark },
   header: {
     paddingHorizontal: spacing.lg,
@@ -181,7 +181,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   logoutBtn: {
     width: 36, height: 36,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: mutedOnDark(isDark, 0.08),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -215,13 +215,13 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   subtitle: {
     fontSize: fontSizes.sm,
-    color: 'rgba(255,255,255,0.5)',
+    color: mutedOnDark(isDark, 0.5),
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: spacing.xl,
   },
   stepsCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: mutedOnDark(isDark, 0.05),
     borderRadius: radius.lg,
     padding: spacing.lg,
     width: '100%',
@@ -235,23 +235,23 @@ const getStyles = (colors: any) => StyleSheet.create({
   stepDot: {
     width: 12, height: 12,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: mutedOnDark(isDark, 0.2),
   },
   stepDotActive: { backgroundColor: colors.primary },
   stepDotDone: { backgroundColor: colors.success },
   stepLine: {
     width: 1, height: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: mutedOnDark(isDark, 0.1),
     marginLeft: 5,
   },
   stepText: {
     fontSize: fontSizes.sm,
-    color: 'rgba(255,255,255,0.6)',
+    color: mutedOnDark(isDark, 0.6),
     fontWeight: '500',
   },
   checkText: {
     fontSize: fontSizes.xs,
-    color: 'rgba(255,255,255,0.3)',
+    color: mutedOnDark(isDark, 0.3),
     textAlign: 'center',
   },
   switchBtn: {
@@ -272,7 +272,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   laterText: {
     fontSize: fontSizes.sm,
-    color: 'rgba(255,255,255,0.4)',
+    color: mutedOnDark(isDark, 0.4),
     marginTop: spacing.lg,
     textAlign: 'center',
   },

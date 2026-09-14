@@ -16,7 +16,7 @@ import { driverAPI, ratingsAPI, reportsAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useRideStore } from '../../store/rideStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, mutedOnDark } from '../../utils/theme';
 import socketService from '../../services/socket';
 import ArrivedAtPickupScreen from './ArrivedAtPickupScreen';
 import { AppState } from 'react-native';
@@ -28,7 +28,7 @@ export default function DriverHomeScreen({ navigation }: any) {
   const { pendingOffer, setPendingOffer, clearRide } = useRideStore();
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
 
   const [isOnline, setIsOnline] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -370,13 +370,13 @@ export default function DriverHomeScreen({ navigation }: any) {
             <Switch
               value={isOnline}
               onValueChange={toggleOnline}
-              trackColor={{ false: 'rgba(255,255,255,0.2)', true: colors.primary }}
+              trackColor={{ false: mutedOnDark(isDark, 0.2), true: colors.primary }}
               thumbColor={colors.white}
               disabled={loading}
             />
           </View>
           <TouchableOpacity style={styles.menuBtn} onPress={() => setMenuOpen(true)}>
-            <Menu size={18} color='rgba(255,255,255,0.6)' />
+            <Menu size={18} color={mutedOnDark(isDark, 0.6)} />
           </TouchableOpacity>
         </View>
       </View>
@@ -482,7 +482,7 @@ export default function DriverHomeScreen({ navigation }: any) {
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.dark, paddingTop: androidTopPadding },
   header: {
     flexDirection: 'row',
@@ -491,7 +491,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: mutedOnDark(isDark, 0.08),
     zIndex: 10,
     backgroundColor: colors.dark,
   },
@@ -500,19 +500,19 @@ const getStyles = (colors: any) => StyleSheet.create({
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 2 },
   statusDot: { width: 6, height: 6, borderRadius: radius.full, backgroundColor: colors.gray3 },
   statusDotOnline: { backgroundColor: colors.success },
-  statusText: { fontSize: fontSizes.xs, color: 'rgba(255,255,255,0.5)', fontWeight: '500' },
+  statusText: { fontSize: fontSizes.xs, color: mutedOnDark(isDark, 0.5), fontWeight: '500' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  toggleContainer: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: radius.full, padding: 4 },
-  menuBtn: { width: 36, height: 36, borderRadius: radius.md, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center' },
+  toggleContainer: { backgroundColor: mutedOnDark(isDark, 0.08), borderRadius: radius.full, padding: 4 },
+  menuBtn: { width: 36, height: 36, borderRadius: radius.md, backgroundColor: mutedOnDark(isDark, 0.08), justifyContent: 'center', alignItems: 'center' },
   mapContainer: { flex: 1, position: 'relative' },
   carIcon: { width: 30, height: 30 },
   statusOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: spacing.lg, paddingBottom: spacing.xxl },
   onlineCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.dark, borderRadius: radius.xl, padding: spacing.md, borderWidth: 1, borderColor: 'rgba(255,184,0,0.3)', ...shadows.lg },
-  offlineCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.dark, borderRadius: radius.xl, padding: spacing.md, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', ...shadows.lg },
+  offlineCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.dark, borderRadius: radius.xl, padding: spacing.md, borderWidth: 1, borderColor: mutedOnDark(isDark, 0.1), ...shadows.lg },
   onlineCardText: { flex: 1 },
   onlineTitle: { fontSize: fontSizes.md, fontWeight: '700', color: colors.white },
   // Sibling to onlineTitle on the same dark card — was using gray3, a token
   // meant for muted text on light backgrounds, which reads dim here.
   offlineTitle: { fontSize: fontSizes.md, fontWeight: '700', color: colors.white },
-  onlineSubtitle: { fontSize: fontSizes.xs, color: 'rgba(255,255,255,0.4)', marginTop: 2 },
+  onlineSubtitle: { fontSize: fontSizes.xs, color: mutedOnDark(isDark, 0.4), marginTop: 2 },
 });

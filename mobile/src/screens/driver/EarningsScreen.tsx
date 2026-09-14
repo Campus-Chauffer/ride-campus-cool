@@ -7,12 +7,12 @@ import {
 import { ArrowLeft, Wallet, Clock, CheckCircle, TrendingUp, RefreshCw, Lock } from 'lucide-react-native';
 import { walletAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, mutedOnDark } from '../../utils/theme';
 
 export default function EarningsScreen({ navigation }: any) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   const [wallet, setWallet] = useState<any>(null);
   const [ledger, setLedger] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +67,7 @@ export default function EarningsScreen({ navigation }: any) {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Earnings</Text>
         <TouchableOpacity style={styles.refreshBtn} onPress={onRefresh}>
-          <RefreshCw size={18} color='rgba(255,255,255,0.6)' />
+          <RefreshCw size={18} color={mutedOnDark(isDark, 0.6)} />
         </TouchableOpacity>
       </View>
 
@@ -168,7 +168,7 @@ export default function EarningsScreen({ navigation }: any) {
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.dark },
   header: {
     flexDirection: 'row',
@@ -177,19 +177,19 @@ const getStyles = (colors: any) => StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: mutedOnDark(isDark, 0.08),
   },
   backBtn: {
     width: 40, height: 40,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: mutedOnDark(isDark, 0.08),
     justifyContent: 'center',
     alignItems: 'center',
   },
   refreshBtn: {
     width: 40, height: 40,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: mutedOnDark(isDark, 0.08),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -221,18 +221,18 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   earningsSubtext: {
     fontSize: fontSizes.xs,
-    color: 'rgba(255,255,255,0.3)',
+    color: mutedOnDark(isDark, 0.3),
   },
   balanceCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: mutedOnDark(isDark, 0.05),
     borderRadius: radius.lg,
     padding: spacing.lg,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: mutedOnDark(isDark, 0.08),
   },
   balanceCardWarning: {
     borderColor: 'rgba(244,67,54,0.3)',
@@ -240,7 +240,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   balanceLabel: {
     fontSize: fontSizes.xs,
-    color: 'rgba(255,255,255,0.4)',
+    color: mutedOnDark(isDark, 0.4),
     marginBottom: 4,
   },
   balanceValue: {
@@ -267,7 +267,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: mutedOnDark(isDark, 0.03),
     padding: spacing.md,
     borderRadius: radius.md,
     marginBottom: spacing.lg,
@@ -275,24 +275,24 @@ const getStyles = (colors: any) => StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: fontSizes.xs,
-    color: 'rgba(255,255,255,0.4)',
+    color: mutedOnDark(isDark, 0.4),
     lineHeight: 18,
   },
   sectionTitle: {
     fontSize: fontSizes.xs,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.4)',
+    color: mutedOnDark(isDark, 0.4),
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: spacing.sm,
   },
   emptyState: { alignItems: 'center', padding: spacing.xl },
-  emptyText: { fontSize: fontSizes.sm, color: 'rgba(255,255,255,0.3)' },
+  emptyText: { fontSize: fontSizes.sm, color: mutedOnDark(isDark, 0.3) },
   ledgerItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: mutedOnDark(isDark, 0.04),
     borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.sm,
@@ -314,10 +314,10 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   ledgerRoute: {
     fontSize: fontSizes.xs,
-    color: 'rgba(255,255,255,0.4)',
+    color: mutedOnDark(isDark, 0.4),
     marginBottom: 2,
   },
-  ledgerDate: { fontSize: fontSizes.xs, color: 'rgba(255,255,255,0.3)' },
+  ledgerDate: { fontSize: fontSizes.xs, color: mutedOnDark(isDark, 0.3) },
   ledgerAmount: { fontSize: fontSizes.md, fontWeight: '800' },
   ledgerAmountPositive: { color: colors.success },
   ledgerAmountNegative: { color: colors.error },

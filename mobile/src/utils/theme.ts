@@ -57,6 +57,16 @@ export const navy = '#1A1A2E';
 // both themes.
 export const white = '#FFFFFF';
 
+// Several screens use colors.dark as a card/header background specifically
+// because it's supposed to invert (navy in light mode, near-white in dark
+// mode) with colors.white as the primary text riding along correctly in
+// the opposite direction. But their secondary/muted text was hardcoded as
+// raw rgba(255,255,255,x) — fine on the navy version, invisible once the
+// card flips to near-white. This is that same colors.white pairing, just
+// faded, so it inverts alongside the card instead of assuming it stays dark.
+export const mutedOnDark = (isDark: boolean, opacity: number) =>
+  isDark ? `rgba(26,26,46,${opacity})` : `rgba(255,255,255,${opacity})`;
+
 export const spacing = {
   xs: 4,
   sm: 8,

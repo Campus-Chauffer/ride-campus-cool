@@ -10,13 +10,13 @@ import {
 import { profileAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, mutedOnDark } from '../../utils/theme';
 
 export default function ProfileScreen({ navigation }: any) {
   const { user } = useAuthStore();
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -72,8 +72,8 @@ export default function ProfileScreen({ navigation }: any) {
           <Text style={styles.name}>{user?.first_name} {user?.last_name}</Text>
           <View style={styles.roleBadge}>
             {user?.role === 'driver'
-              ? <Car size={12} color="rgba(255,255,255,0.6)" />
-              : <GraduationCap size={12} color="rgba(255,255,255,0.6)" />
+              ? <Car size={12} color={mutedOnDark(isDark, 0.6)} />
+              : <GraduationCap size={12} color={mutedOnDark(isDark, 0.6)} />
             }
             <Text style={styles.roleText}>
               {user?.role === 'driver' ? 'Driver' : 'Student'}
@@ -135,7 +135,7 @@ export default function ProfileScreen({ navigation }: any) {
           >
             <Edit size={18} color={colors.white} />
             <Text style={styles.actionText}>Edit Profile</Text>
-            <ChevronRight size={16} color={'rgba(255,255,255,0.3)'} />
+            <ChevronRight size={16} color={mutedOnDark(isDark, 0.3)} />
           </TouchableOpacity>
 
           <View style={styles.actionDivider} />
@@ -146,7 +146,7 @@ export default function ProfileScreen({ navigation }: any) {
           >
             <Award size={18} color={colors.white} />
             <Text style={styles.actionText}>Settings</Text>
-            <ChevronRight size={16} color={'rgba(255,255,255,0.3)'} />
+            <ChevronRight size={16} color={mutedOnDark(isDark, 0.3)} />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -154,7 +154,7 @@ export default function ProfileScreen({ navigation }: any) {
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.dark },
   header: {
     flexDirection: 'row',
@@ -166,7 +166,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   backBtn: {
     width: 40, height: 40,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: mutedOnDark(isDark, 0.08),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -210,19 +210,19 @@ const getStyles = (colors: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: mutedOnDark(isDark, 0.08),
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radius.full,
   },
   roleText: {
     fontSize: fontSizes.xs,
-    color: 'rgba(255,255,255,0.6)',
+    color: mutedOnDark(isDark, 0.6),
     fontWeight: '600',
   },
   statsRow: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: mutedOnDark(isDark, 0.05),
     borderRadius: radius.lg,
     padding: spacing.lg,
     marginBottom: spacing.md,
@@ -230,7 +230,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   statCard: { flex: 1, alignItems: 'center' },
   statDivider: {
     width: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: mutedOnDark(isDark, 0.1),
   },
   statValue: {
     fontSize: fontSizes.xl,
@@ -240,7 +240,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   statLabel: {
     fontSize: fontSizes.xs,
-    color: 'rgba(255,255,255,0.4)',
+    color: mutedOnDark(isDark, 0.4),
     textAlign: 'center',
   },
   ratingRow: {
@@ -249,7 +249,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     gap: 4,
   },
   infoCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: mutedOnDark(isDark, 0.05),
     borderRadius: radius.lg,
     padding: spacing.lg,
     marginBottom: spacing.md,
@@ -262,11 +262,11 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   infoText: {
     fontSize: fontSizes.sm,
-    color: 'rgba(255,255,255,0.6)',
+    color: mutedOnDark(isDark, 0.6),
     fontWeight: '500',
   },
   actionsCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: mutedOnDark(isDark, 0.05),
     borderRadius: radius.lg,
     overflow: 'hidden',
     ...shadows.sm,
@@ -277,20 +277,21 @@ const getStyles = (colors: any) => StyleSheet.create({
     gap: spacing.md,
     padding: spacing.md,
   },
+  // This card's background is colors.dark, which inverts (navy in light
+  // mode, near-white in dark mode) — colors.white on it inverts the
+  // opposite way and stays correct in both, unlike the raw rgba(255,...)
+  // this was previously copy-pasted from elsewhere, which read fine in
+  // light mode but became near-invisible white-on-white once dark mode
+  // flipped this card's background to near-white.
   actionText: {
     flex: 1,
     fontSize: fontSizes.md,
     fontWeight: '600',
-    // This screen's background is always the dark navy (colors.dark) by
-    // fixed design, not tied to the app's dark-mode toggle — this was
-    // using colors.dark for the text too, making it identical to its own
-    // background (1:1 contrast, invisible). Every other label on this
-    // screen already uses white/near-white; match that.
     color: colors.white,
   },
   actionDivider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: mutedOnDark(isDark, 0.08),
     marginLeft: spacing.lg + 18 + spacing.md,
   },
 });
