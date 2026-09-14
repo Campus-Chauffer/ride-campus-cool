@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  StatusBar, Linking, Alert
+  StatusBar, Linking, Alert, Image
 } from 'react-native';
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -10,13 +10,21 @@ import socketService from '../../services/socket';
 import { ridesAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, navy } from '../../utils/theme';
-import { shouldRefreshRoute } from '../../utils/geo';
+import { shouldRefreshRoute, haversineMeters } from '../../utils/geo';
 
 // Below this, GPS-derived heading is a known-unreliable reading (it's
 // largely Doppler-derived and gets noisy near-stationary) rather than
 // something worth smoothing after the fact — better to just not transmit
 // it and let the passenger's marker keep its last real heading.
 const MIN_HEADING_SPEED_MPS = 1;
+
+// A driver tapping "I've Arrived" while genuinely far from the pickup point
+// (whether an honest mis-tap or not) previously went straight through with
+// no check at all, and the passenger's app had no way to tell the
+// difference — this is the trust gap that surfaced from an actual test.
+// 150m is generous enough for GPS drift and a building's real entrance
+// being set back from its pin, while still catching "nowhere near."
+const ARRIVAL_DISTANCE_THRESHOLD_M = 150;
 
 const CAR_ICON = require('../../../assets/car-top.png');
 
@@ -31,6 +39,7 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
   const colors = getColors(isDark);
   const styles = getStyles(colors);
   const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [driverHeading, setDriverHeading] = useState(0);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   const mapRef = useRef<RNMapView>(null);
   const routeRequestId = useRef(0);
@@ -51,6 +60,7 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
       const headingReliable = heading != null && heading >= 0 && (speed == null || speed >= MIN_HEADING_SPEED_MPS);
       if (headingReliable) lastGoodHeading = heading as number;
       setDriverLocation({ latitude, longitude });
+      setDriverHeading(lastGoodHeading);
       socketService.sendLocation(trip.id, latitude, longitude, lastGoodHeading);
     };
 
@@ -118,6 +128,31 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
     }
   };
 
+  // Confirms the driver is actually near the pickup point before letting
+  // "I've Arrived" go through — a plain tap used to fire instantly
+  // regardless of where the driver's GPS actually put them, which is
+  // exactly what let a mis-tap during testing show the passenger a driver
+  // "at" the pickup point who wasn't there at all.
+  const confirmArrival = () => {
+    if (driverLocation) {
+      const distance = haversineMeters(
+        driverLocation.latitude, driverLocation.longitude,
+        parseFloat(trip.pickup_lat), parseFloat(trip.pickup_lng)
+      );
+      if (distance > ARRIVAL_DISTANCE_THRESHOLD_M) {
+        return Alert.alert(
+          "You're not at the pickup point yet",
+          `You appear to be about ${Math.round(distance)}m from ${trip.pickup_address}. Are you sure you've arrived?`,
+          [
+            { text: 'Not yet', style: 'cancel' },
+            { text: "Yes, I've arrived", style: 'destructive', onPress: onArrived },
+          ]
+        );
+      }
+    }
+    onArrived();
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
@@ -135,10 +170,14 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
           }}
         >
           {driverLocation && (
-            <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
-              <View style={styles.driverMarker}>
-                <MapPin size={16} color={navy} />
-              </View>
+            <Marker
+              coordinate={driverLocation}
+              anchor={{ x: 0.5, y: 0.5 }}
+              rotation={driverHeading}
+              flat
+              tracksViewChanges={false}
+            >
+              <Image source={CAR_ICON} style={styles.carIcon} resizeMode="contain" />
             </Marker>
           )}
 
@@ -201,7 +240,7 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
               <Phone size={18} color={colors.dark} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.arrivedBtn} onPress={onArrived}>
+          <TouchableOpacity style={styles.arrivedBtn} onPress={confirmArrival}>
             <CheckCircle size={20} color={navy} />
             <Text style={styles.arrivedBtnText}>I've Arrived at Pickup</Text>
           </TouchableOpacity>
@@ -214,11 +253,7 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
 const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   mapContainer: { flex: 1 },
-  driverMarker: {
-    width: 36, height: 36, borderRadius: radius.full,
-    backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center',
-    ...shadows.md,
-  },
+  carIcon: { width: 44, height: 44 },
   pickupMarker: {
     width: 32, height: 32, borderRadius: radius.full,
     backgroundColor: colors.dark, justifyContent: 'center', alignItems: 'center',

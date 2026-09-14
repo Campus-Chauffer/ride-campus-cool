@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  Linking, StatusBar
+  Linking, StatusBar, Image
 } from 'react-native';
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { Phone, MapPin, CheckCircle, Flag } from 'lucide-react-native';
+import { Phone, CheckCircle, Flag } from 'lucide-react-native';
 import socketService from '../../services/socket';
 import { ridesAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
@@ -18,6 +18,8 @@ import { shouldRefreshRoute } from '../../utils/geo';
 // it and let the passenger's marker keep its last real heading.
 const MIN_HEADING_SPEED_MPS = 1;
 
+const CAR_ICON = require('../../../assets/car-top.png');
+
 interface Props {
   trip: any;
   onCompleteTrip: () => void;
@@ -28,6 +30,7 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
   const colors = getColors(isDark);
   const styles = getStyles(colors);
   const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [driverHeading, setDriverHeading] = useState(0);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   const routeRequestId = useRef(0);
   const lastRouteFetchAt = useRef<number | null>(null);
@@ -47,6 +50,7 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
       const headingReliable = heading != null && heading >= 0 && (speed == null || speed >= MIN_HEADING_SPEED_MPS);
       if (headingReliable) lastGoodHeading = heading as number;
       setDriverLocation({ latitude, longitude });
+      setDriverHeading(lastGoodHeading);
       socketService.sendLocation(trip.id, latitude, longitude, lastGoodHeading);
     };
 
@@ -125,10 +129,14 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
           }}
         >
           {driverLocation && (
-            <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
-              <View style={styles.driverMarker}>
-                <MapPin size={16} color={navy} />
-              </View>
+            <Marker
+              coordinate={driverLocation}
+              anchor={{ x: 0.5, y: 0.5 }}
+              rotation={driverHeading}
+              flat
+              tracksViewChanges={false}
+            >
+              <Image source={CAR_ICON} style={styles.carIcon} resizeMode="contain" />
             </Marker>
           )}
 
@@ -196,11 +204,7 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
 const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   mapContainer: { flex: 1 },
-  driverMarker: {
-    width: 36, height: 36, borderRadius: radius.full,
-    backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center',
-    ...shadows.md,
-  },
+  carIcon: { width: 44, height: 44 },
   dropoffMarker: {
     width: 32, height: 32, borderRadius: radius.full,
     backgroundColor: colors.dark, justifyContent: 'center', alignItems: 'center',

@@ -3,10 +3,16 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   StatusBar, Alert, Linking,
 } from 'react-native';
+import * as Location from 'expo-location';
 import { CheckCircle, MapPin, Phone, Clock, AlertTriangle } from 'lucide-react-native';
 import { driverAPI } from '../../services/api';
+import socketService from '../../services/socket';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, navy } from '../../utils/theme';
+
+// Below this, GPS-derived heading is a known-unreliable reading — better to
+// keep transmitting the last reliable heading than forward jitter.
+const MIN_HEADING_SPEED_MPS = 1;
 
 interface Props {
   trip: any;
@@ -48,6 +54,43 @@ export default function ArrivedAtPickupScreen({ trip, onStartTrip, onCancelled }
     return () => {
       clearInterval(timerRef.current);
       clearInterval(fareRef.current);
+    };
+  }, []);
+
+  // This screen previously broadcast nothing at all once "arrived" was
+  // tapped — meaning if that tap happened while genuinely far from the
+  // pickup point (a mis-tap, or worse), the passenger's app had zero live
+  // signal to catch it and just went quiet. Keep streaming real GPS
+  // position for the whole waiting period, same mechanism as the driving
+  // legs, so the passenger's map reflects where the driver actually is.
+  useEffect(() => {
+    let cancelled = false;
+    let subscription: Location.LocationSubscription | null = null;
+    let lastGoodHeading = 0;
+
+    const applyLocation = (coords: { latitude: number; longitude: number; heading?: number | null; speed?: number | null }) => {
+      if (cancelled) return;
+      const { latitude, longitude, heading, speed } = coords;
+      const headingReliable = heading != null && heading >= 0 && (speed == null || speed >= MIN_HEADING_SPEED_MPS);
+      if (headingReliable) lastGoodHeading = heading as number;
+      socketService.sendLocation(trip.id, latitude, longitude, lastGoodHeading);
+    };
+
+    Location.getLastKnownPositionAsync({}).then((cached) => {
+      if (cached) applyLocation(cached.coords);
+    }).catch(() => {});
+
+    Location.watchPositionAsync(
+      { accuracy: Location.Accuracy.Balanced, timeInterval: 4000, distanceInterval: 10 },
+      (loc) => applyLocation(loc.coords)
+    ).then((sub) => {
+      if (cancelled) { sub.remove(); return; }
+      subscription = sub;
+    }).catch((err) => console.log('Location watch error:', err));
+
+    return () => {
+      cancelled = true;
+      subscription?.remove();
     };
   }, []);
 

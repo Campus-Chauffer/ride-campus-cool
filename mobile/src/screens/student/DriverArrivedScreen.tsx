@@ -9,11 +9,23 @@ import { driverAPI, ridesAPI } from '../../services/api';
 import socketService from '../../services/socket';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, navy } from '../../utils/theme';
+import { haversineMeters } from '../../utils/geo';
 
 const CAR_ICON = require('../../../assets/car-top.png');
-// Smooths out small GPS jitter while the driver is parked waiting, rather
-// than the marker twitching between near-identical points every update.
-const MARKER_ANIMATION_MS = 1500;
+// This screen used to arrive at a fixed 1.5s glide because updates only
+// ever came from an occasional GPS jitter — now that the driver's phone
+// streams continuously (see ArrivedAtPickupScreen), the duration is
+// measured from the actual gap since the last update instead, same as the
+// driving legs.
+const MIN_ANIMATION_MS = 400;
+const MAX_ANIMATION_MS = 3000;
+// If the driver's live position is further than this from the pickup
+// point while "arrived," something's off — either they tapped the button
+// prematurely or GPS is having a bad moment — and the passenger should see
+// that plainly instead of just trusting an unqualified "arrived" screen.
+// This is the trust gap a real test surfaced: a driver marked arrived
+// while genuinely elsewhere, and the app had nothing to say about it.
+const ARRIVAL_MISMATCH_THRESHOLD_M = 150;
 
 interface Props {
   trip: any;
@@ -28,17 +40,37 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
   const [waitSeconds, setWaitSeconds] = useState(0);
   const [currentFare, setCurrentFare] = useState(parseFloat(trip.fare));
   const [waitPenalty, setWaitPenalty] = useState(0);
-  const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const initialDriverLocation = trip.driver_lat && trip.driver_lng
+    ? { latitude: parseFloat(trip.driver_lat), longitude: parseFloat(trip.driver_lng) }
+    : null;
+  const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(initialDriverLocation);
+  const [driverHeading, setDriverHeading] = useState(0);
   // Mirrors driverLocation but read inside a mount-only effect's closure, so
   // it always reflects the latest value instead of the one captured when
-  // the effect first ran (state would be frozen at null there).
-  const driverLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  // the effect first ran (state would be frozen at its initial value there).
+  const driverLocationRef = useRef<{ latitude: number; longitude: number } | null>(initialDriverLocation);
+  const lastMarkerUpdateAtRef = useRef<number>(Date.now());
   const mapRef = useRef<RNMapView>(null);
   const carMarkerRef = useRef<any>(null);
   const timerRef = useRef<any>(null);
   const fareRef = useRef<any>(null);
 
   const FREE_WAIT = 300;
+
+  // Glides the car icon to its new position, animating over however long
+  // it's actually been since the last update (clamped) rather than a fixed
+  // duration.
+  const moveDriverMarker = (lat: number, lng: number) => {
+    const coord = { latitude: lat, longitude: lng };
+    if (carMarkerRef.current && driverLocationRef.current) {
+      const now = Date.now();
+      const duration = Math.max(MIN_ANIMATION_MS, Math.min(MAX_ANIMATION_MS, now - lastMarkerUpdateAtRef.current));
+      carMarkerRef.current.animateMarkerToCoordinate(coord, duration);
+      lastMarkerUpdateAtRef.current = now;
+    }
+    driverLocationRef.current = coord;
+    return coord;
+  };
 
   useEffect(() => {
     timerRef.current = setInterval(() => {
@@ -61,14 +93,9 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
     // since the driver hasn't left the trip, just changed phase to "arrived"
     socketService.joinRide(trip.id);
     socketService.onDriverLocation((data) => {
-      const coord = { latitude: data.latitude, longitude: data.longitude };
-      // Glide the car icon to its new position instead of letting the
-      // coordinate prop change snap it there instantly.
-      if (carMarkerRef.current && driverLocationRef.current) {
-        carMarkerRef.current.animateMarkerToCoordinate(coord, MARKER_ANIMATION_MS);
-      }
-      driverLocationRef.current = coord;
+      const coord = moveDriverMarker(data.latitude, data.longitude);
       setDriverLocation(coord);
+      setDriverHeading(data.heading || 0);
       mapRef.current?.animateToRegion({
         latitude: data.latitude,
         longitude: data.longitude,
@@ -83,6 +110,16 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
       socketService.offDriverLocation();
     };
   }, []);
+
+  // DB-polling fallback for whenever the socket hasn't delivered an update
+  // yet, same pattern as the driving-leg screens — the parent
+  // (RideMatchingScreen) keeps refreshing the trip prop regardless of phase.
+  useEffect(() => {
+    if (trip.driver_lat && trip.driver_lng) {
+      const coord = moveDriverMarker(parseFloat(trip.driver_lat), parseFloat(trip.driver_lng));
+      setDriverLocation(coord);
+    }
+  }, [trip.driver_lat, trip.driver_lng]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -123,6 +160,17 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
     longitude: parseFloat(trip.pickup_lng),
   };
 
+  // Surfaces the exact mismatch a real test caught: a driver marked
+  // "arrived" while their live position says otherwise. Only flagged once
+  // an actual GPS fix has come in — never inferred from the absence of one.
+  const distanceFromPickup = driverLocation
+    ? haversineMeters(
+        driverLocation.latitude, driverLocation.longitude,
+        parseFloat(trip.pickup_lat), parseFloat(trip.pickup_lng)
+      )
+    : null;
+  const arrivalMismatch = distanceFromPickup !== null && distanceFromPickup > ARRIVAL_MISMATCH_THRESHOLD_M;
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
@@ -146,9 +194,11 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
               coordinate={driverLocation}
               title="Your driver"
               anchor={{ x: 0.5, y: 0.5 }}
+              rotation={driverHeading}
+              flat
               tracksViewChanges={false}
             >
-              <Image source={CAR_ICON} style={{ width: 36, height: 36 }} resizeMode="contain" />
+              <Image source={CAR_ICON} style={styles.carIcon} resizeMode="contain" />
             </Marker>
           )}
           <Marker
@@ -180,6 +230,17 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
             <Text style={styles.arrivedSubtitle}>Waiting at {trip.pickup_address}</Text>
           </View>
         </View>
+
+        {/* Flags the exact scenario a real test caught: the driver marked
+            arrived from somewhere that isn't actually the pickup point. */}
+        {arrivalMismatch && (
+          <View style={styles.mismatchBanner}>
+            <AlertTriangle size={16} color="#FF4444" />
+            <Text style={styles.mismatchText}>
+              Your driver's live location is about {Math.round(distanceFromPickup!)}m from the pickup point — they may still be on the way.
+            </Text>
+          </View>
+        )}
 
         {/* Timer */}
         <View style={[styles.timerCard, isInPenalty && styles.timerCardPenalty]}>
@@ -306,4 +367,17 @@ const getStyles = (colors: any) => StyleSheet.create({
   cancelBtn: { padding: spacing.md, borderRadius: radius.full, borderWidth: 1.5, borderColor: colors.gray2, alignItems: 'center' },
   cancelText: { fontSize: fontSizes.sm, color: colors.textMuted, fontWeight: '600' },
   pickupMarker: { width: 32, height: 32, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', ...shadows.md },
+  carIcon: { width: 36, height: 36 },
+  mismatchBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(255,68,68,0.08)',
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255,68,68,0.25)',
+  },
+  mismatchText: { flex: 1, fontSize: fontSizes.xs, color: colors.dark, lineHeight: 18 },
 });
