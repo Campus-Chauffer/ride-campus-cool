@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   StatusBar, Linking, Alert, Image
@@ -36,7 +36,10 @@ interface Props {
 export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }: Props) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  // This screen re-renders every second for its wait timer plus every few
+  // seconds for live GPS updates — without memoizing, getStyles reruns
+  // StyleSheet.create on every one of those ticks for no reason.
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [waitSeconds, setWaitSeconds] = useState(0);
   const [currentFare, setCurrentFare] = useState(parseFloat(trip.fare));
   const [waitPenalty, setWaitPenalty] = useState(0);

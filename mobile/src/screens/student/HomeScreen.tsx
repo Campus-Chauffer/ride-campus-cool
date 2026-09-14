@@ -482,7 +482,7 @@ export default function StudentHomeScreen({ navigation }: any) {
           </Marker>
         )}
         {selectedDest && (
-          <Marker coordinate={{ latitude: selectedDest.lat, longitude: selectedDest.lng }} pinColor={colors.primary} title={selectedDest.name} />
+          <Marker coordinate={{ latitude: selectedDest.lat, longitude: selectedDest.lng }} pinColor={colors.primary} title={selectedDest.name} tracksViewChanges={false} />
         )}
         {routeCoords.length > 0 && (
           <Polyline coordinates={routeCoords} strokeColor={colors.dark} strokeWidth={4} />

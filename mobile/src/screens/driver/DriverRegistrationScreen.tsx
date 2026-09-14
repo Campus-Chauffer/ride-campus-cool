@@ -8,6 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { ArrowLeft, Camera, ChevronRight, Check } from 'lucide-react-native';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, navy, white } from '../../utils/theme';
+import { resizeForUpload } from '../../utils/imageResize';
 
 const CHECKLIST_ITEMS = [
   { id: 'ac', label: 'My vehicle has working air conditioning' },
@@ -52,7 +53,8 @@ export default function DriverRegistrationScreen({ route, navigation }: any) {
       base64: true,
     });
     if (!result.canceled && result.assets[0]) {
-      setter(`data:image/jpeg;base64,${result.assets[0].base64}`);
+      const asset = result.assets[0];
+      setter(await resizeForUpload(asset.uri, asset.width, asset.base64));
     }
   };
 
@@ -67,7 +69,8 @@ export default function DriverRegistrationScreen({ route, navigation }: any) {
       base64: true,
     });
     if (!result.canceled && result.assets[0]) {
-      setter(`data:image/jpeg;base64,${result.assets[0].base64}`);
+      const asset = result.assets[0];
+      setter(await resizeForUpload(asset.uri, asset.width, asset.base64));
     }
   };
 

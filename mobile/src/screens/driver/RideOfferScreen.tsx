@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, Animated, PanResponder,
   Dimensions, Alert, StatusBar
@@ -28,7 +28,10 @@ interface Props {
 export default function RideOfferScreen({ trip, onAccepted, onDeclined, timer }: Props) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  // This screen re-renders once a second for its countdown timer — without
+  // memoizing, getStyles(colors) reruns StyleSheet.create on every one of
+  // those ticks for no reason, since colors itself hasn't changed.
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const slideX = useRef(new Animated.Value(0)).current;
   const [accepted, setAccepted] = useState(false);
   const [trackWidth, setTrackWidth] = useState(FALLBACK_SLIDER_WIDTH);

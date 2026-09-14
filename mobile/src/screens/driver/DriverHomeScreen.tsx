@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, Alert, ActivityIndicator,
@@ -28,7 +28,10 @@ export default function DriverHomeScreen({ navigation }: any) {
   const { pendingOffer, setPendingOffer, clearRide } = useRideStore();
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors, isDark);
+  // This screen re-renders once a second during the offer countdown and on
+  // every accepted heading update — without memoizing, getStyles reruns
+  // StyleSheet.create on every one of those ticks for no reason.
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
 
   const [isOnline, setIsOnline] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -44,6 +47,7 @@ export default function DriverHomeScreen({ navigation }: any) {
   const offerInterval = useRef<any>(null);
   const timerInterval = useRef<any>(null);
   const headingSubscription = useRef<any>(null);
+  const lastHeadingRef = useRef(0);
   const tripPhaseRef = useRef<string>('idle');
   const activeTripRef = useRef<any>(null);
   const isCompleting = useRef(false);
@@ -110,7 +114,18 @@ export default function DriverHomeScreen({ navigation }: any) {
       setDriverLocation({ lat: latitude, lng: longitude });
       mapRef.current?.animateToRegion({ latitude, longitude, latitudeDelta: 0.02, longitudeDelta: 0.02 });
       headingSubscription.current = await Location.watchHeadingAsync((h) => {
-        setHeading(h.trueHeading || h.magHeading || 0);
+        // watchHeadingAsync has no threshold option and fires many times a
+        // second on the slightest compass drift, and each call re-rendered
+        // this whole screen (header, online/offline card) for a change too
+        // small to see — only actually update state once it's moved enough
+        // to matter, so a driver sitting online isn't paying continuous
+        // reconciliation cost for nothing visible.
+        const newHeading = h.trueHeading || h.magHeading || 0;
+        const diff = Math.abs(newHeading - lastHeadingRef.current) % 360;
+        if (Math.min(diff, 360 - diff) >= 5) {
+          lastHeadingRef.current = newHeading;
+          setHeading(newHeading);
+        }
       });
     } catch (err) {
       console.log('Initial location error:', err);

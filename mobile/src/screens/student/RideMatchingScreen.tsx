@@ -63,7 +63,13 @@ export default function RideMatchingScreen({ route, navigation }: any) {
         const res = await ridesAPI.getTripStatus(trip.id);
         const updated = res.data;
         if (!updated) return;
-        setCurrentTrip(updated);
+        // The poll fires every 3s for the whole ride regardless of whether
+        // anything actually changed — bailing out on an identical payload
+        // (returning the same reference from the updater) skips re-rendering
+        // whichever ride sub-screen is mounted instead of forcing its whole
+        // tree (map, bottom sheet, avatar image) through a reconcile pass
+        // for no visible reason.
+        setCurrentTrip(prev => JSON.stringify(updated) === JSON.stringify(prev) ? prev : updated);
 
         const currentPhase = phaseRef.current;
 

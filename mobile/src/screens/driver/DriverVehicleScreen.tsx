@@ -9,6 +9,7 @@ import { ArrowLeft, ChevronRight, Camera, Check } from 'lucide-react-native';
 import { driverRegistrationAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, navy, white } from '../../utils/theme';
+import { resizeForUpload } from '../../utils/imageResize';
 
 export default function DriverVehicleScreen({ route, navigation }: any) {
   const { isDark } = useThemeStore();
@@ -35,7 +36,8 @@ export default function DriverVehicleScreen({ route, navigation }: any) {
             allowsEditing: true, quality: 0.3, base64: true,
           });
           if (!result.canceled && result.assets[0]) {
-            setter(`data:image/jpeg;base64,${result.assets[0].base64}`);
+            const asset = result.assets[0];
+            setter(await resizeForUpload(asset.uri, asset.width, asset.base64));
           }
         }
       },
@@ -48,7 +50,8 @@ export default function DriverVehicleScreen({ route, navigation }: any) {
             allowsEditing: true, quality: 0.3, base64: true,
           });
           if (!result.canceled && result.assets[0]) {
-            setter(`data:image/jpeg;base64,${result.assets[0].base64}`);
+            const asset = result.assets[0];
+            setter(await resizeForUpload(asset.uri, asset.width, asset.base64));
           }
         }
       },

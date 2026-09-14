@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   StatusBar, Alert, Linking,
@@ -23,7 +23,10 @@ interface Props {
 export default function ArrivedAtPickupScreen({ trip, onStartTrip, onCancelled }: Props) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors, isDark);
+  // This screen re-renders every second for its wait timer — without
+  // memoizing, getStyles reruns StyleSheet.create on every tick for no
+  // reason, since colors/isDark haven't changed.
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const [waitSeconds, setWaitSeconds] = useState(0);
   const [currentFare, setCurrentFare] = useState(parseFloat(trip.fare));
   const [waitPenalty, setWaitPenalty] = useState(0);
