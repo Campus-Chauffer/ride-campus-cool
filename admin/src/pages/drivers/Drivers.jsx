@@ -241,9 +241,9 @@ export default function Drivers() {
         </button>
       </div>
 
-      <div className="flex gap-5 items-start">
+      <div className="flex flex-col lg:flex-row gap-5 items-start">
         {/* Table */}
-        <div className="flex-1 bg-gray-900 border border-gray-800 rounded-xl overflow-hidden min-w-0">
+        <div className="flex-1 w-full bg-gray-900 border border-gray-800 rounded-xl overflow-hidden min-w-0">
           {loading ? (
             <div className="text-center text-gray-500 text-sm py-16">Loading drivers…</div>
           ) : filtered.length === 0 ? (
@@ -341,7 +341,7 @@ export default function Drivers() {
 
         {/* Detail panel */}
         {selected && (
-          <div className="w-80 flex-shrink-0 bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <div className="w-full lg:w-80 flex-shrink-0 bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
             {/* Panel header */}
             <div className="flex justify-between items-center px-5 py-4 border-b border-gray-800">
               <h2 className="text-white font-semibold">Driver Profile</h2>
