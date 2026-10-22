@@ -10,7 +10,7 @@ const STATUS_STYLES = {
 };
 
 const TYPE_STYLES = {
-  passenger: "bg-purple-500/10 text-purple-400",
+  passenger: "bg-gray-500/10 text-gray-400",
   driver: "bg-blue-500/10 text-blue-400",
 };
 
@@ -120,8 +120,8 @@ export default function Reports() {
         </button>
       </div>
 
-      <div className="flex gap-5 items-start">
-        <div className="flex-1 bg-gray-900 border border-gray-800 rounded-xl overflow-hidden min-w-0">
+      <div className="flex flex-col lg:flex-row gap-5 items-start">
+        <div className="flex-1 w-full bg-gray-900 border border-gray-800 rounded-xl overflow-hidden min-w-0">
           {loading ? (
             <div className="text-center text-gray-500 text-sm py-16">Loading reports…</div>
           ) : paginated.length === 0 ? (
@@ -170,7 +170,7 @@ export default function Reports() {
         </div>
 
         {selected && (
-          <div className="w-72 flex-shrink-0 bg-gray-900 border border-gray-800 rounded-xl p-5">
+          <div className="w-full lg:w-72 flex-shrink-0 bg-gray-900 border border-gray-800 rounded-xl p-5">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-white font-semibold">Report #{selected.id}</h2>
               <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-white transition">

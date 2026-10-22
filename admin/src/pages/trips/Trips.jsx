@@ -7,7 +7,7 @@ const STATUS_STYLES = {
   cancelled: "bg-red-500/10 text-red-400",
   in_progress: "bg-blue-500/10 text-blue-400",
   active: "bg-blue-500/10 text-blue-400",
-  arrived: "bg-purple-500/10 text-purple-400",
+  arrived: "bg-teal-500/10 text-teal-400",
   offered: "bg-yellow-500/10 text-yellow-400",
   accepted: "bg-yellow-500/10 text-yellow-400",
   requested: "bg-gray-500/10 text-gray-300",

@@ -10,7 +10,7 @@ const AUDIENCE_OPTIONS = [
 
 const AUDIENCE_STYLES = {
   all: "bg-yellow-500/10 text-yellow-400",
-  passenger: "bg-purple-500/10 text-purple-400",
+  passenger: "bg-gray-500/10 text-gray-400",
   driver: "bg-blue-500/10 text-blue-400",
 };
 

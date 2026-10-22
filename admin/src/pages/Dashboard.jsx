@@ -5,9 +5,10 @@ import {
   Pie, Cell, Legend
 } from 'recharts';
 import api from '../api';
-import { Car, Users, MapPin, Wallet, TrendingUp, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import DateRangeFilter, { getPeriodRange, PERIODS } from '../components/DateRangeFilter';
 import TodayStats from '../components/TodayStats';
+import KpiTile from '../components/KpiTile';
 
 const COLORS = ['#FBBF24', '#34D399', '#F87171', '#60A5FA'];
 
@@ -117,76 +118,48 @@ export default function Dashboard() {
       <TodayStats />
 
       <div>
-        <h2 className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">
+        <h2 className="text-gray-400 text-sm font-medium mb-3">
           {PERIODS.find(p => p.id === period)?.label || 'This Period'}
         </h2>
       </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          icon={<Users size={20} />}
-          label="Total Users"
-          value={stats?.totalUsers}
-          color="blue"
-        />
-        <StatCard
-          icon={<Car size={20} />}
+        <KpiTile label="Total Users" value={stats?.totalUsers} />
+        <KpiTile
           label="Online Drivers"
-          value={`${stats?.onlineDrivers} / ${stats?.approvedDrivers}`}
+          value={stats ? `${stats.onlineDrivers} / ${stats.approvedDrivers}` : '—'}
           sub="online / approved"
-          color="green"
-          pulse
+          live
         />
-        <StatCard
-          icon={<MapPin size={20} />}
+        <KpiTile
           label="Total Trips"
           value={stats?.totalTrips}
-          sub={`${stats?.completionRate}% completion`}
-          color="yellow"
+          sub={stats ? `${stats.completionRate}% completion` : undefined}
         />
-        <StatCard
-          icon={<Wallet size={20} />}
+        <KpiTile
           label="Total Revenue"
           value={`GH₵${parseFloat(stats?.totalRevenue || 0).toFixed(2)}`}
           sub={`GH₵${parseFloat(stats?.totalCommission || 0).toFixed(2)} commission`}
-          color="purple"
         />
       </div>
 
       {/* Second row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          icon={<CheckCircle size={20} />}
-          label="Completed"
-          value={stats?.completedTrips}
-          color="green"
-        />
-        <StatCard
-          icon={<XCircle size={20} />}
-          label="Cancelled"
-          value={stats?.cancelledTrips}
-          color="red"
-        />
-        <StatCard
-          icon={<AlertCircle size={20} />}
-          label="No Driver Found"
-          value={stats?.noDriverTrips}
-          color="orange"
-        />
-        <StatCard
-          icon={<TrendingUp size={20} />}
+        <KpiTile label="Completed" value={stats?.completedTrips} />
+        <KpiTile label="Cancelled" value={stats?.cancelledTrips} />
+        <KpiTile label="No Driver Found" value={stats?.noDriverTrips} />
+        <KpiTile
           label="Outstanding"
           value={`GH₵${parseFloat(stats?.outstandingCommission || 0).toFixed(2)}`}
           sub="commission owed"
-          color="red"
         />
       </div>
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue chart */}
-        <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+        <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
           <h3 className="text-white font-semibold mb-4">Daily Revenue</h3>
           {revenue?.daily?.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
@@ -222,7 +195,7 @@ export default function Dashboard() {
         </div>
 
         {/* Trip status pie */}
-        <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+        <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
           <h3 className="text-white font-semibold mb-4">Trip Status Breakdown</h3>
           {stats?.totalTrips > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
@@ -260,7 +233,7 @@ export default function Dashboard() {
       {/* Driver status + daily trips */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Daily trips bar chart */}
-        <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+        <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
           <h3 className="text-white font-semibold mb-4">Daily Trips</h3>
           {revenue?.daily?.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
@@ -284,7 +257,7 @@ export default function Dashboard() {
         </div>
 
         {/* Driver status */}
-        <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+        <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
           <h3 className="text-white font-semibold mb-4">Driver Status</h3>
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
@@ -314,7 +287,7 @@ export default function Dashboard() {
       </div>
 
       {/* Online drivers list */}
-      <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
         <h3 className="text-white font-semibold mb-4">
           Currently Online Drivers
           <span className="ml-2 bg-green-400/10 text-green-400 text-xs px-2 py-0.5 rounded-full">
@@ -346,31 +319,6 @@ export default function Dashboard() {
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function StatCard({ icon, label, value, sub, color, pulse }) {
-  const colors = {
-    blue: 'bg-blue-400/10 text-blue-400',
-    green: 'bg-green-400/10 text-green-400',
-    yellow: 'bg-yellow-400/10 text-yellow-400',
-    purple: 'bg-purple-400/10 text-purple-400',
-    red: 'bg-red-400/10 text-red-400',
-    orange: 'bg-orange-400/10 text-orange-400',
-  };
-
-  return (
-    <div className="bg-gray-900 rounded-2xl p-5 border border-gray-800">
-      <div className={`inline-flex p-2 rounded-lg ${colors[color]} mb-3`}>
-        {icon}
-      </div>
-      <div className="flex items-center gap-2">
-        <p className="text-2xl font-bold text-white">{value ?? '—'}</p>
-        {pulse && <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />}
-      </div>
-      <p className="text-gray-400 text-sm mt-0.5">{label}</p>
-      {sub && <p className="text-gray-500 text-xs mt-0.5">{sub}</p>}
     </div>
   );
 }

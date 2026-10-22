@@ -6,7 +6,7 @@ const STATUS_STYLES = {
   completed: 'bg-green-500/10 text-green-400',
   cancelled: 'bg-red-500/10 text-red-400',
   in_progress: 'bg-blue-500/10 text-blue-400',
-  arrived: 'bg-purple-500/10 text-purple-400',
+  arrived: 'bg-teal-500/10 text-teal-400',
   offered: 'bg-yellow-500/10 text-yellow-400',
   accepted: 'bg-yellow-500/10 text-yellow-400',
   requested: 'bg-gray-500/10 text-gray-300',
@@ -37,6 +37,13 @@ export default function RideHistoryPanel({ userId }) {
       setLoading(true);
       setError(null);
       const res = await api.get(`/admin/users/${userId}/rides`);
+      // The render below indexes straight into data.trips/data.reports —
+      // an unexpected shape here (a proxy/CDN error page, a future backend
+      // change) would otherwise only surface as an uncaught render crash,
+      // and this app has no error boundary to catch that.
+      if (!res.data || !Array.isArray(res.data.trips) || !Array.isArray(res.data.reports)) {
+        throw new Error('Unexpected response shape');
+      }
       setData(res.data);
     } catch (err) {
       setError('Failed to load ride history.');
@@ -55,7 +62,14 @@ export default function RideHistoryPanel({ userId }) {
       <div className="grid grid-cols-3 gap-2">
         <MiniStat label="Total rides" value={data.total_trips} />
         <MiniStat label="Completed" value={data.completed_trips} />
-        <MiniStat label="Avg rating" value={data.average_rating ? `${data.average_rating} ★` : '—'} />
+        <MiniStat
+          label="Avg rating"
+          value={data.average_rating ? (
+            <span className="inline-flex items-center gap-1">
+              {data.average_rating} <Star size={14} className="fill-current" />
+            </span>
+          ) : '—'}
+        />
       </div>
 
       {/* Ride history */}
