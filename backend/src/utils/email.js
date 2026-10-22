@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const { renderEmailShell, heroNumber, infoRow, heading, paragraph, mutedNote, escapeHtml } = require('./emailTemplate');
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -14,21 +15,15 @@ const sendRatingReminder = async (email, firstName, tripId, role) => {
   const subject = 'Rate your recent Campus Chauffeur ride';
   const action = role === 'passenger' ? 'rate your driver' : 'rate your passenger';
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
-      <div style="background: #FFB800; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-        <h1 style="color: #1A1A2E; margin: 0;">🚗 Campus Chauffeur</h1>
-      </div>
-      <div style="background: #f5f5f5; padding: 24px; border-radius: 0 0 8px 8px;">
-        <h2 style="color: #1A1A2E;">Hi ${firstName},</h2>
-        <p style="color: #555;">Your recent ride has been completed. Please take a moment to ${action}.</p>
-        <p style="color: #555;">Your feedback helps keep Campus Chauffeur safe and reliable for everyone.</p>
-        <p style="color: #999; font-size: 12px;">You have 3 hours from trip completion to submit your rating.</p>
-        <hr style="border: 1px solid #e0e0e0; margin: 20px 0;">
-        <p style="color: #999; font-size: 11px; text-align: center;">Campus Chauffeur — Safe rides around UG Legon</p>
-      </div>
-    </div>
-  `;
+  const html = renderEmailShell({
+    preheader: 'Your feedback helps keep Campus Chauffeur safe and reliable.',
+    bodyHtml: `
+      ${heading('How was your ride?')}
+      ${paragraph(`Hi ${escapeHtml(firstName)}, your recent ride has been completed. Please take a moment to ${escapeHtml(action)} — open the Campus Chauffeur app to leave a rating.`)}
+      ${paragraph('Your feedback helps keep Campus Chauffeur safe and reliable for everyone.')}
+      ${mutedNote('You have 3 hours from trip completion to submit your rating.')}
+    `,
+  });
 
   try {
     await transporter.sendMail({
@@ -46,23 +41,19 @@ const sendRatingReminder = async (email, firstName, tripId, role) => {
 const sendRideReceipt = async (email, firstName, trip) => {
   if (!email) return;
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
-      <div style="background: #FFB800; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-        <h1 style="color: #1A1A2E; margin: 0;">🚗 Campus Chauffeur</h1>
-      </div>
-      <div style="background: #f5f5f5; padding: 24px; border-radius: 0 0 8px 8px;">
-        <h2 style="color: #1A1A2E;">Hi ${firstName}, your ride is complete!</h2>
-        <div style="background: white; padding: 16px; border-radius: 8px; margin: 16px 0;">
-          <p style="margin: 8px 0;"><strong>From:</strong> ${trip.pickup_address}</p>
-          <p style="margin: 8px 0;"><strong>To:</strong> ${trip.dropoff_address}</p>
-          <p style="margin: 8px 0;"><strong>Fare:</strong> GH₵${trip.fare}</p>
-          <p style="margin: 8px 0;"><strong>Date:</strong> ${new Date(trip.completed_at).toLocaleString()}</p>
-        </div>
-        <p style="color: #999; font-size: 11px; text-align: center;">Campus Chauffeur — Safe rides around UG Legon</p>
-      </div>
-    </div>
-  `;
+  const html = renderEmailShell({
+    preheader: `Your ride is complete — GH₵${trip.fare}`,
+    bodyHtml: `
+      ${heading('Your ride is complete')}
+      ${paragraph(`Hi ${escapeHtml(firstName)}, thanks for riding with Campus Chauffeur. Here's your receipt.`)}
+      ${heroNumber({ label: 'Fare', value: `GH₵${trip.fare}` })}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 4px;">
+        ${infoRow({ label: 'From', value: trip.pickup_address })}
+        ${infoRow({ label: 'To', value: trip.dropoff_address })}
+        ${infoRow({ label: 'Date', value: new Date(trip.completed_at).toLocaleString() })}
+      </table>
+    `,
+  });
 
   try {
     await transporter.sendMail({
@@ -84,21 +75,15 @@ const sendRideReceipt = async (email, firstName, trip) => {
 const sendEmailChangedAlert = async (oldEmail, firstName, newEmail) => {
   if (!oldEmail) return;
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
-      <div style="background: #FFB800; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-        <h1 style="color: #1A1A2E; margin: 0;">🚗 Campus Chauffeur</h1>
-      </div>
-      <div style="background: #f5f5f5; padding: 24px; border-radius: 0 0 8px 8px;">
-        <h2 style="color: #1A1A2E;">Hi ${firstName},</h2>
-        <p style="color: #555;">The email address on your Campus Chauffeur account was just changed to <strong>${newEmail}</strong>.</p>
-        <p style="color: #555;"><strong>If you made this change, you can ignore this email.</strong></p>
-        <p style="color: #555;">If you didn't make this change, someone else may have access to your account. Contact us immediately at campuschauffeur1@gmail.com and change your password from the app's login screen using "Forgot Password."</p>
-        <hr style="border: 1px solid #e0e0e0; margin: 20px 0;">
-        <p style="color: #999; font-size: 11px; text-align: center;">Campus Chauffeur — Safe rides around UG Legon</p>
-      </div>
-    </div>
-  `;
+  const html = renderEmailShell({
+    preheader: 'The email address on your account was just changed.',
+    bodyHtml: `
+      ${heading('Your email was changed')}
+      ${paragraph(`Hi ${escapeHtml(firstName)}, the email address on your Campus Chauffeur account was just changed to <strong>${escapeHtml(newEmail)}</strong>.`)}
+      ${paragraph('<strong>If you made this change, you can ignore this email.</strong>')}
+      ${paragraph(`If you didn't make this change, someone else may have access to your account. Contact us immediately at campuschauffeur1@gmail.com and change your password from the app's login screen using "Forgot Password."`)}
+    `,
+  });
 
   try {
     await transporter.sendMail({
@@ -113,4 +98,25 @@ const sendEmailChangedAlert = async (oldEmail, firstName, newEmail) => {
   }
 };
 
-module.exports = { sendRatingReminder, sendRideReceipt, sendEmailChangedAlert };
+const sendPasswordResetOTP = async (email, firstName, otp) => {
+  if (!email) return;
+
+  const html = renderEmailShell({
+    preheader: `Your password reset code is ${otp}`,
+    bodyHtml: `
+      ${heading('Reset your password')}
+      ${paragraph(`Hi ${escapeHtml(firstName)}, use this code to reset your password.`)}
+      ${heroNumber({ label: 'Reset code', value: otp, letterSpaced: true })}
+      ${mutedNote("This code expires in 1 hour. If you didn't request this, you can safely ignore this email.")}
+    `,
+  });
+
+  await transporter.sendMail({
+    from: `Campus Chauffeur <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: 'Reset your Campus Chauffeur password',
+    html,
+  });
+};
+
+module.exports = { sendRatingReminder, sendRideReceipt, sendEmailChangedAlert, sendPasswordResetOTP };
