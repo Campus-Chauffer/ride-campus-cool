@@ -1,5 +1,5 @@
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 const BASE_URL = 'https://ride-campus-cool-production.up.railway.app/api';
 
@@ -12,7 +12,7 @@ const api = axios.create({
 api.interceptors.request.use(async (config) => {
   try {
     const token = await Promise.race([
-      AsyncStorage.getItem('token'),
+      SecureStore.getItemAsync('token'),
       new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000))
     ]);
     if (token) {
@@ -29,9 +29,9 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      try {
-        await AsyncStorage.multiRemove(['token', 'user']);
-      } catch (e) {}
+      // authStore's own logout() clears both the SecureStore token/user and
+      // any leftover pre-migration AsyncStorage copy — no need to duplicate
+      // that here.
       // Import dynamically to avoid circular dependency
       const { useAuthStore } = require('../store/authStore');
       useAuthStore.getState().logout();
