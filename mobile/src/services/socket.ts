@@ -1,13 +1,19 @@
 import { io, Socket } from 'socket.io-client';
-
-const SOCKET_URL = 'https://ride-campus-cool-production.up.railway.app';
+import { DEFAULT_SOCKET_URL } from '../utils/remoteConfig';
 
 class SocketService {
   private socket: Socket | null = null;
+  private socketUrl: string = DEFAULT_SOCKET_URL;
+
+  // Called once at startup if the remote config points somewhere other
+  // than the hardcoded default — see utils/remoteConfig.ts.
+  setBaseUrl(url: string) {
+    this.socketUrl = url;
+  }
 
   connect() {
     if (this.socket?.connected) return;
-    this.socket = io(SOCKET_URL, {
+    this.socket = io(this.socketUrl, {
       transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: Infinity, // keep trying forever
@@ -45,6 +51,22 @@ class SocketService {
 
   offDriverLocation() {
     this.socket?.off('ride:driver_location');
+  }
+
+  // Lets the driver's screen share the route it already fetched from
+  // Directions instead of the passenger independently calling the same
+  // endpoint for the identical route — halves the Directions API calls for
+  // every ride leg.
+  sendRoute(rideId: number, coordinates: { latitude: number; longitude: number }[], durationMinutes: number | null, durationText: string | null) {
+    this.socket?.emit('driver:route', { rideId, coordinates, durationMinutes, durationText });
+  }
+
+  onDriverRoute(callback: (data: { coordinates: { latitude: number; longitude: number }[]; durationMinutes: number | null; durationText: string | null }) => void) {
+    this.socket?.on('ride:driver_route', callback);
+  }
+
+  offDriverRoute() {
+    this.socket?.off('ride:driver_route');
   }
 }
 

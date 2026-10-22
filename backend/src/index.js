@@ -151,6 +151,17 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Pure relay — the driver's own screen already calls GET /rides/directions
+  // to draw its own route, so this just forwards that same computed polyline
+  // to the passenger instead of having the passenger independently call
+  // Directions again for the identical route. Nothing to persist: unlike
+  // location, a stale route line isn't dangerous, just momentarily out of
+  // date until the next refresh, so there's no DB fallback path for this.
+  socket.on('driver:route', (data) => {
+    const { rideId, coordinates, durationMinutes, durationText } = data;
+    io.to(`ride:${rideId}`).emit('ride:driver_route', { coordinates, durationMinutes, durationText });
+  });
+
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
   });

@@ -10,6 +10,7 @@ import Reports from "./pages/reports/Reports";
 import Config from "./pages/config/Config";
 import Analytics from "./pages/analytics/Analytics";
 import Announcements from "./pages/announcements/Announcements";
+import Emails from "./pages/emails/Emails";
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem("adminToken");
@@ -38,6 +39,7 @@ export default function App() {
                   <Route path="config" element={<Config />} />
                   <Route path="analytics" element={<Analytics />} />
                   <Route path="announcements" element={<Announcements />} />
+                  <Route path="emails" element={<Emails />} />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>
               </Layout>

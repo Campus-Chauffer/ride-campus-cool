@@ -1,7 +1,7 @@
 const pool = require('../db/pool');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { sendRatingReminder, sendEmailChangedAlert } = require('../utils/email');
+const { sendRatingReminder, sendEmailChangedAlert, sendPasswordResetOTP } = require('../utils/email');
 const { sendSMS } = require('../utils/sms');
 const { takeDriverOffline } = require('./driversController');
 
@@ -193,30 +193,7 @@ const forgotPassword = async (req, res) => {
       [user.phone_number, otp, expires_at]
     );
 
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-    });
-
-    await transporter.sendMail({
-      from: `Campus Chauffeur <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: 'Reset your Campus Chauffeur password',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
-          <div style="background: #FFB800; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-            <h1 style="color: #1A1A2E; margin: 0;">Campus Chauffeur</h1>
-          </div>
-          <div style="background: #f5f5f5; padding: 24px; border-radius: 0 0 8px 8px;">
-            <h2>Hi ${user.first_name},</h2>
-            <p>Your password reset code is:</p>
-            <h1 style="color: #FFB800; letter-spacing: 8px;">${otp}</h1>
-            <p>This code expires in 1 hour.</p>
-          </div>
-        </div>
-      `,
-    });
+    await sendPasswordResetOTP(email, user.first_name, otp);
 
     console.log(`Password reset OTP for ${email}: ${otp}`);
     // The mobile client needs phone_number for the follow-up resetPassword

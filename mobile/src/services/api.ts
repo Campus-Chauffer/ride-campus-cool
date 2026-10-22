@@ -1,18 +1,25 @@
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const BASE_URL = 'https://ride-campus-cool-production.up.railway.app/api';
+import * as SecureStore from 'expo-secure-store';
+import { DEFAULT_API_BASE_URL } from '../utils/remoteConfig';
 
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: DEFAULT_API_BASE_URL,
   timeout: 15000,
 });
+
+// Called once at startup if the remote config points somewhere other than
+// the hardcoded default (see utils/remoteConfig.ts) — lets an app already
+// installed on someone's phone start talking to a replacement backend
+// without needing a new app store build.
+export function applyRemoteApiBaseUrl(url: string) {
+  api.defaults.baseURL = url;
+}
 
 // Request interceptor — attach token
 api.interceptors.request.use(async (config) => {
   try {
     const token = await Promise.race([
-      AsyncStorage.getItem('token'),
+      SecureStore.getItemAsync('token'),
       new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000))
     ]);
     if (token) {
@@ -29,9 +36,9 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      try {
-        await AsyncStorage.multiRemove(['token', 'user']);
-      } catch (e) {}
+      // authStore's own logout() clears both the SecureStore token/user and
+      // any leftover pre-migration AsyncStorage copy — no need to duplicate
+      // that here.
       // Import dynamically to avoid circular dependency
       const { useAuthStore } = require('../store/authStore');
       useAuthStore.getState().logout();

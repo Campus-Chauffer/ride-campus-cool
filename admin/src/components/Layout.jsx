@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Car, Users, MapPin,
   Wallet, Flag, Settings, LogOut,
-  Menu, X, ChevronRight, BarChart2, Megaphone
+  Menu, X, ChevronRight, BarChart2, Megaphone, Mail
 } from 'lucide-react';
 
 const navItems = [
@@ -14,6 +14,7 @@ const navItems = [
   { path: '/wallet', label: 'Wallet', icon: Wallet },
   { path: '/reports', label: 'Reports', icon: Flag },
   { path: '/announcements', label: 'Announcements', icon: Megaphone },
+  { path: '/emails', label: 'Emails', icon: Mail },
   { path: '/config', label: 'Config', icon: Settings },
   { path: '/analytics', label: 'Analytics', icon: BarChart2 },
 ];

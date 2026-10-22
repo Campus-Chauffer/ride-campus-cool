@@ -19,6 +19,9 @@ const CAR_ICON = require('../../../assets/car-top.png');
 // multi-second crawl if updates come in unevenly.
 const MIN_ANIMATION_MS = 400;
 const MAX_ANIMATION_MS = 3000;
+// How long to go without a route broadcast from the driver before this
+// screen falls back to fetching the route itself.
+const ROUTE_BROADCAST_STALE_MS = 15000;
 
 interface Props {
   trip: any;
@@ -51,6 +54,8 @@ export default function ActiveRideScreen({ trip }: Props) {
   const lastMarkerUpdateAtRef = useRef<number>(Date.now());
   const lastRouteFetchAt = useRef<number | null>(null);
   const lastRouteFetchOrigin = useRef<{ latitude: number; longitude: number } | null>(null);
+  // Set whenever a route broadcast actually arrives from the driver.
+  const lastRouteBroadcastAtRef = useRef<number | null>(null);
 
   useEffect(() => { routeCoordsRef.current = routeCoords; }, [routeCoords]);
 
@@ -87,8 +92,20 @@ export default function ActiveRideScreen({ trip }: Props) {
       }, 500);
     });
 
+    // The driver's own screen already calls Directions to draw its route —
+    // this receives that same computed route instead of independently
+    // calling Directions again for the identical path on every location
+    // update.
+    socketService.onDriverRoute((data) => {
+      lastRouteBroadcastAtRef.current = Date.now();
+      if (data.coordinates?.length > 0) {
+        setRouteCoords(data.coordinates);
+      }
+    });
+
     return () => {
       socketService.offDriverLocation();
+      socketService.offDriverRoute();
     };
   }, []);
 
@@ -136,6 +153,14 @@ export default function ActiveRideScreen({ trip }: Props) {
 
   async function fetchRoute() {
     if (!driverLocation) return; // wait until we have a real starting point
+    // Only fetch the route ourselves once the driver's own broadcast has
+    // gone quiet for a while (or hasn't arrived yet) — otherwise this would
+    // fire on every driverLocation change in parallel with the normally-
+    // healthy broadcast, recreating the duplicate-calls problem this is
+    // meant to fix. The null case also covers the very first render, before
+    // any broadcast could possibly have arrived yet.
+    const broadcastStale = !lastRouteBroadcastAtRef.current || Date.now() - lastRouteBroadcastAtRef.current > ROUTE_BROADCAST_STALE_MS;
+    if (!broadcastStale) return;
     // Location updates now arrive continuously rather than every 4s, but a
     // route recalculation is a paid Directions API call — only actually
     // refetch on a time/distance cadence, independent of ping frequency.

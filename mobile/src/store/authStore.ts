@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import api from '../services/api';
 
 interface User {
@@ -28,8 +29,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   setAuth: async (token, user) => {
     set({ token, user, isAuthenticated: true });
-    await AsyncStorage.setItem('token', token);
-    await AsyncStorage.setItem('user', JSON.stringify(user));
+    // The login token (and the user object it's paired with) now lives in
+    // the OS keychain/keystore via SecureStore instead of plain AsyncStorage
+    // — AsyncStorage is unencrypted on-device storage, readable by anything
+    // with filesystem access (a rooted/jailbroken device, certain backup
+    // extraction tools), which was the actual exposure for a value that
+    // authenticates as the user for up to 30 days.
+    await SecureStore.setItemAsync('token', token);
+    await SecureStore.setItemAsync('user', JSON.stringify(user));
   },
 
   logout: async () => {
@@ -39,21 +46,43 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     // clearing local state: logout must work instantly regardless of
     // network, same as goOffline's own philosophy on the driver side. The
     // token is passed explicitly (rather than going through the normal
-    // request interceptor, which reads it from AsyncStorage) so this call
-    // can't race against the removeItem calls right below clearing it out
+    // request interceptor, which reads it from SecureStore) so this call
+    // can't race against the delete calls right below clearing it out
     // from under that read.
     const token = get().token;
     if (token) {
       api.post('/auth/logout', {}, { headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
     }
     set({ token: null, user: null, isAuthenticated: false });
-    await AsyncStorage.removeItem('token');
-    await AsyncStorage.removeItem('user');
+    await SecureStore.deleteItemAsync('token');
+    await SecureStore.deleteItemAsync('user');
+    // Also clear any pre-migration copy (see loadFromStorage) in case this
+    // account logged out before ever triggering that one-time migration —
+    // otherwise a stale, unencrypted copy of the token would keep sitting
+    // in AsyncStorage indefinitely after "logging out."
+    await AsyncStorage.multiRemove(['token', 'user']);
   },
 
   loadFromStorage: async () => {
-    const token = await AsyncStorage.getItem('token');
-    const userStr = await AsyncStorage.getItem('user');
+    let token = await SecureStore.getItemAsync('token');
+    let userStr = await SecureStore.getItemAsync('user');
+
+    if (!token || !userStr) {
+      // One-time migration for sessions that were created before SecureStore
+      // was wired up — without this, everyone already logged in would be
+      // silently signed out the moment they update, since the AsyncStorage
+      // key the app used to read is now never checked again on its own.
+      const legacyToken = await AsyncStorage.getItem('token');
+      const legacyUserStr = await AsyncStorage.getItem('user');
+      if (legacyToken && legacyUserStr) {
+        token = legacyToken;
+        userStr = legacyUserStr;
+        await SecureStore.setItemAsync('token', legacyToken);
+        await SecureStore.setItemAsync('user', legacyUserStr);
+        await AsyncStorage.multiRemove(['token', 'user']);
+      }
+    }
+
     if (token && userStr) {
       set({
         token,
