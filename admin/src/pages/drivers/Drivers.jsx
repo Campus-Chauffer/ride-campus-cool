@@ -539,8 +539,8 @@ export default function Drivers() {
                       >
                         <span className="text-gray-400">{item.label}</span>
                         {selected.vehicle_checklist[item.id]
-                          ? <span className="text-green-400 font-medium text-xs">✓ Confirmed</span>
-                          : <span className="text-red-400 font-medium text-xs">✗ Not confirmed</span>
+                          ? <span className="inline-flex items-center gap-1 text-green-400 font-medium text-xs"><CheckCircle size={12} /> Confirmed</span>
+                          : <span className="inline-flex items-center gap-1 text-red-400 font-medium text-xs"><X size={12} /> Not confirmed</span>
                         }
                       </div>
                     ))}

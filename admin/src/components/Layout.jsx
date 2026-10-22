@@ -3,8 +3,12 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Car, Users, MapPin,
   Wallet, Flag, Settings, LogOut,
-  Menu, X, ChevronRight, BarChart2, Megaphone, Mail
+  Menu, X, BarChart2, Megaphone, Mail
 } from 'lucide-react';
+
+// Same mark used in the mobile app and the email templates — hosted from
+// the repo itself (now public), consistent brand across every surface.
+const LOGO_URL = 'https://raw.githubusercontent.com/Campus-Chauffer/ride-campus-cool/main/mobile/assets/cc-logo.jpg';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -35,7 +39,7 @@ export default function Layout({ children }) {
     <div className="min-h-screen bg-gray-950 flex">
       {/* Sidebar — fixed at all screen sizes so it never scrolls with page content */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 border-r border-gray-800
+        fixed inset-y-0 left-0 z-50 w-60 bg-gray-900 border-r border-gray-800
         transform transition-transform duration-200 ease-in-out
         flex flex-col
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -43,9 +47,7 @@ export default function Layout({ children }) {
       `}>
         {/* Logo */}
         <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-800 shrink-0">
-          <div className="w-9 h-9 bg-yellow-400 rounded-xl flex items-center justify-center">
-            <span className="text-lg">🚗</span>
-          </div>
+          <img src={LOGO_URL} alt="" className="w-8 h-8 rounded-lg" />
           <div>
             <p className="text-white font-bold text-sm">Campus Chauffeur</p>
             <p className="text-gray-500 text-xs">Admin Panel</p>
@@ -71,14 +73,13 @@ export default function Layout({ children }) {
                 className={`
                   flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 text-sm font-medium transition
                   ${active
-                    ? 'bg-yellow-400/10 text-yellow-400'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                    ? 'text-white'
+                    : 'text-gray-400 hover:text-white'
                   }
                 `}
               >
                 <Icon size={18} />
                 {item.label}
-                {active && <ChevronRight size={14} className="ml-auto" />}
               </Link>
             );
           })}
@@ -117,9 +118,9 @@ export default function Layout({ children }) {
       )}
 
       {/* Main content — offset by sidebar width on large screens, independent scroll */}
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-60">
         {/* Top bar */}
-        <header className="bg-gray-900 border-b border-gray-800 px-4 py-4 flex items-center gap-4 lg:px-6 shrink-0">
+        <header className="h-16 bg-gray-900 border-b border-gray-800 px-4 flex items-center gap-4 lg:px-6 shrink-0">
           <button
             className="lg:hidden text-gray-400 hover:text-white"
             onClick={() => setSidebarOpen(true)}

@@ -262,7 +262,7 @@ export default function Wallet() {
           className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4"
           onClick={(e) => e.target === e.currentTarget && setPaymentModal(null)}
         >
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 w-full max-w-sm">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-sm">
             <div className="flex items-start justify-between mb-1">
               <h2 className="text-white font-semibold text-lg">Record Payment</h2>
               <button onClick={() => setPaymentModal(null)} className="text-gray-500 hover:text-white transition -mt-1 -mr-1">

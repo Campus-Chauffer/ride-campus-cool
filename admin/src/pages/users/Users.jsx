@@ -207,7 +207,7 @@ export default function Users() {
                           className={`text-xs font-medium px-2.5 py-1 rounded-full ${
                             user.role === "driver"
                               ? "bg-blue-500/10 text-blue-400"
-                              : "bg-purple-500/10 text-purple-400"
+                              : "bg-gray-500/10 text-gray-400"
                           }`}
                         >
                           {user.role === "driver"
@@ -300,7 +300,7 @@ export default function Users() {
               <div className="flex gap-2">
                 <span
                   className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                    selected.role === "driver" ? "bg-blue-500/10 text-blue-400" : "bg-purple-500/10 text-purple-400"
+                    selected.role === "driver" ? "bg-blue-500/10 text-blue-400" : "bg-gray-500/10 text-gray-400"
                   }`}
                 >
                   {selected.role === "driver"

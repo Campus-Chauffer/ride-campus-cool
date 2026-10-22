@@ -173,7 +173,7 @@ export default function Emails() {
                         className={`text-xs font-medium px-2.5 py-1 rounded-full ${
                           isApprovedDriver(u) || u.role === "driver"
                             ? "bg-blue-500/10 text-blue-400"
-                            : "bg-purple-500/10 text-purple-400"
+                            : "bg-gray-500/10 text-gray-400"
                         }`}
                       >
                         {roleLabel(u)}

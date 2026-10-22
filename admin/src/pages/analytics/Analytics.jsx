@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
-import { RefreshCw, Clock, MapPin, TrendingUp, AlertCircle } from "lucide-react";
+import { RefreshCw, Clock, MapPin } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from "recharts";
 import api from "../../api";
+import KpiTile from "../../components/KpiTile";
 
-const COLORS = ["#FBBF24", "#34D399", "#F87171", "#60A5FA", "#A78BFA"];
+const COLORS = ["#FBBF24", "#34D399", "#F87171", "#60A5FA", "#2DD4BF"];
 
 const HOURS = Array.from({ length: 24 }, (_, i) => {
   const h = i % 12 || 12;
@@ -20,26 +21,6 @@ const TABS = [
   { id: "locations", label: "Locations" },
   { id: "cancellations", label: "Cancellations" },
 ];
-
-function StatCard({ icon, label, value, sub, color }) {
-  const colors = {
-    yellow: "bg-yellow-400/10 text-yellow-400",
-    green: "bg-green-400/10 text-green-400",
-    blue: "bg-blue-400/10 text-blue-400",
-    purple: "bg-purple-400/10 text-purple-400",
-    red: "bg-red-400/10 text-red-400",
-  };
-  return (
-    <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
-      <div className={`inline-flex p-2 rounded-lg ${colors[color]} mb-3`}>
-        {icon}
-      </div>
-      <p className="text-white text-2xl font-bold tracking-tight">{value ?? "—"}</p>
-      <p className="text-gray-400 text-sm mt-0.5">{label}</p>
-      {sub && <p className="text-gray-500 text-xs mt-0.5">{sub}</p>}
-    </div>
-  );
-}
 
 function EmptyChart({ children }) {
   return <div className="h-44 flex items-center justify-center text-gray-500 text-sm">{children}</div>;
@@ -189,53 +170,35 @@ export default function Analytics() {
         <div className="space-y-6">
           <div>
             <h2 className="text-white font-medium text-sm mb-3 flex items-center gap-2">
-              <Clock size={15} className="text-yellow-400" /> Average Timings
+              <Clock size={15} className="text-gray-500" /> Average Timings
             </h2>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard
-                icon={<Clock size={18} />}
+              <KpiTile
                 label="Matching time"
                 value={`${round(data?.timings?.avg_matching_minutes)}m`}
                 sub="Request → driver found"
-                color="yellow"
               />
-              <StatCard
-                icon={<Clock size={18} />}
+              <KpiTile
                 label="Wait time"
                 value={`${round(data?.timings?.avg_wait_minutes)}m`}
                 sub="Accepted → driver arrived"
-                color="green"
               />
-              <StatCard
-                icon={<Clock size={18} />}
+              <KpiTile
                 label="Transit time"
                 value={`${round(data?.timings?.avg_transit_minutes)}m`}
                 sub="Started → completed"
-                color="blue"
               />
-              <StatCard
-                icon={<Clock size={18} />}
+              <KpiTile
                 label="Total trip time"
                 value={`${round(data?.timings?.avg_total_minutes)}m`}
                 sub="Request → completed"
-                color="purple"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              icon={<MapPin size={18} />}
-              label="Avg distance"
-              value={`${round(data?.timings?.avg_distance_km)}km`}
-              color="green"
-            />
-            <StatCard
-              icon={<TrendingUp size={18} />}
-              label="Avg fare"
-              value={`₵${round(data?.timings?.avg_fare)}`}
-              color="yellow"
-            />
+            <KpiTile label="Avg distance" value={`${round(data?.timings?.avg_distance_km)}km`} />
+            <KpiTile label="Avg fare" value={`₵${round(data?.timings?.avg_fare)}`} />
           </div>
         </div>
       )}
@@ -327,7 +290,7 @@ export default function Analytics() {
           <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-800">
               <h2 className="text-white font-medium text-sm flex items-center gap-2">
-                <MapPin size={14} className="text-yellow-400" />
+                <MapPin size={14} className="text-gray-500" />
                 Top Pickup Hotspots
               </h2>
               <p className="text-gray-500 text-xs mt-0.5">
@@ -381,20 +344,8 @@ export default function Analytics() {
       {activeTab === "cancellations" && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              icon={<AlertCircle size={18} />}
-              label="No driver found"
-              value={totalNoDriver}
-              sub="Total unmatched trips"
-              color="red"
-            />
-            <StatCard
-              icon={<AlertCircle size={18} />}
-              label="Cancellations"
-              value={totalCancellations}
-              sub="Total cancelled trips"
-              color="red"
-            />
+            <KpiTile label="No driver found" value={totalNoDriver} sub="Total unmatched trips" />
+            <KpiTile label="Cancellations" value={totalCancellations} sub="Total cancelled trips" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
