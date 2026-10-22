@@ -6,6 +6,21 @@ import SplashScreen from './src/components/SplashScreen';
 import CrashFallbackScreen from './src/components/CrashFallbackScreen';
 import UpdateModal from './src/components/UpdateModal';
 import './src/utils/backgroundLocation'; // register background task on app start
+import { fetchRemoteBackendConfig } from './src/utils/remoteConfig';
+import { applyRemoteApiBaseUrl } from './src/services/api';
+import socketService from './src/services/socket';
+
+// Fired at module-evaluation time, not inside a React effect, so it starts
+// as early as physically possible — well before the 3s splash screen below
+// even finishes, giving it the best chance of resolving before any screen
+// could fire a real request. Fails silently and changes nothing if the
+// fetch doesn't come back in time; see utils/remoteConfig.ts for why this
+// exists — it's what lets already-installed apps recover from an outage
+// on whatever's currently hosting the backend without an app store update.
+fetchRemoteBackendConfig().then((config) => {
+  if (config?.apiBaseUrl) applyRemoteApiBaseUrl(config.apiBaseUrl);
+  if (config?.socketUrl) socketService.setBaseUrl(config.socketUrl);
+});
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);

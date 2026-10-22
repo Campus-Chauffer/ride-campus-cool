@@ -1,12 +1,19 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
-
-const BASE_URL = 'https://ride-campus-cool-production.up.railway.app/api';
+import { DEFAULT_API_BASE_URL } from '../utils/remoteConfig';
 
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: DEFAULT_API_BASE_URL,
   timeout: 15000,
 });
+
+// Called once at startup if the remote config points somewhere other than
+// the hardcoded default (see utils/remoteConfig.ts) — lets an app already
+// installed on someone's phone start talking to a replacement backend
+// without needing a new app store build.
+export function applyRemoteApiBaseUrl(url: string) {
+  api.defaults.baseURL = url;
+}
 
 // Request interceptor — attach token
 api.interceptors.request.use(async (config) => {

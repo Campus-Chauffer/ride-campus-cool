@@ -1,13 +1,19 @@
 import { io, Socket } from 'socket.io-client';
-
-const SOCKET_URL = 'https://ride-campus-cool-production.up.railway.app';
+import { DEFAULT_SOCKET_URL } from '../utils/remoteConfig';
 
 class SocketService {
   private socket: Socket | null = null;
+  private socketUrl: string = DEFAULT_SOCKET_URL;
+
+  // Called once at startup if the remote config points somewhere other
+  // than the hardcoded default — see utils/remoteConfig.ts.
+  setBaseUrl(url: string) {
+    this.socketUrl = url;
+  }
 
   connect() {
     if (this.socket?.connected) return;
-    this.socket = io(SOCKET_URL, {
+    this.socket = io(this.socketUrl, {
       transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: Infinity, // keep trying forever
