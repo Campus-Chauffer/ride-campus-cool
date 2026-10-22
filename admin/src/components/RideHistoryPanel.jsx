@@ -37,6 +37,13 @@ export default function RideHistoryPanel({ userId }) {
       setLoading(true);
       setError(null);
       const res = await api.get(`/admin/users/${userId}/rides`);
+      // The render below indexes straight into data.trips/data.reports —
+      // an unexpected shape here (a proxy/CDN error page, a future backend
+      // change) would otherwise only surface as an uncaught render crash,
+      // and this app has no error boundary to catch that.
+      if (!res.data || !Array.isArray(res.data.trips) || !Array.isArray(res.data.reports)) {
+        throw new Error('Unexpected response shape');
+      }
       setData(res.data);
     } catch (err) {
       setError('Failed to load ride history.');
