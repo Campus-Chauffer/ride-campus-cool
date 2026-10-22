@@ -46,6 +46,22 @@ class SocketService {
   offDriverLocation() {
     this.socket?.off('ride:driver_location');
   }
+
+  // Lets the driver's screen share the route it already fetched from
+  // Directions instead of the passenger independently calling the same
+  // endpoint for the identical route — halves the Directions API calls for
+  // every ride leg.
+  sendRoute(rideId: number, coordinates: { latitude: number; longitude: number }[], durationMinutes: number | null, durationText: string | null) {
+    this.socket?.emit('driver:route', { rideId, coordinates, durationMinutes, durationText });
+  }
+
+  onDriverRoute(callback: (data: { coordinates: { latitude: number; longitude: number }[]; durationMinutes: number | null; durationText: string | null }) => void) {
+    this.socket?.on('ride:driver_route', callback);
+  }
+
+  offDriverRoute() {
+    this.socket?.off('ride:driver_route');
+  }
 }
 
 export default new SocketService();

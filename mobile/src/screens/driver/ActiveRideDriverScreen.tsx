@@ -101,6 +101,9 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
       if (requestId !== routeRequestId.current) return;
       if (res.data?.coordinates) {
         setRouteCoords(res.data.coordinates);
+        // Share the route we just fetched instead of letting the passenger
+        // independently call Directions for the identical path.
+        socketService.sendRoute(trip.id, res.data.coordinates, res.data.duration_minutes ?? null, res.data.duration_text ?? null);
       }
     } catch (err) {
       console.log('Directions error:', err);

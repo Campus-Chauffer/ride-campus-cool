@@ -20,6 +20,12 @@ const CAR_ICON = require('../../../assets/car-top.png');
 // an instant snap or a multi-second crawl if updates come in unevenly.
 const MIN_ANIMATION_MS = 400;
 const MAX_ANIMATION_MS = 3000;
+// How long to go without a route broadcast from the driver before this
+// screen falls back to fetching the route itself. Keeps the DB-polling
+// fallback path genuinely a fallback (only kicks in once the driver's own
+// broadcast channel looks dead) instead of calling Directions in parallel
+// on every poll regardless of whether the broadcast is already working.
+const ROUTE_BROADCAST_STALE_MS = 15000;
 
 interface Props {
   trip: any;
@@ -57,6 +63,10 @@ export default function DriverFoundScreen({ trip, onCancelled }: Props) {
   const lastMarkerUpdateAtRef = useRef<number>(Date.now());
   const lastRouteFetchAt = useRef<number | null>(null);
   const lastRouteFetchOrigin = useRef<{ latitude: number; longitude: number } | null>(null);
+  // Set whenever a route broadcast actually arrives from the driver — lets
+  // the fallback effect below tell "broadcast is working, stay quiet" apart
+  // from "broadcast channel is dead, fetch it myself."
+  const lastRouteBroadcastAtRef = useRef<number | null>(null);
 
   useEffect(() => { routeCoordsRef.current = routeCoords; }, [routeCoords]);
 
@@ -90,7 +100,6 @@ export default function DriverFoundScreen({ trip, onCancelled }: Props) {
       setDriverLocation({ lat: snapped.latitude, lng: snapped.longitude });
       setDriverHeading(heading || 0);
       if (userLocationRef.current) {
-        getDirections(latitude, longitude, userLocationRef.current.lat, userLocationRef.current.lng);
         mapRef.current?.fitToCoordinates(
           [
             { latitude, longitude },
@@ -101,8 +110,25 @@ export default function DriverFoundScreen({ trip, onCancelled }: Props) {
       }
     });
 
+    // The driver's own screen already calls Directions to draw its route —
+    // this receives that same computed route instead of independently
+    // calling Directions again for the identical path on every location
+    // update, which is what used to make this screen's share of the API
+    // cost scale with GPS ping frequency instead of actual route changes.
+    socketService.onDriverRoute((data) => {
+      lastRouteBroadcastAtRef.current = Date.now();
+      if (data.coordinates?.length > 0) {
+        setRouteCoords(data.coordinates);
+      }
+      if (data.durationMinutes != null) {
+        setEtaMinutes(data.durationMinutes);
+        setEtaText(data.durationText);
+      }
+    });
+
     return () => {
       socketService.offDriverLocation();
+      socketService.offDriverRoute();
     };
   }, []);
 
@@ -134,7 +160,13 @@ export default function DriverFoundScreen({ trip, onCancelled }: Props) {
       fallbackLocationRef.current = { lat: dLat, lng: dLng };
       const snapped = moveDriverMarker(dLat, dLng);
       setDriverLocation({ lat: snapped.latitude, lng: snapped.longitude });
-      if (userLocationRef.current) {
+      // Only fetch the route ourselves once the driver's own broadcast has
+      // gone quiet for a while — otherwise this fires on every one of the
+      // parent's 3s polls in parallel with the (normally healthy) broadcast,
+      // which would recreate the exact duplicate-calls problem this is
+      // meant to fix.
+      const broadcastStale = !lastRouteBroadcastAtRef.current || Date.now() - lastRouteBroadcastAtRef.current > ROUTE_BROADCAST_STALE_MS;
+      if (userLocationRef.current && broadcastStale) {
         getDirections(dLat, dLng, userLocationRef.current.lat, userLocationRef.current.lng);
       }
     }
@@ -176,11 +208,11 @@ export default function DriverFoundScreen({ trip, onCancelled }: Props) {
   };
 
   const getDirections = async (fromLat: number, fromLng: number, toLat: number, toLng: number) => {
-    // Requests fire from three places (socket updates, the trip-prop fallback
-    // effect, and the userLocation effect), now potentially every couple of
-    // seconds since location streams continuously — but a route
-    // recalculation is a paid Directions API call, so only actually refetch
-    // on a time/distance cadence regardless of how often those call sites fire.
+    // Only called now for the initial bootstrap render (before the driver's
+    // first route broadcast arrives) and as a genuine fallback once that
+    // broadcast channel has gone stale — not on every location update
+    // anymore, since onDriverRoute above covers the normal case. The
+    // throttle stays as a second line of defense regardless.
     const origin = { latitude: fromLat, longitude: fromLng };
     if (!shouldRefreshRoute(lastRouteFetchAt.current, lastRouteFetchOrigin.current, origin)) return;
     lastRouteFetchAt.current = Date.now();
