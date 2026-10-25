@@ -79,7 +79,12 @@ function StudentScreens() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="StudentHome" component={StudentHomeScreen} />
-      <Stack.Screen name="RideMatching" component={RideMatchingScreen} />
+      {/* No swipe-back while a ride is active — losing this screen means
+          losing the only thing listening for the ride's status (see
+          RideMatchingScreen's own BackHandler guard for the Android half
+          of this). Leaving has to go through an explicit, confirmed
+          cancel action instead of an accidental edge-swipe. */}
+      <Stack.Screen name="RideMatching" component={RideMatchingScreen} options={{ gestureEnabled: false }} />
       <Stack.Screen name="RideRating" component={RideRatingScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
