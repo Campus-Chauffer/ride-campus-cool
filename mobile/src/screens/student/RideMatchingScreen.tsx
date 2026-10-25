@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView,
-  TouchableOpacity, Alert, Animated, StatusBar
+  TouchableOpacity, Alert, Animated, StatusBar,
+  BackHandler
 } from 'react-native';
 import { X, MapPin, Navigation } from 'lucide-react-native';
 import { ridesAPI } from '../../services/api';
@@ -40,6 +41,25 @@ export default function RideMatchingScreen({ route, navigation }: any) {
     socketService.joinRide(trip.id);
     startPolling();
     return () => clearInterval(pollInterval.current);
+  }, []);
+
+  // Android hardware back button — paired with gestureEnabled: false on
+  // this screen in AppNavigator (the iOS swipe-back equivalent). Losing
+  // this screen to an accidental back press mid-ride doesn't just change
+  // what's on screen - it kills the only thing in the app that's actually
+  // listening for the ride's status (the poll above), since nothing else
+  // (no socket event, no notification-triggered navigation - see
+  // AppNavigator's comment on RIDE_LIFECYCLE_NOTIFICATION_TYPES) picks it
+  // back up. Blocked for every phase except 'completed', by which point
+  // this screen has already been replaced by RideRating anyway. Leaving
+  // early still works, just only through each phase's own explicit,
+  // confirmed cancel button (the X here, or onCancelled in the child
+  // screens) - never an accidental swipe or back press.
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      return phaseRef.current !== 'completed';
+    });
+    return () => subscription.remove();
   }, []);
 
   const startPulse = () => {
@@ -182,10 +202,7 @@ export default function RideMatchingScreen({ route, navigation }: any) {
       )}
 
       {phase === 'in_progress' && (
-        <ActiveRideScreen
-          trip={currentTrip}
-          onTripComplete={() => navigation.replace('RideRating', { trip: currentTrip })}
-        />
+        <ActiveRideScreen trip={currentTrip} />
       )}
     </View>
   );
