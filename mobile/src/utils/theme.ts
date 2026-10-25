@@ -67,6 +67,14 @@ export const white = '#FFFFFF';
 export const mutedOnDark = (isDark: boolean, opacity: number) =>
   isDark ? `rgba(26,26,46,${opacity})` : `rgba(255,255,255,${opacity})`;
 
+// The `navy`/`white` counterpart for faded text/overlays: a screen whose
+// whole background is pinned to the fixed `navy` above (not colors.dark,
+// which would invert to near-white in dark mode and leave the screen with
+// no surrounding themed content to contrast against) needs its muted text
+// to stay a faint white overlay in both themes too, not flip to a faint
+// navy overlay that goes invisible on its own now-fixed-navy surface.
+export const mutedWhite = (opacity: number) => `rgba(255,255,255,${opacity})`;
+
 export const spacing = {
   xs: 4,
   sm: 8,

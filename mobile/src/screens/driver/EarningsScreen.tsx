@@ -8,7 +8,7 @@ import { ArrowLeft, Wallet, Clock, CheckCircle, TrendingUp, RefreshCw, Lock, Cop
 import * as Clipboard from 'expo-clipboard';
 import { walletAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, mutedOnDark } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, white, mutedWhite } from '../../utils/theme';
 
 // Where drivers send their commission payments. Static for now - the plan
 // is to replace this with a direct Paystack payment link once that's wired
@@ -20,7 +20,7 @@ const MOMO_ACCOUNT_NAME = 'JEFFREY MENSAH ADU-TUTU';
 export default function EarningsScreen({ navigation }: any) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors, isDark);
+  const styles = getStyles(colors);
   const [wallet, setWallet] = useState<any>(null);
   const [ledger, setLedger] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,14 +81,17 @@ export default function EarningsScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle={isDark ? 'dark-content' : 'light-content'} />
+      {/* Fixed light-content, not tied to isDark — this screen's background
+          is pinned to navy in both themes, so the status bar icons need to
+          stay light/white regardless of the system setting. */}
+      <StatusBar barStyle="light-content" />
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <ArrowLeft size={22} color={colors.white} />
+          <ArrowLeft size={22} color={white} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Earnings</Text>
         <TouchableOpacity style={styles.refreshBtn} onPress={onRefresh}>
-          <RefreshCw size={18} color={mutedOnDark(isDark, 0.6)} />
+          <RefreshCw size={18} color={mutedWhite(0.6)} />
         </TouchableOpacity>
       </View>
 
@@ -131,8 +134,8 @@ export default function EarningsScreen({ navigation }: any) {
             wallet?.is_locked ? styles.lockBadgeLocked : styles.lockBadgeUnlocked
           ]}>
             {wallet?.is_locked
-              ? <Lock size={12} color={colors.white} strokeWidth={2.5} />
-              : <CheckCircle size={12} color={colors.white} strokeWidth={2.5} />
+              ? <Lock size={12} color={white} strokeWidth={2.5} />
+              : <CheckCircle size={12} color={white} strokeWidth={2.5} />
             }
             <Text style={styles.lockBadgeText}>
               {wallet?.is_locked ? 'Locked' : 'Active'}
@@ -160,7 +163,7 @@ export default function EarningsScreen({ navigation }: any) {
 
         {/* Info box */}
         <View style={styles.infoBox}>
-          <Clock size={14} color={colors.textMuted} />
+          <Clock size={14} color={mutedWhite(0.4)} />
           <Text style={styles.infoText}>
             Commission is collected daily at 4AM. Pay before then to stay active. Pull down to refresh after payment.
           </Text>
@@ -207,8 +210,8 @@ export default function EarningsScreen({ navigation }: any) {
   );
 }
 
-const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.dark },
+const getStyles = (colors: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: navy },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -216,26 +219,26 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: mutedOnDark(isDark, 0.08),
+    borderBottomColor: mutedWhite(0.08),
   },
   backBtn: {
     width: 40, height: 40,
     borderRadius: radius.md,
-    backgroundColor: mutedOnDark(isDark, 0.08),
+    backgroundColor: mutedWhite(0.08),
     justifyContent: 'center',
     alignItems: 'center',
   },
   refreshBtn: {
     width: 40, height: 40,
     borderRadius: radius.md,
-    backgroundColor: mutedOnDark(isDark, 0.08),
+    backgroundColor: mutedWhite(0.08),
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: fontSizes.lg,
     fontWeight: '700',
-    color: colors.white,
+    color: white,
   },
   scroll: { padding: spacing.lg, paddingBottom: spacing.xxl },
   earningsCard: {
@@ -251,7 +254,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   earningsValue: {
     fontSize: fontSizes.xxxl,
     fontWeight: '800',
-    color: colors.white,
+    color: white,
   },
   earningsLabel: {
     fontSize: fontSizes.md,
@@ -260,18 +263,18 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   },
   earningsSubtext: {
     fontSize: fontSizes.xs,
-    color: mutedOnDark(isDark, 0.3),
+    color: mutedWhite(0.3),
   },
   balanceCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: mutedOnDark(isDark, 0.05),
+    backgroundColor: mutedWhite(0.05),
     borderRadius: radius.lg,
     padding: spacing.lg,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: mutedOnDark(isDark, 0.08),
+    borderColor: mutedWhite(0.08),
   },
   balanceCardWarning: {
     borderColor: 'rgba(244,67,54,0.3)',
@@ -279,13 +282,13 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   },
   balanceLabel: {
     fontSize: fontSizes.xs,
-    color: mutedOnDark(isDark, 0.4),
+    color: mutedWhite(0.4),
     marginBottom: 4,
   },
   balanceValue: {
     fontSize: fontSizes.xxl,
     fontWeight: '800',
-    color: colors.white,
+    color: white,
   },
   lockBadge: {
     flexDirection: 'row',
@@ -300,20 +303,20 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   lockBadgeText: {
     fontSize: fontSizes.xs,
     fontWeight: '700',
-    color: colors.white,
+    color: white,
   },
   momoCard: {
-    backgroundColor: mutedOnDark(isDark, 0.05),
+    backgroundColor: mutedWhite(0.05),
     borderRadius: radius.lg,
     padding: spacing.lg,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: mutedOnDark(isDark, 0.08),
+    borderColor: mutedWhite(0.08),
   },
   momoLabel: {
     fontSize: fontSizes.xs,
     fontWeight: '700',
-    color: mutedOnDark(isDark, 0.4),
+    color: mutedWhite(0.4),
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: spacing.sm,
@@ -321,7 +324,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   momoName: {
     fontSize: fontSizes.sm,
     fontWeight: '700',
-    color: colors.white,
+    color: white,
   },
   momoNetwork: {
     fontSize: fontSizes.xs,
@@ -333,7 +336,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: mutedOnDark(isDark, 0.08),
+    backgroundColor: mutedWhite(0.08),
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
@@ -342,7 +345,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   momoPhone: {
     fontSize: fontSizes.lg,
     fontWeight: '800',
-    color: colors.white,
+    color: white,
     letterSpacing: 0.5,
   },
   momoCopiedBadge: {
@@ -359,7 +362,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: mutedOnDark(isDark, 0.03),
+    backgroundColor: mutedWhite(0.03),
     padding: spacing.md,
     borderRadius: radius.md,
     marginBottom: spacing.lg,
@@ -367,24 +370,24 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: fontSizes.xs,
-    color: mutedOnDark(isDark, 0.4),
+    color: mutedWhite(0.4),
     lineHeight: 18,
   },
   sectionTitle: {
     fontSize: fontSizes.xs,
     fontWeight: '700',
-    color: mutedOnDark(isDark, 0.4),
+    color: mutedWhite(0.4),
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: spacing.sm,
   },
   emptyState: { alignItems: 'center', padding: spacing.xl },
-  emptyText: { fontSize: fontSizes.sm, color: mutedOnDark(isDark, 0.3) },
+  emptyText: { fontSize: fontSizes.sm, color: mutedWhite(0.3) },
   ledgerItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: mutedOnDark(isDark, 0.04),
+    backgroundColor: mutedWhite(0.04),
     borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.sm,
@@ -401,15 +404,15 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   ledgerDesc: {
     fontSize: fontSizes.sm,
     fontWeight: '600',
-    color: colors.white,
+    color: white,
     marginBottom: 2,
   },
   ledgerRoute: {
     fontSize: fontSizes.xs,
-    color: mutedOnDark(isDark, 0.4),
+    color: mutedWhite(0.4),
     marginBottom: 2,
   },
-  ledgerDate: { fontSize: fontSizes.xs, color: mutedOnDark(isDark, 0.3) },
+  ledgerDate: { fontSize: fontSizes.xs, color: mutedWhite(0.3) },
   ledgerAmount: { fontSize: fontSizes.md, fontWeight: '800' },
   ledgerAmountPositive: { color: colors.success },
   ledgerAmountNegative: { color: colors.error },
