@@ -128,6 +128,12 @@ export default function StudentHomeScreen({ navigation }: any) {
   const [pinMode, setPinMode] = useState(false);
   const [pinTarget, setPinTarget] = useState<'pickup' | 'dropoff'>('dropoff');
   const [pinRegion, setPinRegion] = useState<Region | null>(null);
+  const [isDraggingPin, setIsDraggingPin] = useState(false);
+  // 0 = resting on the map, 1 = lifted mid-drag. Drives both the pin's
+  // own translateY/scale and (inversely) its ground shadow, so the two
+  // stay perfectly in sync off a single driver instead of two Animated
+  // values that could drift out of step with each other.
+  const pinLiftAnim = useRef(new Animated.Value(0)).current;
   const [reverseGeoLoading, setReverseGeoLoading] = useState(false);
   const [estimatedFare, setEstimatedFare] = useState<number | null>(null);
   const [pricing, setPricing] = useState(DEFAULT_PRICING);
@@ -239,6 +245,8 @@ export default function StudentHomeScreen({ navigation }: any) {
     setPinTarget(target);
     setPinMode(true);
     setPinRegion(null);
+    setIsDraggingPin(false);
+    pinLiftAnim.setValue(0);
     Keyboard.dismiss();
     collapseSheet();
   };
@@ -246,6 +254,30 @@ export default function StudentHomeScreen({ navigation }: any) {
   const exitPinMode = () => {
     setPinMode(false);
     setPinRegion(null);
+    setIsDraggingPin(false);
+    pinLiftAnim.setValue(0);
+  };
+
+  // Fires repeatedly while a finger is actively panning the map (unlike
+  // onRegionChange, which also fires for momentum/programmatic moves) —
+  // the first call per gesture is the pin's cue to lift off the map.
+  const handlePinPanDrag = () => {
+    if (!pinMode) return;
+    if (!isDraggingPin) {
+      setIsDraggingPin(true);
+      Animated.timing(pinLiftAnim, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+    }
+  };
+
+  // Fires once the map settles, whether that's the end of a drag or
+  // momentum finishing — the pin's cue to drop back onto the new point.
+  const handlePinRegionSettled = (region: Region) => {
+    if (!pinMode) return;
+    setPinRegion(region);
+    if (isDraggingPin) {
+      setIsDraggingPin(false);
+      Animated.spring(pinLiftAnim, { toValue: 0, friction: 5, tension: 60, useNativeDriver: true }).start();
+    }
   };
 
   const confirmPin = async () => {
@@ -468,6 +500,8 @@ export default function StudentHomeScreen({ navigation }: any) {
         showsUserLocation
         showsMyLocationButton={false}
         onRegionChange={(region) => { if (pinMode) setPinRegion(region); }}
+        onPanDrag={handlePinPanDrag}
+        onRegionChangeComplete={handlePinRegionSettled}
       >
         <Polygon
           coordinates={UG_LEGON_BOUNDARY}
@@ -504,8 +538,25 @@ export default function StudentHomeScreen({ navigation }: any) {
       {pinMode && (
         <>
           <View style={styles.centerPin} pointerEvents="none">
-            <MapPin size={36} color={pinTarget === 'pickup' ? colors.success : colors.primary} />
-            <View style={styles.centerPinShadow} />
+            <Animated.View
+              style={{
+                transform: [
+                  { translateY: pinLiftAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -14] }) },
+                  { scale: pinLiftAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) },
+                ],
+              }}
+            >
+              <RingPinIcon size={36} color={pinTarget === 'pickup' ? colors.textMuted : colors.primary} />
+            </Animated.View>
+            <Animated.View
+              style={[
+                styles.centerPinShadow,
+                {
+                  opacity: pinLiftAnim.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.12] }),
+                  transform: [{ scaleX: pinLiftAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.7] }) }],
+                },
+              ]}
+            />
           </View>
           <View style={styles.pinBanner}>
             <Text style={styles.pinBannerText}>
@@ -698,8 +749,8 @@ const getStyles = (colors: any) => StyleSheet.create({
     position: 'absolute',
     top: '50%',
     left: '50%',
-    marginLeft: -18,
-    marginTop: -36,
+    marginLeft: -18, // half of RingPinIcon's 36px width
+    marginTop: -39,  // RingPinIcon's rendered height at size 36 (36 * 1.08 viewBox ratio)
     alignItems: 'center',
   },
   centerPinShadow: {
