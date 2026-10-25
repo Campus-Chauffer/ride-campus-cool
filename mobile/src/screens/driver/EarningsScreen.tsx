@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, ScrollView, ActivityIndicator,
@@ -48,10 +48,16 @@ export default function EarningsScreen({ navigation }: any) {
 
   const onRefresh = useCallback(() => loadData(true), []);
 
+  const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+  }, []);
+
   const copyMomoNumber = async () => {
     await Clipboard.setStringAsync(MOMO_PHONE);
     setPhoneCopied(true);
-    setTimeout(() => setPhoneCopied(false), 1500);
+    if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+    copiedTimeoutRef.current = setTimeout(() => setPhoneCopied(false), 1500);
   };
 
   const formatDate = (dateStr: string) => {
