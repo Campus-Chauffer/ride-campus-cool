@@ -11,6 +11,7 @@ import socketService from '../../services/socket';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, navy, white } from '../../utils/theme';
 import { getBearing, haversineMeters, snapToRoute, shouldRefreshRoute } from '../../utils/geo';
+import { useAnimatedRoute } from '../../hooks/useAnimatedRoute';
 
 const CAR_ICON = require('../../../assets/car-top.png');
 // The driver's location now streams continuously rather than arriving on a
@@ -55,6 +56,7 @@ export default function DriverFoundScreen({ trip, onCancelled }: Props) {
   const fallbackLocationRef = useRef<any>(initialDriverLocation);
   const [driverHeading, setDriverHeading] = useState(0);
   const [routeCoords, setRouteCoords] = useState<any[]>([]);
+  const animatedRouteCoords = useAnimatedRoute(routeCoords);
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
   const [etaText, setEtaText] = useState<string | null>(null);
   const [trackCarMarker, setTrackCarMarker] = useState(true);
@@ -321,7 +323,7 @@ export default function DriverFoundScreen({ trip, onCancelled }: Props) {
         </Marker>
 
         {routeCoords.length > 0 && (
-          <Polyline coordinates={routeCoords} strokeColor={colors.primary} strokeWidth={4} />
+          <Polyline coordinates={animatedRouteCoords} strokeColor={colors.primary} strokeWidth={4} />
         )}
       </RNMapView>
 
