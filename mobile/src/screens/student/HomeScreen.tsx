@@ -7,8 +7,9 @@ import {
 } from 'react-native';
 import * as Location from 'expo-location';
 import RNMapView, { Marker, Polyline, Polygon, PROVIDER_GOOGLE, Region } from 'react-native-maps';
-import { MapPin, Navigation, Menu, X, Crosshair, LocateFixed } from 'lucide-react-native';
+import { MapPin, Navigation, Menu, X, LocateFixed } from 'lucide-react-native';
 import SideMenu from '../../components/SideMenu';
+import RingPinIcon from '../../components/icons/RingPinIcon';
 import { ridesAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useRideStore } from '../../store/rideStore';
@@ -563,7 +564,7 @@ export default function StudentHomeScreen({ navigation }: any) {
                 />
               )}
               <TouchableOpacity onPress={() => enterPinMode('pickup')} style={styles.pinIconBtn}>
-                <Crosshair size={14} color={colors.textMuted} />
+                <RingPinIcon size={14} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
 
@@ -588,7 +589,7 @@ export default function StudentHomeScreen({ navigation }: any) {
                 </TouchableOpacity>
               )}
               <TouchableOpacity onPress={() => enterPinMode('dropoff')} style={styles.pinIconBtn}>
-                <Crosshair size={14} color={colors.textMuted} />
+                <RingPinIcon size={14} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
           </View>
