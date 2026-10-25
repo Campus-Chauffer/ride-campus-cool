@@ -11,6 +11,7 @@ import { ridesAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, navy } from '../../utils/theme';
 import { shouldRefreshRoute, haversineMeters } from '../../utils/geo';
+import { useAnimatedRoute } from '../../hooks/useAnimatedRoute';
 
 // Below this, GPS-derived heading is a known-unreliable reading (it's
 // largely Doppler-derived and gets noisy near-stationary) rather than
@@ -41,6 +42,7 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
   const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [driverHeading, setDriverHeading] = useState(0);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
+  const animatedRouteCoords = useAnimatedRoute(routeCoords);
   const mapRef = useRef<RNMapView>(null);
   const routeRequestId = useRef(0);
   const lastRouteFetchAt = useRef<number | null>(null);
@@ -199,7 +201,7 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
 
           {routeCoords.length > 0 && (
             <Polyline
-              coordinates={routeCoords}
+              coordinates={animatedRouteCoords}
               strokeColor={colors.primary}
               strokeWidth={4}
             />

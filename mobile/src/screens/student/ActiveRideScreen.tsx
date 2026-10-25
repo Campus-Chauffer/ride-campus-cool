@@ -10,6 +10,7 @@ import { ridesAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, navy } from '../../utils/theme';
 import { getBearing, haversineMeters, snapToRoute, shouldRefreshRoute } from '../../utils/geo';
+import { useAnimatedRoute } from '../../hooks/useAnimatedRoute';
 
 const CAR_ICON = require('../../../assets/car-top.png');
 // The driver's location now streams continuously rather than arriving on a
@@ -32,6 +33,7 @@ export default function ActiveRideScreen({ trip }: Props) {
   const colors = getColors(isDark);
   const styles = getStyles(colors);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
+  const animatedRouteCoords = useAnimatedRoute(routeCoords);
   const initialDriverLocation = trip.driver_lat && trip.driver_lng
     ? { latitude: parseFloat(trip.driver_lat), longitude: parseFloat(trip.driver_lng) }
     : null;
@@ -235,7 +237,7 @@ export default function ActiveRideScreen({ trip }: Props) {
           </Marker>
 
           {routeCoords.length > 0 && (
-            <Polyline coordinates={routeCoords} strokeColor={colors.primary} strokeWidth={4} />
+            <Polyline coordinates={animatedRouteCoords} strokeColor={colors.primary} strokeWidth={4} />
           )}
         </RNMapView>
       </View>
