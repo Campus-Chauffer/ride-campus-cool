@@ -10,6 +10,7 @@ import RNMapView, { Marker, Polyline, Polygon, PROVIDER_GOOGLE, Region } from 'r
 import { MapPin, Navigation, Menu, X, LocateFixed } from 'lucide-react-native';
 import SideMenu from '../../components/SideMenu';
 import RingPinIcon from '../../components/icons/RingPinIcon';
+import PulsingRouteTrace from '../../components/PulsingRouteTrace';
 import { useAnimatedRoute } from '../../hooks/useAnimatedRoute';
 import { ridesAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
@@ -118,7 +119,7 @@ export default function StudentHomeScreen({ navigation }: any) {
   const [pickup, setPickup] = useState('');
   const [dropoff, setDropoff] = useState('');
   const [routeCoords, setRouteCoords] = useState<any[]>([]);
-  const animatedRouteCoords = useAnimatedRoute(routeCoords);
+  const [animatedRouteCoords, routeDrawComplete] = useAnimatedRoute(routeCoords);
   const [loading, setLoading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -519,11 +520,14 @@ export default function StudentHomeScreen({ navigation }: any) {
           </Marker>
         )}
         {selectedDest && (
-          <Marker coordinate={{ latitude: selectedDest.lat, longitude: selectedDest.lng }} pinColor={colors.primary} title={selectedDest.name} tracksViewChanges={false} />
+          <Marker coordinate={{ latitude: selectedDest.lat, longitude: selectedDest.lng }} title={selectedDest.name} tracksViewChanges={false}>
+            <RingPinIcon size={36} color={colors.primary} />
+          </Marker>
         )}
         {routeCoords.length > 0 && (
           <Polyline coordinates={animatedRouteCoords} strokeColor={colors.primary} strokeWidth={4} />
         )}
+        <PulsingRouteTrace routeCoords={routeCoords} active={routeDrawComplete && routeCoords.length > 0} />
       </RNMapView>
 
       <TouchableOpacity style={styles.menuBtn} onPress={() => setMenuOpen(true)}>
