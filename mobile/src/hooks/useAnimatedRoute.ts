@@ -23,8 +23,16 @@ const DRAW_DURATION_MS = 700;
 // changed - replaying the draw-in on every one of those would look like
 // the route flickering mid-trip, not a reveal. Later updates snap in
 // directly instead.
-export function useAnimatedRoute(routeCoords: Coordinate[]): Coordinate[] {
+//
+// Returns [coords, drawComplete] - the second value flips true once the
+// reveal finishes (or immediately, for a route that was never animated:
+// a later update, or a route restored into an already-populated hook).
+// Callers that want to layer something on top of a *finished* route (the
+// pulsing trace on HomeScreen/DriverFoundScreen) gate on this instead of
+// re-deriving the same timing independently.
+export function useAnimatedRoute(routeCoords: Coordinate[]): [Coordinate[], boolean] {
   const [visibleCoords, setVisibleCoords] = useState<Coordinate[]>(routeCoords);
+  const [drawComplete, setDrawComplete] = useState(false);
   const progress = useRef(new Animated.Value(0)).current;
   const hasAnimatedRef = useRef(false);
   const prevLengthRef = useRef(routeCoords.length);
@@ -35,16 +43,19 @@ export function useAnimatedRoute(routeCoords: Coordinate[]): Coordinate[] {
 
     if (routeCoords.length === 0) {
       setVisibleCoords([]);
+      setDrawComplete(false);
       hasAnimatedRef.current = false;
       return;
     }
 
     if (!isFirstAppearance || hasAnimatedRef.current) {
       setVisibleCoords(routeCoords);
+      setDrawComplete(true);
       return;
     }
 
     hasAnimatedRef.current = true;
+    setDrawComplete(false);
     progress.setValue(0);
     const listenerId = progress.addListener(({ value }) => {
       const count = Math.max(2, Math.ceil(value * routeCoords.length));
@@ -58,6 +69,7 @@ export function useAnimatedRoute(routeCoords: Coordinate[]): Coordinate[] {
       useNativeDriver: false,
     }).start(() => {
       progress.removeListener(listenerId);
+      setDrawComplete(true);
     });
 
     return () => {
@@ -65,5 +77,5 @@ export function useAnimatedRoute(routeCoords: Coordinate[]): Coordinate[] {
     };
   }, [routeCoords]);
 
-  return visibleCoords;
+  return [visibleCoords, drawComplete];
 }
