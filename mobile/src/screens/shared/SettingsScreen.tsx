@@ -178,7 +178,7 @@ export default function SettingsScreen({ navigation }: any) {
           <SettingRow
             icon={<Info size={18} color={c.dark} />}
             label="About Campus Chauffeur"
-            onPress={() => Alert.alert('Campus Chauffeur', 'Version 1.0.0\nSafe rides around UG Legon')}
+            onPress={() => Alert.alert('Campus Chauffeur', "Version 1.0.0\nWe'll get you there")}
           />
         </View>
 
