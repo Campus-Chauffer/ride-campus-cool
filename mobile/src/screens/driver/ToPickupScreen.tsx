@@ -42,7 +42,7 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
   const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [driverHeading, setDriverHeading] = useState(0);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
-  const [animatedRouteCoords] = useAnimatedRoute(routeCoords);
+  const animatedRouteCoords = useAnimatedRoute(routeCoords);
   const mapRef = useRef<RNMapView>(null);
   const routeRequestId = useRef(0);
   const lastRouteFetchAt = useRef<number | null>(null);

@@ -33,7 +33,7 @@ export default function ActiveRideScreen({ trip }: Props) {
   const colors = getColors(isDark);
   const styles = getStyles(colors);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
-  const [animatedRouteCoords] = useAnimatedRoute(routeCoords);
+  const animatedRouteCoords = useAnimatedRoute(routeCoords);
   const initialDriverLocation = trip.driver_lat && trip.driver_lng
     ? { latitude: parseFloat(trip.driver_lat), longitude: parseFloat(trip.driver_lng) }
     : null;
