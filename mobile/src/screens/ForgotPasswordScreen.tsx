@@ -20,6 +20,7 @@ export default function ForgotPasswordScreen({ navigation }: any) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const sendReset = async () => {
@@ -38,14 +39,23 @@ export default function ForgotPasswordScreen({ navigation }: any) {
   };
 
   const resetPassword = async () => {
+    // Android's autoCapitalize can silently capitalize the first character
+    // typed into one masked field but not the other (a known RN/Android
+    // quirk on some keyboards), and autofill suggestions can tack on
+    // trailing whitespace — both invisible since the fields are dots.
+    // Trimming here, and comparing the trimmed values, is what actually
+    // gets sent, so what the user sees matching is what gets checked.
+    const trimmedNew = newPassword.trim();
+    const trimmedConfirm = confirmPassword.trim();
+
     if (!otp) return Alert.alert('Error', 'Enter the reset code');
-    if (!newPassword) return Alert.alert('Error', 'Enter a new password');
-    if (newPassword.length < 6) return Alert.alert('Error', 'Password must be at least 6 characters');
-    if (newPassword !== confirmPassword) return Alert.alert('Error', 'Passwords do not match');
+    if (!trimmedNew) return Alert.alert('Error', 'Enter a new password');
+    if (trimmedNew.length < 6) return Alert.alert('Error', 'Password must be at least 6 characters');
+    if (trimmedNew !== trimmedConfirm) return Alert.alert('Error', 'Passwords do not match');
 
     setLoading(true);
     try {
-      await authAPI.resetPassword(phone, otp, newPassword);
+      await authAPI.resetPassword(phone, otp, trimmedNew);
       Alert.alert('Success', 'Password reset successfully', [
         { text: 'Login', onPress: () => navigation.navigate('Login') }
       ]);
@@ -150,6 +160,8 @@ export default function ForgotPasswordScreen({ navigation }: any) {
                     value={newPassword}
                     onChangeText={setNewPassword}
                     secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
                     placeholderTextColor={colors.gray3}
                   />
                   <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
@@ -169,9 +181,17 @@ export default function ForgotPasswordScreen({ navigation }: any) {
                     placeholder="Repeat password"
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
-                    secureTextEntry={!showPassword}
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
                     placeholderTextColor={colors.gray3}
                   />
+                  <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                    {showConfirmPassword
+                      ? <EyeOff size={18} color={colors.textMuted} />
+                      : <Eye size={18} color={colors.textMuted} />
+                    }
+                  </TouchableOpacity>
                 </View>
               </View>
               <TouchableOpacity

@@ -26,6 +26,7 @@ export default function RegisterScreen({ route, navigation }: any) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -59,11 +60,17 @@ export default function RegisterScreen({ route, navigation }: any) {
 
   const register = async () => {
   if (submitted) return;
+  // Trimmed the same way as ForgotPasswordScreen — guards against Android
+  // silently auto-capitalizing the first character of only one masked
+  // field, and against trailing whitespace from keyboard autofill, both
+  // invisible since the fields render as dots.
+  const trimmedPassword = password.trim();
+  const trimmedConfirm = confirmPassword.trim();
   if (!firstName || !lastName) return Alert.alert('Error', 'Enter your full name');
   if (!email) return Alert.alert('Error', 'Enter your email');
-  if (!password) return Alert.alert('Error', 'Enter a password');
-  if (password.length < 6) return Alert.alert('Error', 'Password must be at least 6 characters');
-  if (password !== confirmPassword) return Alert.alert('Error', 'Passwords do not match');
+  if (!trimmedPassword) return Alert.alert('Error', 'Enter a password');
+  if (trimmedPassword.length < 6) return Alert.alert('Error', 'Password must be at least 6 characters');
+  if (trimmedPassword !== trimmedConfirm) return Alert.alert('Error', 'Passwords do not match');
 
   setSubmitted(true);
   setLoading(true);
@@ -76,7 +83,7 @@ export default function RegisterScreen({ route, navigation }: any) {
         first_name: firstName,
         last_name: lastName,
         email,
-        password,
+        password: trimmedPassword,
         role,
       });
     } catch (regErr: any) {
@@ -98,7 +105,7 @@ export default function RegisterScreen({ route, navigation }: any) {
     // otherwise surface it as a real conflict.
     let loginRes;
     try {
-      loginRes = await authAPI.login(phone, password);
+      loginRes = await authAPI.login(phone, trimmedPassword);
     } catch (loginErr: any) {
       // A login failure only reaches here as part of the "already exists"
       // fallback — someone trying to sign up, not sign in, so the raw
@@ -288,6 +295,8 @@ export default function RegisterScreen({ route, navigation }: any) {
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
                     placeholderTextColor={colors.gray3}
                   />
                   <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
@@ -308,9 +317,17 @@ export default function RegisterScreen({ route, navigation }: any) {
                     placeholder="Repeat password"
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
-                    secureTextEntry={!showPassword}
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
                     placeholderTextColor={colors.gray3}
                   />
+                  <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                    {showConfirmPassword
+                      ? <EyeOff size={18} color={colors.textMuted} />
+                      : <Eye size={18} color={colors.textMuted} />
+                    }
+                  </TouchableOpacity>
                 </View>
               </View>
 
