@@ -1,13 +1,23 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const { renderEmailShell, heroNumber, infoRow, heading, paragraph, mutedNote, escapeHtml } = require('./emailTemplate');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
+// Without a verified sending domain in Resend, this can only be
+// onboarding@resend.dev, and Resend will only actually deliver to the
+// address the account was signed up with - fine for confirming the
+// integration itself works, not for real users until a domain is
+// verified and this is pointed at an address on it.
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+const FROM = `Campus Chauffeur <${FROM_EMAIL}>`;
+
+// Resend's SDK returns { data, error } rather than throwing - this
+// normalizes it back to the throw-on-failure shape the rest of this file
+// (and authController's forgotPassword, which relies on sendPasswordResetOTP
+// rejecting on failure) already expects.
+async function send(params) {
+  const { error } = await resend.emails.send(params);
+  if (error) throw new Error(error.message);
+}
 
 const sendRatingReminder = async (email, firstName, tripId, role) => {
   if (!email) return;
@@ -26,12 +36,7 @@ const sendRatingReminder = async (email, firstName, tripId, role) => {
   });
 
   try {
-    await transporter.sendMail({
-      from: `Campus Chauffeur <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject,
-      html,
-    });
+    await send({ from: FROM, to: email, subject, html });
     console.log(`Rating reminder sent to ${email}`);
   } catch (err) {
     console.error('Email error:', err);
@@ -56,12 +61,7 @@ const sendRideReceipt = async (email, firstName, trip) => {
   });
 
   try {
-    await transporter.sendMail({
-      from: `Campus Chauffeur <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: 'Your Campus Chauffeur ride receipt',
-      html,
-    });
+    await send({ from: FROM, to: email, subject: 'Your Campus Chauffeur ride receipt', html });
     console.log(`Receipt sent to ${email}`);
   } catch (err) {
     console.error('Email error:', err);
@@ -86,12 +86,7 @@ const sendEmailChangedAlert = async (oldEmail, firstName, newEmail) => {
   });
 
   try {
-    await transporter.sendMail({
-      from: `Campus Chauffeur <${process.env.EMAIL_USER}>`,
-      to: oldEmail,
-      subject: 'Your Campus Chauffeur account email was changed',
-      html,
-    });
+    await send({ from: FROM, to: oldEmail, subject: 'Your Campus Chauffeur account email was changed', html });
     console.log(`Email-change alert sent to ${oldEmail}`);
   } catch (err) {
     console.error('Email error:', err);
@@ -111,12 +106,7 @@ const sendPasswordResetOTP = async (email, firstName, otp) => {
     `,
   });
 
-  await transporter.sendMail({
-    from: `Campus Chauffeur <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject: 'Reset your Campus Chauffeur password',
-    html,
-  });
+  await send({ from: FROM, to: email, subject: 'Reset your Campus Chauffeur password', html });
 };
 
 module.exports = { sendRatingReminder, sendRideReceipt, sendEmailChangedAlert, sendPasswordResetOTP };
