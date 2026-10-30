@@ -6,6 +6,7 @@ import Drivers from "./pages/drivers/Drivers";
 import Users from "./pages/users/Users";
 import Trips from "./pages/trips/Trips";
 import Wallet from "./pages/wallet/Wallet";
+import Transactions from "./pages/transactions/Transactions";
 import Reports from "./pages/reports/Reports";
 import Config from "./pages/config/Config";
 import Analytics from "./pages/analytics/Analytics";
@@ -35,6 +36,7 @@ export default function App() {
                   <Route path="users" element={<Users />} />
                   <Route path="trips" element={<Trips />} />
                   <Route path="wallet" element={<Wallet />} />
+                  <Route path="transactions" element={<Transactions />} />
                   <Route path="reports" element={<Reports />} />
                   <Route path="config" element={<Config />} />
                   <Route path="analytics" element={<Analytics />} />

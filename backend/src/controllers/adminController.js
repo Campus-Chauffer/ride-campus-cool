@@ -602,6 +602,36 @@ const getAdminLedger = async (req, res) => {
   }
 };
 
+// Full ledger for the Transactions tab — every commission charge AND every
+// payment against it, unlike getAdminLedger above which only shows payments
+// (that one backs the Wallet page's "History" tab). trip_id is included so a
+// commission charge can be traced back to the ride that generated it.
+const getAllTransactions = async (req, res) => {
+  try {
+    const { type } = req.query;
+    const params = [];
+    let whereClause = '';
+    if (type === 'commission' || type === 'payment') {
+      params.push(type);
+      whereClause = `WHERE l.type = $${params.length}`;
+    }
+    const result = await pool.query(
+      `SELECT l.*, u.first_name, u.last_name, u.phone_number
+       FROM ledger l
+       JOIN drivers d ON l.driver_id = d.id
+       JOIN users u ON d.user_id = u.id
+       ${whereClause}
+       ORDER BY l.created_at DESC
+       LIMIT 200`,
+      params
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 // Today's snapshot for the admin dashboard: ride requests by status, revenue
 // generated, and which drivers went online today with how many rides they
 // completed. All queries are scoped to the server's local calendar day via
@@ -711,6 +741,6 @@ module.exports = {
   getAllTrips, getRevenueSummary,
   getAllUsers, blockUser, updateConfig,
   getAllReports, updateReport, getAllConfig,
-  getAnalytics, getAdminLedger, getDriverActivity, getReverseGeocode,
+  getAnalytics, getAdminLedger, getAllTransactions, getDriverActivity, getReverseGeocode,
   getTodayStats, getUserRideHistory
 };

@@ -6,7 +6,7 @@ const {
   getAllTrips, getRevenueSummary,
   getAllUsers, blockUser, updateConfig,
   getAllReports, updateReport, getAllConfig,
-  getAnalytics, getAdminLedger, getDriverActivity, getReverseGeocode,
+  getAnalytics, getAdminLedger, getAllTransactions, getDriverActivity, getReverseGeocode,
   getTodayStats, getUserRideHistory
 } = require('../controllers/adminController');
 const { createAnnouncement, getAnnouncementsAdmin } = require('../controllers/announcementsController');
@@ -28,6 +28,7 @@ router.patch('/reports/:id', adminAuth, updateReport);
 router.get('/analytics', adminAuth, getAnalytics);
 router.get('/analytics/driver-activity', adminAuth, getDriverActivity);
 router.get('/ledger', adminAuth, getAdminLedger);
+router.get('/transactions', adminAuth, getAllTransactions);
 router.get('/geocode', adminAuth, getReverseGeocode);
 router.get('/stats/today', adminAuth, getTodayStats);
 router.post('/announcements', adminAuth, createAnnouncement);

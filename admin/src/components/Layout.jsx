@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Car, Users, MapPin,
-  Wallet, Flag, Settings, LogOut,
+  Wallet, Receipt, Flag, Settings, LogOut,
   Menu, X, BarChart2, Megaphone, Mail
 } from 'lucide-react';
 
@@ -16,6 +16,7 @@ const navItems = [
   { path: '/users', label: 'Users', icon: Users },
   { path: '/trips', label: 'Trips', icon: MapPin },
   { path: '/wallet', label: 'Wallet', icon: Wallet },
+  { path: '/transactions', label: 'Transactions', icon: Receipt },
   { path: '/reports', label: 'Reports', icon: Flag },
   { path: '/announcements', label: 'Announcements', icon: Megaphone },
   { path: '/emails', label: 'Emails', icon: Mail },
