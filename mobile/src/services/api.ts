@@ -189,6 +189,7 @@ export const driverAPI = {
 export const walletAPI = {
   getWallet: () => api.get('/wallet'),
   getLedger: () => api.get('/wallet/ledger'),
+  initializePaystackPayment: () => api.post('/wallet/pay/initialize'),
 };
 
 export const driverRegistrationAPI = {

@@ -1,0 +1,11 @@
+-- One-time migration for Paystack-based commission payments. Run against
+-- the live database once, then it's done — schema.sql has already been
+-- updated to match for any future fresh DB.
+--
+-- The unique constraint is what makes the webhook handler's
+-- ON CONFLICT (paystack_reference) DO NOTHING idempotent against a
+-- duplicate delivery of the same Paystack event. NULL stays allowed and
+-- unconstrained (multiple NULLs don't conflict with each other under a
+-- unique index) so every existing admin-recorded payment — which never
+-- had a Paystack reference — is unaffected.
+ALTER TABLE ledger ADD COLUMN IF NOT EXISTS paystack_reference VARCHAR(100) UNIQUE;

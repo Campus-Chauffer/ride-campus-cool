@@ -52,7 +52,16 @@ const io = new Server(server, {
 // Security middleware first
 app.use(helmet());
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+// The Paystack webhook needs the exact raw bytes of the request body to
+// verify its signature (re-serializing the parsed JS object with
+// JSON.stringify isn't guaranteed to byte-match what Paystack actually
+// sent — key order, spacing, etc. can differ). Stashing it here on every
+// request is cheap and lets that one route reach for req.rawBody instead
+// of needing its own separate body-parsing setup.
+app.use(express.json({
+  limit: '50mb',
+  verify: (req, res, buf) => { req.rawBody = buf; },
+}));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // ── Rate limiters ──────────────────────────────────────────────────────────
