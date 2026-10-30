@@ -33,7 +33,7 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
   const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [driverHeading, setDriverHeading] = useState(0);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
-  const [animatedRouteCoords] = useAnimatedRoute(routeCoords);
+  const animatedRouteCoords = useAnimatedRoute(routeCoords);
   const routeRequestId = useRef(0);
   const lastRouteFetchAt = useRef<number | null>(null);
   const lastRouteFetchOrigin = useRef<{ latitude: number; longitude: number } | null>(null);

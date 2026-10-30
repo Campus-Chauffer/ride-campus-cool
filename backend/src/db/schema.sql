@@ -105,6 +105,11 @@ CREATE TABLE IF NOT EXISTS ledger (
   amount DECIMAL(10,2),
   type VARCHAR(20),
   description TEXT,
+  -- Set only for payments made via Paystack; the admin manual-entry path
+  -- leaves this NULL. Unique so the webhook handler can treat a retried
+  -- delivery of the same Paystack event as a no-op instead of crediting
+  -- the driver twice for one payment.
+  paystack_reference VARCHAR(100) UNIQUE,
   created_at TIMESTAMP DEFAULT NOW()
 );
 

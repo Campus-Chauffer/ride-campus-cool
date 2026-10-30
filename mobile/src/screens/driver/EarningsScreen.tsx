@@ -2,17 +2,18 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, ScrollView, ActivityIndicator,
-  StatusBar, RefreshControl
+  StatusBar, RefreshControl, Alert
 } from 'react-native';
-import { ArrowLeft, Wallet, Clock, CheckCircle, TrendingUp, RefreshCw, Lock, Copy, Check } from 'lucide-react-native';
+import * as WebBrowser from 'expo-web-browser';
+import { ArrowLeft, Wallet, Clock, CheckCircle, TrendingUp, RefreshCw, Lock, Copy, Check, CreditCard } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import { walletAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, navy, white, mutedWhite } from '../../utils/theme';
 
-// Where drivers send their commission payments. Static for now - the plan
-// is to replace this with a direct Paystack payment link once that's wired
-// up, so this doesn't need a manual transfer at all.
+// Momo stays as a fallback alongside the Paystack button below (outage,
+// or a driver who just prefers a direct transfer) rather than being
+// replaced by it.
 const MOMO_PHONE = '0534036293';
 const MOMO_NETWORK = 'MTN';
 const MOMO_ACCOUNT_NAME = 'JEFFREY MENSAH ADU-TUTU';
@@ -26,6 +27,7 @@ export default function EarningsScreen({ navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [phoneCopied, setPhoneCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [payingWithPaystack, setPayingWithPaystack] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -47,6 +49,33 @@ export default function EarningsScreen({ navigation }: any) {
   };
 
   const onRefresh = useCallback(() => loadData(true), []);
+
+  // Opens Paystack's hosted checkout for the driver's exact outstanding
+  // balance. Reconciliation happens server-side via webhook once Paystack
+  // confirms the charge, not here - there's an inherent gap between the
+  // driver finishing payment in the browser and that webhook landing, so
+  // the message on return sets the right expectation instead of the
+  // screen just looking unchanged (or the driver assuming it failed and
+  // trying to pay twice).
+  const payWithPaystack = async () => {
+    try {
+      setPayingWithPaystack(true);
+      const res = await walletAPI.initializePaystackPayment();
+      const url = res.data?.authorization_url;
+      if (!url) throw new Error('No checkout URL returned');
+      await WebBrowser.openBrowserAsync(url);
+      Alert.alert(
+        'Payment submitted',
+        "If your payment went through, this may take a moment to reflect here. Pull down to refresh, and your account will unlock automatically once it's processed."
+      );
+      loadData(true);
+    } catch (err: any) {
+      const message = err?.response?.data?.error || 'Could not start Paystack checkout. Please try again.';
+      Alert.alert('Payment error', message);
+    } finally {
+      setPayingWithPaystack(false);
+    }
+  };
 
   const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
@@ -142,6 +171,26 @@ export default function EarningsScreen({ navigation }: any) {
             </Text>
           </View>
         </View>
+
+        {/* Pay with Paystack — the preferred, faster option; momo below
+            stays as a fallback. */}
+        {commissionOwed > 0 && (
+          <TouchableOpacity
+            style={styles.paystackBtn}
+            onPress={payWithPaystack}
+            disabled={payingWithPaystack}
+            activeOpacity={0.8}
+          >
+            {payingWithPaystack ? (
+              <ActivityIndicator color={navy} size="small" />
+            ) : (
+              <>
+                <CreditCard size={16} color={navy} />
+                <Text style={styles.paystackBtnText}>Pay with Paystack</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
 
         {/* Momo payment details */}
         <View style={styles.momoCard}>
@@ -304,6 +353,21 @@ const getStyles = (colors: any) => StyleSheet.create({
     fontSize: fontSizes.xs,
     fontWeight: '700',
     color: white,
+  },
+  paystackBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  paystackBtnText: {
+    fontSize: fontSizes.sm,
+    fontWeight: '800',
+    color: navy,
   },
   momoCard: {
     backgroundColor: mutedWhite(0.05),
