@@ -85,6 +85,8 @@ export default function LoginScreen({ route, navigation }: any) {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
                 placeholderTextColor={colors.gray3}
               />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
