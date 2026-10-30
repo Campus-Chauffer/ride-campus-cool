@@ -28,7 +28,7 @@ export default function LandingScreen({ navigation }: any) {
             style={{ width: 80, height: 80, borderRadius: 20 }}
           />
           <Text style={styles.appName}>Campus Chauffeur</Text>
-          <Text style={styles.tagline}>Safe rides around UG Legon</Text>
+          <Text style={styles.tagline}>We'll get you there</Text>
         </View>
       </View>
 

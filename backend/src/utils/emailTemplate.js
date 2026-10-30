@@ -104,7 +104,7 @@ function renderEmailShell({ preheader, bodyHtml }) {
           <tr>
             <td style="background-color: ${BRAND_NAVY}; padding: 28px 32px; text-align: center; border-radius: 0 0 4px 4px;">
               <div style="font-family: ${FONT_SANS}; font-size: 13px; color: #C8C8D4; line-height: 1.6;">
-                Campus Chauffeur — Safe rides around UG Legon<br>
+                Campus Chauffeur — We'll get you there<br>
                 Need help? <a href="mailto:campuschauffeur1@gmail.com" style="color: ${BRAND_YELLOW}; text-decoration: none;">campuschauffeur1@gmail.com</a>
               </div>
             </td>
