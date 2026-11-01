@@ -186,6 +186,17 @@ export default function StudentHomeScreen({ navigation }: any) {
     return hour >= pricing.night_start || hour < pricing.night_end;
   })();
 
+  // Greeting text only — intentionally separate from isNight above, which
+  // drives day/night fare pricing on its own admin-configurable schedule.
+  // This is just "what do you call this time of day," fixed at
+  // midnight-noon/noon-6pm/6pm-midnight regardless of the pricing config.
+  const timeOfDayGreeting = (() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'morning';
+    if (hour < 18) return 'afternoon';
+    return 'evening';
+  })();
+
   useEffect(() => {
     const origin = selectedPickup || userLocation;
     if (origin && selectedDest) {
@@ -591,7 +602,7 @@ export default function StudentHomeScreen({ navigation }: any) {
           {/* Greeting — no fare badge (issue 8) */}
           <View style={styles.greetingRow}>
             <Text style={styles.greetingText}>
-              Good {isNight ? 'evening' : 'morning'}, {user?.first_name}
+              Good {timeOfDayGreeting}, {user?.first_name}
             </Text>
           </View>
 
