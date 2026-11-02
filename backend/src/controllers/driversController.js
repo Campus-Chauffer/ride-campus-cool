@@ -175,22 +175,47 @@ const acceptOffer = async (req, res) => {
     );
     const driver = driverResult.rows[0];
 
-    // Atomic claim: this is the actual "first to accept wins" arbiter. Two
-    // drivers racing to accept the same broadcast offer both reach this
-    // UPDATE, but Postgres serializes concurrent writes to the same row —
-    // whichever commits first flips status/driver_id, and the loser's WHERE
-    // clause (status = 'offered' AND driver_id IS NULL) no longer matches
-    // against the now-committed row, so it affects 0 rows instead of
-    // double-assigning the trip. The EXISTS check keeps a driver who was
-    // never actually offered this trip (not in the current broadcast
-    // batch) from claiming it just by guessing a trip_id.
-    const result = await pool.query(
-      `UPDATE trips SET status = 'accepted', driver_id = $2, accepted_at = NOW()
-       WHERE id = $1 AND status = 'offered' AND driver_id IS NULL
-       AND EXISTS (SELECT 1 FROM trip_offers WHERE trip_id = $1 AND driver_id = $2)
-       RETURNING *`,
-      [trip_id, driver.id]
-    );
+    // Atomic claim, part 1: two drivers racing to accept the SAME offer both
+    // reach the UPDATE below targeting the SAME trip row, so Postgres's own
+    // row lock serializes them for free — whichever commits first flips
+    // status/driver_id, and the loser's WHERE clause (status = 'offered'
+    // AND driver_id IS NULL) no longer matches, so it affects 0 rows
+    // instead of double-assigning the trip.
+    //
+    // Atomic claim, part 2: that row lock does NOT help when the SAME
+    // driver races to accept TWO DIFFERENT trips at once (possible since
+    // two trips dispatched close together can briefly both think that
+    // driver is free before either offer is recorded) — those two UPDATEs
+    // target different rows, so there's no lock forcing one to see the
+    // other's write before committing. A NOT EXISTS check here alone is
+    // NOT enough (verified empirically: it fails most of the time under
+    // real concurrency, since both transactions read "no accepted trip
+    // yet" before either commits). Explicitly locking the driver's own row
+    // first forces the second transaction to wait for the first to commit,
+    // so its own check of "does this driver already have an accepted
+    // trip" is guaranteed to see that commit.
+    const client = await pool.connect();
+    let result;
+    try {
+      await client.query('BEGIN');
+      await client.query('SELECT id FROM drivers WHERE id = $1 FOR UPDATE', [driver.id]);
+
+      result = await client.query(
+        `UPDATE trips SET status = 'accepted', driver_id = $2, accepted_at = NOW()
+         WHERE id = $1 AND status = 'offered' AND driver_id IS NULL
+         AND EXISTS (SELECT 1 FROM trip_offers WHERE trip_id = $1 AND driver_id = $2)
+         AND NOT EXISTS (SELECT 1 FROM trips WHERE driver_id = $2 AND status IN ('accepted', 'in_progress'))
+         RETURNING *`,
+        [trip_id, driver.id]
+      );
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
 
     if (result.rows.length === 0) {
       return res.status(400).json({ error: 'This ride was just accepted by another driver, or the offer has expired.' });
