@@ -7,8 +7,11 @@ const OFFER_TIMEOUT_SECONDS = 15;
 // Broadcasting to a batch instead of one driver at a time means the whole
 // fan-out finishes in a handful of 15s rounds instead of one round per
 // driver, while still not paging every online driver on campus for a
-// single ride.
-const BROADCAST_BATCH_SIZE = 5;
+// single ride. Starting conservative at 3 while the driver pool is still
+// small — worth raising as the driver population grows, since a bigger
+// batch means fewer 15s rounds (faster worst-case match) for the same
+// number of nearby drivers.
+const BROADCAST_BATCH_SIZE = 3;
 
 const toRad = (deg) => deg * (Math.PI / 180);
 
