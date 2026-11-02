@@ -1,8 +1,30 @@
 const pool = require('../db/pool');
-const { sendPushNotification } = require('../utils/notifications');
+const { sendPushNotification, sendBulkPushNotifications } = require('../utils/notifications');
 
 const DISPATCH_RADIUS_KM = 10;
 const OFFER_TIMEOUT_SECONDS = 15;
+
+// Nudges every approved driver (online or not) to get/stay online whenever a
+// trip ends up unmatched — the whole point is reaching the OFFLINE ones who
+// weren't in the dispatch pool at all, so there's no is_online filter here.
+const notifyDriversOfUnfilledDemand = async () => {
+  try {
+    const result = await pool.query(
+      `SELECT u.push_token
+       FROM drivers d
+       JOIN users u ON u.id = d.user_id
+       WHERE d.approval_status = 'approved' AND u.push_token IS NOT NULL`
+    );
+    await sendBulkPushNotifications(
+      result.rows.map(r => r.push_token),
+      'Rides are coming in!',
+      "A passenger just couldn't find a driver nearby — go online now to catch the next one.",
+      { type: 'demand_surge' }
+    );
+  } catch (err) {
+    console.error('Demand-surge broadcast error:', err);
+  }
+};
 
 const toRad = (deg) => deg * (Math.PI / 180);
 
@@ -55,10 +77,11 @@ const dispatchRide = async (trip_id) => {
       .sort((a, b) => a.distance - b.distance);
 
     if (nearbyDrivers.length === 0) {
-      await pool.query(
+      const result = await pool.query(
         "UPDATE trips SET status = 'no_driver_found' WHERE id = $1",
         [trip_id]
       );
+      if (result.rowCount > 0) await notifyDriversOfUnfilledDemand();
       return;
     }
 
@@ -194,10 +217,11 @@ const dispatchRide = async (trip_id) => {
       [trip_id]
     );
     if (finalCheck.rows[0]?.status === 'requested') {
-      await pool.query(
+      const result = await pool.query(
         "UPDATE trips SET status = 'no_driver_found' WHERE id = $1 AND status = 'requested'",
         [trip_id]
       );
+      if (result.rowCount > 0) await notifyDriversOfUnfilledDemand();
     }
 
   } catch (err) {

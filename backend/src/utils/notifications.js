@@ -2,15 +2,21 @@ const { Expo } = require('expo-server-sdk');
 
 const expo = new Expo();
 
-// Mirrors RIDE_LIFECYCLE_NOTIFICATION_TYPES in mobile/src/navigation/AppNavigator.tsx
-// — these get the distinct car-horn sound (bundled via the expo-notifications
-// config plugin, see app.config.js) rather than the phone's default
-// notification tone, since they're the events a driver/passenger most needs
-// to notice immediately (a new offer with a countdown to accept, a driver
-// arriving, etc.). Keep this list in sync with the client's if either changes.
+// Mostly mirrors RIDE_LIFECYCLE_NOTIFICATION_TYPES in
+// mobile/src/navigation/AppNavigator.tsx — these get the distinct car-horn
+// sound (bundled via the expo-notifications config plugin, see
+// app.config.js) rather than the phone's default notification tone, since
+// they're the events a driver/passenger most needs to notice immediately.
+// demand_surge is the one exception: it needs the same attention-grabbing
+// sound, but — unlike the others — has no dedicated in-app screen reacting
+// to it, so it's deliberately left OUT of the mobile-side set (which also
+// controls banner suppression) and keeps its normal banner/list presentation
+// there. Keep the rest of this list in sync with the client's if either
+// changes.
 const RIDE_LIFECYCLE_TYPES = new Set([
   'ride_request', 'driver_found', 'driver_arrived',
   'trip_started', 'trip_completed_passenger', 'trip_completed_driver',
+  'demand_surge',
 ]);
 
 const sendPushNotification = async (pushToken, title, body, data = {}) => {
@@ -43,9 +49,10 @@ const sendPushNotification = async (pushToken, title, body, data = {}) => {
 // needs its input pre-chunked — this batches all valid tokens through that
 // chunking instead of firing one HTTP request per recipient.
 const sendBulkPushNotifications = async (pushTokens, title, body, data = {}) => {
+  const sound = RIDE_LIFECYCLE_TYPES.has(data.type) ? 'car_horn.wav' : 'default';
   const messages = pushTokens
     .filter((token) => token && Expo.isExpoPushToken(token))
-    .map((token) => ({ to: token, sound: 'default', title, body, data }));
+    .map((token) => ({ to: token, sound, title, body, data }));
 
   if (messages.length === 0) return { sent: 0 };
 

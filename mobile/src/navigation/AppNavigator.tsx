@@ -40,8 +40,13 @@ export const navigationRef = createNavigationContainerRef();
 // exactly this, is redundant. These still get a sound + explicit vibration
 // (below) so the user notices even if they're not looking at the screen,
 // just not the banner/notification-list entry. Anything NOT in this list
-// (rating reminders, wallet lockout warnings, announcements) has no
-// dedicated screen reacting to it, so it keeps the normal full presentation.
+// (rating reminders, wallet lockout warnings, announcements, demand_surge —
+// the "rides are coming in, go online" nudge sent when a trip can't find a
+// driver) has no dedicated screen reacting to it, so it keeps the normal
+// full presentation. demand_surge still gets the loud car-horn sound on the
+// backend side (see RIDE_LIFECYCLE_TYPES in utils/notifications.js) despite
+// being left out of this set deliberately — the two lists aren't meant to
+// be 100% identical.
 const RIDE_LIFECYCLE_NOTIFICATION_TYPES = new Set([
   'ride_request', 'driver_found', 'driver_arrived',
   'trip_started', 'trip_completed_passenger', 'trip_completed_driver',

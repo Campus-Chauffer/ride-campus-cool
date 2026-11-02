@@ -2,8 +2,9 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, Alert, ActivityIndicator,
-  StatusBar, Switch, Image
+  StatusBar, Switch, Image, Vibration, Platform
 } from 'react-native';
+import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import * as Location from 'expo-location';
 import RNMapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Menu, AlertCircle } from 'lucide-react-native';
@@ -52,6 +53,12 @@ export default function DriverHomeScreen({ navigation }: any) {
   const activeTripRef = useRef<any>(null);
   const isCompleting = useRef(false);
   const cancelPollInterval = useRef<any>(null);
+  const offerVibrationInterval = useRef<any>(null);
+  // Loops car_horn.wav for the full offer window instead of the one-shot
+  // notification sound — a driver with the phone in their pocket or the
+  // screen off needs more than a single ding to notice before the 15s
+  // countdown moves the ride to the next driver.
+  const offerAlertSound = useAudioPlayer(require('../../../assets/sounds/car_horn.wav'));
 
   const setTripPhaseSync = (phase: string) => {
     tripPhaseRef.current = phase;
@@ -65,14 +72,53 @@ export default function DriverHomeScreen({ navigation }: any) {
 
   useEffect(() => {
     getInitialLocation();
+    // Lets the offer alert cut through a muted/silent-mode phone — a
+    // missed ride request because the ringer switch was off is exactly
+    // the failure mode this alert exists to prevent.
+    setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
     return () => {
       clearInterval(locationInterval.current);
       clearInterval(offerInterval.current);
       clearInterval(timerInterval.current);
       clearInterval(cancelPollInterval.current);
+      clearInterval(offerVibrationInterval.current);
+      Vibration.cancel();
       headingSubscription.current?.remove();
     };
   }, []);
+
+  const startOfferAlert = () => {
+    try {
+      offerAlertSound.loop = true;
+      offerAlertSound.volume = 1.0;
+      offerAlertSound.seekTo(0);
+      offerAlertSound.play();
+    } catch (err) {
+      console.log('Offer alert sound error:', err);
+    }
+
+    if (Platform.OS === 'android') {
+      // Android honours a repeating pattern natively.
+      Vibration.vibrate([0, 500, 250, 500], true);
+    } else {
+      // iOS's Vibration.vibrate() has no pattern/repeat support — a single
+      // buzz per call — so a continuous feel needs its own repeating timer.
+      Vibration.vibrate();
+      clearInterval(offerVibrationInterval.current);
+      offerVibrationInterval.current = setInterval(() => Vibration.vibrate(), 1000);
+    }
+  };
+
+  const stopOfferAlert = () => {
+    try {
+      offerAlertSound.pause();
+      offerAlertSound.seekTo(0);
+    } catch (err) {
+      console.log('Offer alert sound stop error:', err);
+    }
+    Vibration.cancel();
+    clearInterval(offerVibrationInterval.current);
+  };
 
   useEffect(() => {
   const subscription = AppState.addEventListener('change', (nextAppState) => {
@@ -142,10 +188,12 @@ export default function DriverHomeScreen({ navigation }: any) {
           setPendingOffer(res.data.offer);
           setTripPhaseSync('offer');
           setOfferTimer(15);
+          startOfferAlert();
           timerInterval.current = setInterval(() => {
             setOfferTimer((prev: number) => {
               if (prev <= 1) {
                 clearInterval(timerInterval.current);
+                stopOfferAlert();
                 setPendingOffer(null);
                 setTripPhaseSync('idle');
                 startOfferPolling();
@@ -248,6 +296,7 @@ export default function DriverHomeScreen({ navigation }: any) {
     clearInterval(offerInterval.current);
     clearInterval(timerInterval.current);
     clearInterval(cancelPollInterval.current);
+    stopOfferAlert();
     try {
       await driverAPI.goOffline();
     } catch (err: any) {
@@ -270,6 +319,7 @@ export default function DriverHomeScreen({ navigation }: any) {
   const acceptOffer = async () => {
     if (!pendingOffer) return;
     clearInterval(timerInterval.current);
+    stopOfferAlert();
     try {
       const res = await driverAPI.acceptOffer(pendingOffer.id);
       setActiveTripSync(res.data);
@@ -283,6 +333,7 @@ export default function DriverHomeScreen({ navigation }: any) {
 
   const declineOffer = () => {
     clearInterval(timerInterval.current);
+    stopOfferAlert();
     setPendingOffer(null);
     setTripPhaseSync('idle');
     startOfferPolling();
