@@ -138,10 +138,15 @@ const checkOffers = async (req, res) => {
 
     const driver = driverResult.rows[0];
 
+    // Broadcast dispatch offers a trip to several drivers at once without
+    // assigning driver_id until someone accepts (see dispatchController.js),
+    // so "is this trip meant for me" is answered by trip_offers membership
+    // rather than trips.driver_id.
     const tripResult = await pool.query(
-      `SELECT * FROM trips 
-       WHERE driver_id = $1 AND status = 'offered'
-       ORDER BY created_at DESC LIMIT 1`,
+      `SELECT t.* FROM trips t
+       JOIN trip_offers o ON o.trip_id = t.id
+       WHERE o.driver_id = $1 AND t.status = 'offered'
+       ORDER BY t.created_at DESC LIMIT 1`,
       [driver.id]
     );
 
@@ -170,14 +175,25 @@ const acceptOffer = async (req, res) => {
     );
     const driver = driverResult.rows[0];
 
+    // Atomic claim: this is the actual "first to accept wins" arbiter. Two
+    // drivers racing to accept the same broadcast offer both reach this
+    // UPDATE, but Postgres serializes concurrent writes to the same row —
+    // whichever commits first flips status/driver_id, and the loser's WHERE
+    // clause (status = 'offered' AND driver_id IS NULL) no longer matches
+    // against the now-committed row, so it affects 0 rows instead of
+    // double-assigning the trip. The EXISTS check keeps a driver who was
+    // never actually offered this trip (not in the current broadcast
+    // batch) from claiming it just by guessing a trip_id.
     const result = await pool.query(
-      `UPDATE trips SET status = 'accepted', accepted_at = NOW()
-      WHERE id = $1 AND driver_id = $2 AND status = 'offered' RETURNING *`,
+      `UPDATE trips SET status = 'accepted', driver_id = $2, accepted_at = NOW()
+       WHERE id = $1 AND status = 'offered' AND driver_id IS NULL
+       AND EXISTS (SELECT 1 FROM trip_offers WHERE trip_id = $1 AND driver_id = $2)
+       RETURNING *`,
       [trip_id, driver.id]
     );
 
     if (result.rows.length === 0) {
-      return res.status(400).json({ error: 'Offer not found or already expired' });
+      return res.status(400).json({ error: 'This ride was just accepted by another driver, or the offer has expired.' });
     }
 
     const trip = result.rows[0];

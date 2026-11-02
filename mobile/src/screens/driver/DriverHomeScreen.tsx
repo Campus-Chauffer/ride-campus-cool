@@ -54,6 +54,7 @@ export default function DriverHomeScreen({ navigation }: any) {
   const isCompleting = useRef(false);
   const cancelPollInterval = useRef<any>(null);
   const offerVibrationInterval = useRef<any>(null);
+  const offerValidityInterval = useRef<any>(null);
   // Loops car_horn.wav for the full offer window instead of the one-shot
   // notification sound — a driver with the phone in their pocket or the
   // screen off needs more than a single ding to notice before the 15s
@@ -82,6 +83,7 @@ export default function DriverHomeScreen({ navigation }: any) {
       clearInterval(timerInterval.current);
       clearInterval(cancelPollInterval.current);
       clearInterval(offerVibrationInterval.current);
+      clearInterval(offerValidityInterval.current);
       Vibration.cancel();
       headingSubscription.current?.remove();
     };
@@ -184,6 +186,7 @@ export default function DriverHomeScreen({ navigation }: any) {
       try {
         const res = await driverAPI.checkOffers();
         if (res.data.offer) {
+          const offerId = res.data.offer.id;
           clearInterval(offerInterval.current);
           setPendingOffer(res.data.offer);
           setTripPhaseSync('offer');
@@ -193,6 +196,7 @@ export default function DriverHomeScreen({ navigation }: any) {
             setOfferTimer((prev: number) => {
               if (prev <= 1) {
                 clearInterval(timerInterval.current);
+                clearInterval(offerValidityInterval.current);
                 stopOfferAlert();
                 setPendingOffer(null);
                 setTripPhaseSync('idle');
@@ -202,6 +206,29 @@ export default function DriverHomeScreen({ navigation }: any) {
               return prev - 1;
             });
           }, 1000);
+
+          // Broadcast dispatch offers this ride to several drivers at
+          // once, so another driver can win it well before this driver's
+          // own 15s countdown runs out. Poll for that instead of leaving
+          // this driver staring at a slider for a ride that's already
+          // gone — checkOffers stops returning it the moment someone else
+          // accepts.
+          offerValidityInterval.current = setInterval(async () => {
+            try {
+              const stillOffered = await driverAPI.checkOffers();
+              if (!stillOffered.data.offer || stillOffered.data.offer.id !== offerId) {
+                clearInterval(timerInterval.current);
+                clearInterval(offerValidityInterval.current);
+                stopOfferAlert();
+                setPendingOffer(null);
+                setTripPhaseSync('idle');
+                Alert.alert('Ride taken', 'Another driver accepted this ride first.');
+                startOfferPolling();
+              }
+            } catch (err) {
+              console.log('Offer validity check error:', err);
+            }
+          }, 2000);
         }
       } catch (err) {
         console.log('Offer poll error:', err);
@@ -296,6 +323,7 @@ export default function DriverHomeScreen({ navigation }: any) {
     clearInterval(offerInterval.current);
     clearInterval(timerInterval.current);
     clearInterval(cancelPollInterval.current);
+    clearInterval(offerValidityInterval.current);
     stopOfferAlert();
     try {
       await driverAPI.goOffline();
@@ -319,6 +347,7 @@ export default function DriverHomeScreen({ navigation }: any) {
   const acceptOffer = async () => {
     if (!pendingOffer) return;
     clearInterval(timerInterval.current);
+    clearInterval(offerValidityInterval.current);
     stopOfferAlert();
     try {
       const res = await driverAPI.acceptOffer(pendingOffer.id);
@@ -326,13 +355,20 @@ export default function DriverHomeScreen({ navigation }: any) {
       setPendingOffer(null);
       setTripPhaseSync('topickup');
       startCancelPoll(res.data.id);
-    } catch (err) {
-      Alert.alert('Error', 'Could not accept offer');
+    } catch (err: any) {
+      // Most likely cause with broadcast dispatch: another driver accepted
+      // first. Reset back to idle and resume polling instead of leaving
+      // this driver stuck on a dead offer screen with no way forward.
+      setPendingOffer(null);
+      setTripPhaseSync('idle');
+      Alert.alert('Ride unavailable', err.response?.data?.error || 'This ride is no longer available.');
+      startOfferPolling();
     }
   };
 
   const declineOffer = () => {
     clearInterval(timerInterval.current);
+    clearInterval(offerValidityInterval.current);
     stopOfferAlert();
     setPendingOffer(null);
     setTripPhaseSync('idle');

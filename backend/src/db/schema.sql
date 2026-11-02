@@ -72,6 +72,10 @@ CREATE TABLE IF NOT EXISTS trips (
   wait_penalty DECIMAL(10,2) DEFAULT 0,
   ride_type VARCHAR(20) DEFAULT 'standard',
   status VARCHAR(20) DEFAULT 'requested',
+  -- Set only when status = 'no_driver_found', to tell apart "nobody was
+  -- even online nearby" from "drivers are online but every one of them is
+  -- already on a trip" — the passenger sees a different message for each.
+  no_driver_reason VARCHAR(30),
   cancelled_by VARCHAR(20),
   passenger_rating INTEGER,
   passenger_comment TEXT,
@@ -86,6 +90,21 @@ CREATE TABLE IF NOT EXISTS trips (
   completed_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Which drivers currently have a live, unexpired offer out for a trip.
+-- Broadcast dispatch sends one ride to several drivers' phones at once
+-- (trips.driver_id stays NULL until someone actually accepts), so this is
+-- what checkOffers reads to know a trip is meant for a given driver, and
+-- what busy-driver filtering checks so a driver mid-decision on one offer
+-- isn't also handed a second one. Rows are deleted as soon as a batch
+-- resolves (accepted, timed out, or the trip leaves play some other way).
+CREATE TABLE IF NOT EXISTS trip_offers (
+  id SERIAL PRIMARY KEY,
+  trip_id INTEGER REFERENCES trips(id),
+  driver_id INTEGER REFERENCES drivers(id),
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(trip_id, driver_id)
 );
 
 CREATE TABLE IF NOT EXISTS wallets (
