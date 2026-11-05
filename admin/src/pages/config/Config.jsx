@@ -14,6 +14,7 @@ function formatHour(h) {
 }
 
 const CONFIG_FIELDS = (values) => [
+  { key: "minimum_fare", label: "Minimum fare (any ride)", description: "Hard floor applied after every other fare rule — no ride is ever quoted below this, regardless of distance tier", prefix: "₵" },
   { key: "day_lower_flat", label: "Flat rate under 0.7km (day)", description: "Fixed fare for trips shorter than 0.7km during the day", prefix: "₵" },
   { key: "night_lower_flat", label: "Flat rate under 0.7km (night)", description: `Fixed fare for trips shorter than 0.7km between ${formatHour(values.night_start)}–${formatHour(values.night_end)}`, prefix: "₵" },
   { key: "base_fare", label: "Base fare (0.7km–4km)", description: "Starting fare for mid-distance trips", prefix: "₵" },
@@ -95,6 +96,7 @@ export default function Config() {
   }
 
   const summaryRows = [
+    { label: "Minimum fare", value: `₵${values["minimum_fare"] || "—"}` },
     { label: "Under 0.7km", value: `Day ₵${values["day_lower_flat"] || "—"}  ·  Night ₵${values["night_lower_flat"] || "—"}` },
     { label: "0.7km – 4km", value: `₵${values["base_fare"] || "—"} base + ₵${values["price_per_km"] || "—"}/km` },
     { label: "Over 4km", value: `Day ₵${values["day_upper_flat"] || "—"}  ·  Night ₵${values["night_upper_flat"] || "—"}` },

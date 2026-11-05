@@ -38,6 +38,13 @@ const requestRide = async (req, res) => {
       fare = Math.min(Math.max(fare, lowerFlat), upperFlat);
     }
 
+    // Hard floor, applied last regardless of which branch above produced
+    // the number — a single misconfigured tier (e.g. day_lower_flat set
+    // too low) can't silently undercut what's actually a fair minimum fare.
+    const MINIMUM_FARE_FALLBACK = 15;
+    const minimumFare = Number.isFinite(config.minimum_fare) ? config.minimum_fare : MINIMUM_FARE_FALLBACK;
+    fare = Math.max(fare, minimumFare);
+
     const commission = Math.round(fare * config.commission_rate * 100) / 100;
 
    // Check if passenger is within UG LEGON geofence (polygon)
@@ -105,6 +112,7 @@ const PRICING_CONFIG_KEYS = [
   'day_upper_flat', 'night_upper_flat',
   'base_fare', 'price_per_km',
   'night_start', 'night_end',
+  'minimum_fare',
 ];
 
 // Live fare-estimate pricing for the mobile app's home screen. Without this,

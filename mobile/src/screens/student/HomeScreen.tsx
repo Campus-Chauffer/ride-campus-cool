@@ -34,10 +34,11 @@ const DEFAULT_PRICING = {
   upper_distance_km: 4.0,
   base_fare: 8,
   price_per_km: 3,
-  day_lower_flat: 10,
-  night_lower_flat: 13,
-  day_upper_flat: 19,
+  day_lower_flat: 15,
+  night_lower_flat: 18,
+  day_upper_flat: 20,
   night_upper_flat: 20,
+  minimum_fare: 15,
   night_start: 23,
   night_end: 5,
 };
@@ -46,10 +47,15 @@ const calculateFare = (distanceKm: number, isNight: boolean, pricing: typeof DEF
   const shortFlat = isNight ? pricing.night_lower_flat : pricing.day_lower_flat;
   const longFlat = isNight ? pricing.night_upper_flat : pricing.day_upper_flat;
 
-  if (distanceKm <= pricing.lower_distance_km) return shortFlat;
-  if (distanceKm >= pricing.upper_distance_km) return longFlat;
-  const fare = pricing.base_fare + distanceKm * pricing.price_per_km;
-  return Math.round(Math.min(Math.max(fare, shortFlat), longFlat));
+  let fare: number;
+  if (distanceKm <= pricing.lower_distance_km) fare = shortFlat;
+  else if (distanceKm >= pricing.upper_distance_km) fare = longFlat;
+  else fare = Math.round(Math.min(Math.max(pricing.base_fare + distanceKm * pricing.price_per_km, shortFlat), longFlat));
+
+  // Same hard floor requestRide applies server-side — without mirroring it
+  // here, a passenger could see a lower estimate than what they're actually
+  // charged once the ride is requested.
+  return Math.max(fare, pricing.minimum_fare ?? 15);
 };
 
 const getDistanceKm = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
