@@ -182,7 +182,7 @@ INSERT INTO config (key, value) VALUES
   ('night_end', '5'),
   ('lower_distance_km', '0.7'),
   ('upper_distance_km', '4.0'),
-  ('day_lower_flat', '12'),
+  ('day_lower_flat', '15'),
   ('night_lower_flat', '16'),
   ('day_upper_flat', '20'),
   ('night_upper_flat', '20'),

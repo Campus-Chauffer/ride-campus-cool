@@ -34,7 +34,7 @@ const DEFAULT_PRICING = {
   upper_distance_km: 4.0,
   base_fare: 13,
   price_per_km: 3,
-  day_lower_flat: 12,
+  day_lower_flat: 15,
   night_lower_flat: 16,
   day_upper_flat: 20,
   night_upper_flat: 20,
