@@ -34,11 +34,11 @@ const DEFAULT_PRICING = {
   upper_distance_km: 4.0,
   base_fare: 8,
   price_per_km: 3,
-  day_lower_flat: 15,
-  night_lower_flat: 18,
+  day_lower_flat: 12,
+  night_lower_flat: 16,
   day_upper_flat: 20,
   night_upper_flat: 20,
-  minimum_fare: 15,
+  minimum_fare: 12,
   night_start: 23,
   night_end: 5,
 };
@@ -55,7 +55,7 @@ const calculateFare = (distanceKm: number, isNight: boolean, pricing: typeof DEF
   // Same hard floor requestRide applies server-side — without mirroring it
   // here, a passenger could see a lower estimate than what they're actually
   // charged once the ride is requested.
-  return Math.max(fare, pricing.minimum_fare ?? 15);
+  return Math.max(fare, pricing.minimum_fare ?? 12);
 };
 
 const getDistanceKm = (lat1: number, lng1: number, lat2: number, lng2: number): number => {

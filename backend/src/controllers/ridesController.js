@@ -41,7 +41,7 @@ const requestRide = async (req, res) => {
     // Hard floor, applied last regardless of which branch above produced
     // the number — a single misconfigured tier (e.g. day_lower_flat set
     // too low) can't silently undercut what's actually a fair minimum fare.
-    const MINIMUM_FARE_FALLBACK = 15;
+    const MINIMUM_FARE_FALLBACK = 12;
     const minimumFare = Number.isFinite(config.minimum_fare) ? config.minimum_fare : MINIMUM_FARE_FALLBACK;
     fare = Math.max(fare, minimumFare);
 

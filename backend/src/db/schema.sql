@@ -182,8 +182,8 @@ INSERT INTO config (key, value) VALUES
   ('night_end', '5'),
   ('lower_distance_km', '0.7'),
   ('upper_distance_km', '4.0'),
-  ('day_lower_flat', '15'),
-  ('night_lower_flat', '18'),
+  ('day_lower_flat', '12'),
+  ('night_lower_flat', '16'),
   ('day_upper_flat', '20'),
   ('night_upper_flat', '20'),
   ('base_fare', '8'),
@@ -194,8 +194,9 @@ INSERT INTO config (key, value) VALUES
   -- (day_lower_flat, above) was quietly priced well under what drivers
   -- considered a fair minimum, which broke trust badly enough that drivers
   -- stopped going online. This exists so a future misconfigured tier can't
-  -- reproduce that silently.
-  ('minimum_fare', '15'),
+  -- reproduce that silently. Must stay <= the lowest of day_lower_flat/
+  -- night_lower_flat, or it would override a deliberately-set low tier.
+  ('minimum_fare', '12'),
   -- Read by checkVersion() in appController.js to power the in-app "update
   -- available" prompt. latestBuild starts at 1 (below any real build number
   -- EAS will produce) so a fresh database never nags anyone until these are
