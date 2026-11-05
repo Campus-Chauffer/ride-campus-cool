@@ -182,12 +182,12 @@ INSERT INTO config (key, value) VALUES
   ('night_end', '5'),
   ('lower_distance_km', '0.7'),
   ('upper_distance_km', '4.0'),
-  ('day_lower_flat', '15'),
+  ('day_lower_flat', '13'),
   ('night_lower_flat', '16'),
   ('day_upper_flat', '20'),
   ('night_upper_flat', '20'),
-  ('base_fare', '13'),
-  ('price_per_km', '3'),
+  ('base_fare', '12'),
+  ('price_per_km', '2'),
   -- Hard floor applied last, after every tier/branch of the fare
   -- calculation — regardless of which config value produced a number, no
   -- ride is ever quoted below this. Added after a short-trip flat rate
