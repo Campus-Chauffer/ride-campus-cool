@@ -186,7 +186,7 @@ INSERT INTO config (key, value) VALUES
   ('night_lower_flat', '16'),
   ('day_upper_flat', '20'),
   ('night_upper_flat', '20'),
-  ('base_fare', '8'),
+  ('base_fare', '13'),
   ('price_per_km', '3'),
   -- Hard floor applied last, after every tier/branch of the fare
   -- calculation — regardless of which config value produced a number, no

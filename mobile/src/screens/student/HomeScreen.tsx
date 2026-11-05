@@ -32,7 +32,7 @@ const EXPANDED_HEIGHT = height * 0.78;
 const DEFAULT_PRICING = {
   lower_distance_km: 0.7,
   upper_distance_km: 4.0,
-  base_fare: 8,
+  base_fare: 13,
   price_per_km: 3,
   day_lower_flat: 12,
   night_lower_flat: 16,
