@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Car, Users, MapPin,
   Wallet, Receipt, Flag, Settings, LogOut,
-  Menu, X, BarChart2, Megaphone, Mail
+  Menu, X, BarChart2, Megaphone, Mail, Tag
 } from 'lucide-react';
 
 // Same mark used in the mobile app and the email templates — hosted from
@@ -17,6 +17,7 @@ const navItems = [
   { path: '/trips', label: 'Trips', icon: MapPin },
   { path: '/wallet', label: 'Wallet', icon: Wallet },
   { path: '/transactions', label: 'Transactions', icon: Receipt },
+  { path: '/discounts', label: 'Discounts', icon: Tag },
   { path: '/reports', label: 'Reports', icon: Flag },
   { path: '/announcements', label: 'Announcements', icon: Megaphone },
   { path: '/emails', label: 'Emails', icon: Mail },

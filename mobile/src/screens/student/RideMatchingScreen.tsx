@@ -182,8 +182,20 @@ export default function RideMatchingScreen({ route, navigation }: any) {
           </View>
 
           <View style={styles.fareRow}>
-            <Text style={styles.fareLabel}>Estimated fare</Text>
-            <Text style={styles.fareValue}>GH₵{Math.round(parseFloat(trip.fare))}</Text>
+            <View>
+              <Text style={styles.fareLabel}>Estimated fare</Text>
+              {trip.discount_code && (
+                <Text style={styles.fareDiscountNote}>Code {trip.discount_code} applied</Text>
+              )}
+            </View>
+            {trip.discount_code && parseFloat(trip.original_fare) !== parseFloat(trip.fare) ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                <Text style={styles.fareStrike}>GH₵{Math.round(parseFloat(trip.original_fare))}</Text>
+                <Text style={styles.fareValue}>GH₵{Math.round(parseFloat(trip.fare))}</Text>
+              </View>
+            ) : (
+              <Text style={styles.fareValue}>GH₵{Math.round(parseFloat(trip.fare))}</Text>
+            )}
           </View>
 
           <TouchableOpacity style={styles.cancelBtn} onPress={cancelRide}>
@@ -318,6 +330,18 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     fontSize: fontSizes.lg,
     fontWeight: '800',
     color: colors.primary,
+  },
+  fareStrike: {
+    fontSize: fontSizes.sm,
+    fontWeight: '600',
+    color: mutedOnDark(isDark, 0.5),
+    textDecorationLine: 'line-through',
+  },
+  fareDiscountNote: {
+    fontSize: fontSizes.xs,
+    fontWeight: '600',
+    color: colors.primary,
+    marginTop: 2,
   },
   cancelBtn: {
     marginHorizontal: spacing.lg,

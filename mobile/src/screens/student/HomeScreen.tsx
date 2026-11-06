@@ -7,13 +7,14 @@ import {
 } from 'react-native';
 import * as Location from 'expo-location';
 import RNMapView, { Marker, Polyline, Polygon, PROVIDER_GOOGLE, Region } from 'react-native-maps';
-import { MapPin, Navigation, Menu, X, LocateFixed } from 'lucide-react-native';
+import { MapPin, Navigation, Menu, X, LocateFixed, Tag } from 'lucide-react-native';
 import SideMenu from '../../components/SideMenu';
 import RingPinIcon from '../../components/icons/RingPinIcon';
 import { useAnimatedRoute } from '../../hooks/useAnimatedRoute';
 import { ridesAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useRideStore } from '../../store/rideStore';
+import { useDiscountStore } from '../../store/discountStore';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, navy } from '../../utils/theme';
 
@@ -112,6 +113,7 @@ const UG_LEGON_BOUNDARY = [
 export default function StudentHomeScreen({ navigation }: any) {
   const { user } = useAuthStore();
   const { setActiveRide } = useRideStore();
+  const { selected: selectedDiscount, selectedCodeString, clear: clearDiscount } = useDiscountStore();
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
   const styles = getStyles(colors);
@@ -489,8 +491,10 @@ export default function StudentHomeScreen({ navigation }: any) {
         dropoff_lng: selectedDest.lng,
         pickup_address: selectedPickup ? selectedPickup.name : userLocationName,
         dropoff_address: selectedDest.name,
+        discount_code: selectedCodeString || undefined,
       });
       setActiveRide(res.data);
+      clearDiscount();
       navigation.navigate('RideMatching', { trip: res.data });
     } catch (err: any) {
       Alert.alert('Error', err.response?.data?.error || 'Could not request ride');
@@ -706,7 +710,30 @@ export default function StudentHomeScreen({ navigation }: any) {
                   {estimatedFare !== null && (
                     <View style={styles.fareEstimate}>
                       <Text style={styles.fareEstimateLabel}>Estimated fare</Text>
-                      <Text style={styles.fareEstimateValue}>GH₵{estimatedFare}</Text>
+                      {selectedDiscount ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                          <Text style={styles.fareEstimateStrike}>GH₵{estimatedFare}</Text>
+                          <Text style={styles.fareEstimateValue}>
+                            GH₵{Math.max(0, estimatedFare - (selectedDiscount.type === 'percent'
+                              ? Math.round(estimatedFare * (parseFloat(String(selectedDiscount.value)) / 100))
+                              : parseFloat(String(selectedDiscount.value))))}
+                          </Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.fareEstimateValue}>GH₵{estimatedFare}</Text>
+                      )}
+                    </View>
+                  )}
+
+                  {selectedCodeString && (
+                    <View style={styles.discountChip}>
+                      <Tag size={12} color={colors.primary} />
+                      <Text style={styles.discountChipText}>
+                        Code {selectedCodeString} applied — confirmed at checkout
+                      </Text>
+                      <TouchableOpacity onPress={clearDiscount}>
+                        <X size={14} color={colors.textMuted} />
+                      </TouchableOpacity>
                     </View>
                   )}
 
@@ -898,6 +925,24 @@ const getStyles = (colors: any) => StyleSheet.create({
   // would invert to near-white and disappear against it in dark mode.
   fareEstimateLabel: { fontSize: fontSizes.sm, color: navy, opacity: 0.6, fontWeight: '500' },
   fareEstimateValue: { fontSize: fontSizes.xl, fontWeight: '800', color: navy },
+  fareEstimateStrike: {
+    fontSize: fontSizes.md,
+    fontWeight: '600',
+    color: navy,
+    opacity: 0.45,
+    textDecorationLine: 'line-through',
+  },
+  discountChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.primary + '15',
+    borderRadius: radius.md,
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  discountChipText: { flex: 1, fontSize: fontSizes.xs, fontWeight: '600', color: colors.dark },
 
   requestBtn: {
     backgroundColor: colors.primary,

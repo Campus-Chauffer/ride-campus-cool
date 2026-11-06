@@ -132,6 +132,7 @@ export const ridesAPI = {
     dropoff_lng: number;
     pickup_address: string;
     dropoff_address: string;
+    discount_code?: string;
   }) => api.post('/rides/request', data),
 
   getHistory: () => api.get('/rides/history'),
@@ -212,6 +213,10 @@ export const ratingsAPI = {
 
 export const announcementsAPI = {
   getAll: () => api.get('/announcements'),
+};
+
+export const discountAPI = {
+  getAvailable: () => api.get('/discounts/available'),
 };
 
 export const reportsAPI = {

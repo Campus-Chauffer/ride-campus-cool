@@ -25,6 +25,7 @@ import EditProfileScreen from '../screens/shared/EditProfileScreen';
 import SettingsScreen from '../screens/shared/SettingsScreen';
 import RideHistoryScreen from '../screens/shared/RideHistoryScreen';
 import AnnouncementsScreen from '../screens/shared/AnnouncementsScreen';
+import DiscountsScreen from '../screens/shared/DiscountsScreen';
 import LegalScreen from '../screens/shared/LegalScreen';
 import EarningsScreen from '../screens/driver/EarningsScreen';
 import { registerPushToken } from '../utils/registerPushToken';
@@ -96,6 +97,7 @@ function StudentScreens() {
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="RideHistory" component={RideHistoryScreen} />
       <Stack.Screen name="Announcements" component={AnnouncementsScreen} />
+      <Stack.Screen name="Discounts" component={DiscountsScreen} />
       <Stack.Screen name="Legal" component={LegalScreen} />
       {/* Reused from the driver stack — a passenger applying to become a
           driver goes through the same registration/vehicle/pending screens

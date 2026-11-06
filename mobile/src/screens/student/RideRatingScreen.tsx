@@ -90,7 +90,17 @@ export default function RideRatingScreen({ route, navigation }: any) {
           <View style={styles.fareRow}>
             <View>
               <Text style={styles.fareLabel}>Total fare</Text>
-              <Text style={styles.fareValue}>GH₵{Math.round(parseFloat(trip.fare))}</Text>
+              {trip.discount_code && parseFloat(trip.original_fare) !== parseFloat(trip.fare) ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.fareStrike}>GH₵{Math.round(parseFloat(trip.original_fare))}</Text>
+                  <Text style={styles.fareValue}>GH₵{Math.round(parseFloat(trip.fare))}</Text>
+                </View>
+              ) : (
+                <Text style={styles.fareValue}>GH₵{Math.round(parseFloat(trip.fare))}</Text>
+              )}
+              {trip.discount_code && (
+                <Text style={styles.fareDiscountNote}>Code {trip.discount_code} applied</Text>
+              )}
             </View>
             <View style={styles.fareDivider} />
             <View>
@@ -233,6 +243,13 @@ const getStyles = (colors: any) => StyleSheet.create({
   fareRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
   fareLabel: { fontSize: fontSizes.xs, color: 'rgba(255,255,255,0.5)', fontWeight: '500', marginBottom: spacing.xs, textAlign: 'center' },
   fareValue: { fontSize: fontSizes.xxl, fontWeight: '800', color: colors.primary, textAlign: 'center' },
+  fareStrike: {
+    fontSize: fontSizes.md,
+    fontWeight: '600',
+    color: colors.textMuted,
+    textDecorationLine: 'line-through',
+  },
+  fareDiscountNote: { fontSize: fontSizes.xs, fontWeight: '600', color: colors.primary, marginTop: 2 },
   fareDivider: { width: 1, height: 40, backgroundColor: 'rgba(255,255,255,0.1)' },
   fareRoute: { fontSize: fontSizes.sm, fontWeight: '600', color: white, textAlign: 'center', maxWidth: 140 },
   sectionTitle: { fontSize: fontSizes.sm, fontWeight: '700', color: colors.dark, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.5 },

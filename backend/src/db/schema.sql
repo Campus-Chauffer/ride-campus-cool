@@ -67,6 +67,12 @@ CREATE TABLE IF NOT EXISTS trips (
   pickup_address TEXT,
   dropoff_address TEXT,
   fare DECIMAL(10,2),
+  -- What this ride would have cost with no discount applied. NULL means no
+  -- discount was used, in which case it always equals fare. Kept separate
+  -- from fare so the passenger's trip screens can show the original price
+  -- struck through next to what they actually paid.
+  original_fare DECIMAL(10,2),
+  discount_code VARCHAR(50),
   commission DECIMAL(10,2),
   distance_km DECIMAL(6,2),
   wait_penalty DECIMAL(10,2) DEFAULT 0,
@@ -155,7 +161,57 @@ CREATE TABLE IF NOT EXISTS announcements (
   title VARCHAR(200) NOT NULL,
   body TEXT NOT NULL,
   audience VARCHAR(20) NOT NULL DEFAULT 'all', -- 'all' | 'passenger' | 'driver'
+  -- When set, this is a private announcement for one specific user (e.g. a
+  -- personal loyalty discount code) and overrides audience entirely — it
+  -- shows only to this user, regardless of their role.
+  target_user_id INTEGER REFERENCES users(id),
   created_by INTEGER REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- A promo code an admin creates. General codes are listed to any eligible
+-- passenger (unless hidden); user-specific ones can only ever be redeemed
+-- by target_user_id, checked against the authenticated requester, never a
+-- client-asserted identity.
+CREATE TABLE IF NOT EXISTS discount_codes (
+  id SERIAL PRIMARY KEY,
+  code VARCHAR(50) UNIQUE NOT NULL,
+  type VARCHAR(10) NOT NULL, -- 'percent' | 'flat'
+  value DECIMAL(10,2) NOT NULL,
+  scope VARCHAR(20) NOT NULL DEFAULT 'general', -- 'general' | 'user_specific'
+  target_user_id INTEGER REFERENCES users(id),
+  -- NULL max_uses = unlimited stock. When it IS set, max_uses_per_user is
+  -- always forced to 1 at creation time — a "first 40 people" code means
+  -- 40 different people, never one person claiming several slots.
+  max_uses INTEGER,
+  max_uses_per_user INTEGER NOT NULL DEFAULT 1,
+  uses_count INTEGER NOT NULL DEFAULT 0,
+  min_fare_condition DECIMAL(10,2),
+  time_condition VARCHAR(10), -- 'day' | 'night' | NULL (any)
+  expires_at TIMESTAMP,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  -- If true, silently applied to an eligible ride with no passenger action.
+  auto_apply BOOLEAN NOT NULL DEFAULT FALSE,
+  -- If false, never listed in the passenger's browsable Discounts tab —
+  -- still redeemable, but only by typing the exact code (e.g. a flyer or
+  -- social-media promo not meant to be discoverable in-app).
+  visible BOOLEAN NOT NULL DEFAULT TRUE,
+  description TEXT,
+  created_by INTEGER REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- One row per actual redemption. amount_discounted is frozen at redemption
+-- time so it stays historically accurate even if the code is edited later.
+-- The UNIQUE constraint on trip_id is what makes "one code per ride, no
+-- stacking" a database guarantee rather than something application code
+-- has to remember to enforce.
+CREATE TABLE IF NOT EXISTS discount_redemptions (
+  id SERIAL PRIMARY KEY,
+  discount_code_id INTEGER REFERENCES discount_codes(id),
+  user_id INTEGER REFERENCES users(id),
+  trip_id INTEGER REFERENCES trips(id) UNIQUE,
+  amount_discounted DECIMAL(10,2) NOT NULL,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
