@@ -41,6 +41,21 @@ export default {
         "android.permission.ACCESS_BACKGROUND_LOCATION",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_LOCATION"
+      ],
+      // expo-audio's own AndroidManifest.xml unconditionally declares
+      // RECORD_AUDIO and FOREGROUND_SERVICE_MEDIA_PLAYBACK (for its mic-
+      // recording and background-media-session features) regardless of
+      // this app's permissions list above — that list only governs Expo's
+      // own generated manifest, not permissions merged in from a native
+      // module's manifest. We only ever call .play() on a short local
+      // sound while the app is in the foreground (the ride-offer alert) —
+      // never recording, never a background-continuing media session — so
+      // blocking both here keeps the final manifest honest about what the
+      // app actually does, instead of declaring unused capabilities to
+      // Google Play.
+      blockedPermissions: [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ]
     },
     web: {
