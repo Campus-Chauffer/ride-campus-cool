@@ -2,6 +2,7 @@ const cron = require('node-cron');
 const pool = require('../db/pool');
 const { sendPushNotification } = require('./notifications');
 const { takeDriverOffline } = require('../controllers/driversController');
+const { nudgeOfflineDrivers } = require('./driverReminders');
 
 // A driver's location gets refreshed at least every ~2 minutes while online
 // (the foreground poll and the background-location task both run on that
@@ -154,4 +155,29 @@ const schedulePurgeDeletedAccounts = () => {
   });
 };
 
-module.exports = { scheduleDailyLockout, scheduleNightWarning, schedulePurgeDeletedAccounts, scheduleStaleOnlineCleanup };
+// Backstop for drivers who haven't gone online at all today and haven't
+// already been caught by a demand-triggered nudge (notifyDriversOfUnfilledDemand
+// in dispatchController.js) — twice a day rather than hourly, deliberately:
+// an hourly "you're still not online" nag risks training drivers to mute
+// Campus Chauffeur notifications entirely, which would also bury the actual
+// ride-offer alert. Shares the same daily cap as the demand-triggered nudge
+// via driver_reminders, so a bad demand day plus this never stacks past it.
+const scheduleGoOnlineBackstop = () => {
+  cron.schedule('0 9,17 * * *', async () => {
+    try {
+      const count = await nudgeOfflineDrivers(
+        'backstop',
+        "Haven't gone online today?",
+        'Rides are being requested near campus — go online now to start catching them.'
+      );
+      console.log(`Go-online backstop: nudged ${count} driver(s).`);
+    } catch (err) {
+      console.error('Go-online backstop error:', err);
+    }
+  });
+};
+
+module.exports = {
+  scheduleDailyLockout, scheduleNightWarning, schedulePurgeDeletedAccounts,
+  scheduleStaleOnlineCleanup, scheduleGoOnlineBackstop,
+};

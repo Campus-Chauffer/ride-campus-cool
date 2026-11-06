@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Megaphone, Send, RefreshCw, Users, Car, Globe } from "lucide-react";
+import { Megaphone, Send, RefreshCw, Users, Car, Globe, User } from "lucide-react";
 import api from "../../api";
 
 const AUDIENCE_OPTIONS = [
   { value: "all", label: "Everyone", icon: Globe },
   { value: "passenger", label: "Students", icon: Users },
   { value: "driver", label: "Drivers", icon: Car },
+  { value: "specific_user", label: "One specific person", icon: User },
 ];
 
 const AUDIENCE_STYLES = {
@@ -18,6 +19,8 @@ export default function Announcements() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [audience, setAudience] = useState("all");
+  const [targetUserId, setTargetUserId] = useState("");
+  const [users, setUsers] = useState([]);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -27,7 +30,17 @@ export default function Announcements() {
 
   useEffect(() => {
     fetchHistory();
+    fetchUsers();
   }, []);
+
+  async function fetchUsers() {
+    try {
+      const res = await api.get("/admin/users");
+      setUsers(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      // Non-fatal — only needed for the specific-person picker
+    }
+  }
 
   async function fetchHistory() {
     try {
@@ -44,15 +57,21 @@ export default function Announcements() {
   async function sendAnnouncement(e) {
     e.preventDefault();
     if (!title.trim() || !body.trim()) return;
+    if (audience === "specific_user" && !targetUserId) return;
     try {
       setSending(true);
       setError(null);
       setSuccess(null);
-      const res = await api.post("/admin/announcements", { title, body, audience });
+      const res = await api.post("/admin/announcements", {
+        title, body,
+        audience: audience === "specific_user" ? "all" : audience,
+        target_user_id: audience === "specific_user" ? parseInt(targetUserId, 10) : null,
+      });
       setSuccess(`Sent to ${res.data.sent} of ${res.data.recipients} recipients.`);
       setTitle("");
       setBody("");
       setAudience("all");
+      setTargetUserId("");
       setHistory((prev) => [res.data.announcement, ...prev]);
     } catch (err) {
       setError("Failed to send announcement.");
@@ -138,9 +157,24 @@ export default function Announcements() {
             })}
           </div>
         </div>
+        {audience === "specific_user" && (
+          <div>
+            <label className="text-gray-400 text-xs font-medium mb-1.5 block">Send to</label>
+            <select
+              value={targetUserId}
+              onChange={(e) => setTargetUserId(e.target.value)}
+              className="w-full bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400/50 transition"
+            >
+              <option value="">Select a person…</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>{u.first_name} {u.last_name} ({u.phone_number})</option>
+              ))}
+            </select>
+          </div>
+        )}
         <button
           type="submit"
-          disabled={sending || !title.trim() || !body.trim()}
+          disabled={sending || !title.trim() || !body.trim() || (audience === "specific_user" && !targetUserId)}
           className="flex items-center gap-2 bg-yellow-400 text-gray-900 font-semibold px-4 py-2.5 rounded-lg text-sm hover:bg-yellow-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Send size={14} />
@@ -177,9 +211,11 @@ export default function Announcements() {
                     <p className="text-gray-400 text-sm mt-0.5">{a.body}</p>
                   </div>
                   <span
-                    className={`text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${AUDIENCE_STYLES[a.audience]}`}
+                    className={`text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${a.target_user_id ? "bg-purple-500/10 text-purple-400" : AUDIENCE_STYLES[a.audience]}`}
                   >
-                    {a.audience === "all" ? "Everyone" : a.audience === "passenger" ? "Students" : "Drivers"}
+                    {a.target_user_id
+                      ? `Personal${a.target_first_name ? `: ${a.target_first_name}` : ""}`
+                      : a.audience === "all" ? "Everyone" : a.audience === "passenger" ? "Students" : "Drivers"}
                   </span>
                 </div>
                 <p className="text-gray-600 text-xs mt-2">

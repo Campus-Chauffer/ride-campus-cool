@@ -2,15 +2,34 @@ import { useState, useEffect } from "react";
 import { RefreshCw, Save } from "lucide-react";
 import api from "../../api";
 
-const CONFIG_FIELDS = [
+// Formats a 0-23 hour config value as a 12-hour clock string (e.g. 22 -> "10PM"),
+// so the fare-field descriptions below can quote the actual configured window
+// instead of a hardcoded one that goes stale the moment night_start/night_end change.
+function formatHour(h) {
+  const n = parseInt(h, 10);
+  if (Number.isNaN(n)) return "—";
+  const period = n >= 12 ? "PM" : "AM";
+  const twelveHour = n % 12 === 0 ? 12 : n % 12;
+  return `${twelveHour}${period}`;
+}
+
+const CONFIG_FIELDS = (values) => [
+  { key: "minimum_fare", label: "Minimum fare (any ride)", description: "Hard floor applied after every other fare rule — no ride is ever quoted below this, regardless of distance tier", prefix: "₵" },
   { key: "day_lower_flat", label: "Flat rate under 0.7km (day)", description: "Fixed fare for trips shorter than 0.7km during the day", prefix: "₵" },
-  { key: "night_lower_flat", label: "Flat rate under 0.7km (night)", description: "Fixed fare for trips shorter than 0.7km between 11PM–5AM", prefix: "₵" },
+  { key: "night_lower_flat", label: "Flat rate under 0.7km (night)", description: `Fixed fare for trips shorter than 0.7km between ${formatHour(values.night_start)}–${formatHour(values.night_end)}`, prefix: "₵" },
   { key: "base_fare", label: "Base fare (0.7km–4km)", description: "Starting fare for mid-distance trips", prefix: "₵" },
   { key: "price_per_km", label: "Per km rate (0.7km–4km)", description: "Added per kilometre on top of base fare", prefix: "₵" },
   { key: "day_upper_flat", label: "Flat rate over 4km (day)", description: "Fixed fare for trips longer than 4km during the day", prefix: "₵" },
-  { key: "night_upper_flat", label: "Flat rate over 4km (night)", description: "Fixed fare for trips longer than 4km between 11PM–5AM", prefix: "₵" },
+  { key: "night_upper_flat", label: "Flat rate over 4km (night)", description: `Fixed fare for trips longer than 4km between ${formatHour(values.night_start)}–${formatHour(values.night_end)}`, prefix: "₵" },
   { key: "commission_rate", label: "Commission rate", description: "Percentage of each fare taken as platform commission", prefix: "%" },
   { key: "lockout_threshold", label: "Lockout threshold", description: "Outstanding balance at which a driver gets locked out", prefix: "₵" },
+];
+
+// Separate from the currency fields above — these are plain 24-hour-clock
+// hours (0-23), not amounts, so they get their own min/max/step and no ₵ prefix.
+const NIGHT_WINDOW_FIELDS = [
+  { key: "night_start", label: "Night rate starts", description: "Hour (24h, 0-23) night pricing kicks in — e.g. 22 for 10PM" },
+  { key: "night_end", label: "Night rate ends", description: "Hour (24h, 0-23) night pricing stops — e.g. 5 for 5AM" },
 ];
 
 // Powers the in-app "update available" prompt (see checkVersion in
@@ -25,7 +44,7 @@ const UPDATE_FIELDS = [
   { key: "android_update_url", label: "Android update link", description: "Where the update button sends Android users — the Play Store listing URL", type: "text" },
 ];
 
-const ALL_FIELDS = [...CONFIG_FIELDS, ...UPDATE_FIELDS];
+const ALL_FIELDS = [...CONFIG_FIELDS({}), ...NIGHT_WINDOW_FIELDS, ...UPDATE_FIELDS];
 
 export default function Config() {
   const [values, setValues] = useState({});
@@ -77,9 +96,11 @@ export default function Config() {
   }
 
   const summaryRows = [
+    { label: "Minimum fare", value: `₵${values["minimum_fare"] || "—"}` },
     { label: "Under 0.7km", value: `Day ₵${values["day_lower_flat"] || "—"}  ·  Night ₵${values["night_lower_flat"] || "—"}` },
     { label: "0.7km – 4km", value: `₵${values["base_fare"] || "—"} base + ₵${values["price_per_km"] || "—"}/km` },
     { label: "Over 4km", value: `Day ₵${values["day_upper_flat"] || "—"}  ·  Night ₵${values["night_upper_flat"] || "—"}` },
+    { label: "Night hours", value: `${formatHour(values["night_start"])} – ${formatHour(values["night_end"])}` },
     { label: "Commission", value: `${values["commission_rate"] || "—"}%  ·  Lockout at ₵${values["lockout_threshold"] || "—"}` },
   ];
 
@@ -109,12 +130,12 @@ export default function Config() {
             <div className="px-5 py-3.5 border-b border-gray-800 bg-gray-800/40">
               <p className="text-white font-medium text-sm">Fare settings</p>
             </div>
-            {CONFIG_FIELDS.map((field, i) => {
+            {CONFIG_FIELDS(values).map((field, i, arr) => {
               const changed = String(values[field.key] ?? "") !== String(original[field.key] ?? "");
               return (
                 <div
                   key={field.key}
-                  className={`flex items-center justify-between px-5 py-4 gap-4 flex-wrap ${i < CONFIG_FIELDS.length - 1 ? "border-b border-gray-800" : ""}`}
+                  className={`flex items-center justify-between px-5 py-4 gap-4 flex-wrap ${i < arr.length - 1 ? "border-b border-gray-800" : ""}`}
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-white text-sm font-medium">{field.label}</p>
@@ -131,6 +152,35 @@ export default function Config() {
                       className={`w-24 bg-gray-800/60 border rounded-lg px-3 py-2 text-white text-sm text-right focus:outline-none transition ${changed ? "border-yellow-400/60" : "border-gray-800 focus:border-yellow-400/50"}`}
                     />
                   </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-gray-800 bg-gray-800/40">
+              <p className="text-white font-medium text-sm">Night rate hours</p>
+            </div>
+            {NIGHT_WINDOW_FIELDS.map((field, i) => {
+              const changed = String(values[field.key] ?? "") !== String(original[field.key] ?? "");
+              return (
+                <div
+                  key={field.key}
+                  className={`flex items-center justify-between px-5 py-4 gap-4 flex-wrap ${i < NIGHT_WINDOW_FIELDS.length - 1 ? "border-b border-gray-800" : ""}`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-medium">{field.label}</p>
+                    <p className="text-gray-500 text-xs mt-0.5">{field.description}</p>
+                  </div>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    max="23"
+                    value={values[field.key] ?? ""}
+                    onChange={(e) => { setValues((prev) => ({ ...prev, [field.key]: e.target.value })); setSuccessMsg(null); }}
+                    className={`w-24 bg-gray-800/60 border rounded-lg px-3 py-2 text-white text-sm text-right focus:outline-none transition ${changed ? "border-yellow-400/60" : "border-gray-800 focus:border-yellow-400/50"}`}
+                  />
                 </div>
               );
             })}

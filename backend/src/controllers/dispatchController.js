@@ -1,8 +1,18 @@
 const pool = require('../db/pool');
-const { sendPushNotification } = require('../utils/notifications');
+const { sendPushNotification, sendBulkPushNotifications } = require('../utils/notifications');
+const { nudgeOfflineDrivers } = require('../utils/driverReminders');
 
 const DISPATCH_RADIUS_KM = 10;
 const OFFER_TIMEOUT_SECONDS = 15;
+// How many of the nearest available drivers get offered a ride at once.
+// Broadcasting to a batch instead of one driver at a time means the whole
+// fan-out finishes in a handful of 15s rounds instead of one round per
+// driver, while still not paging every online driver on campus for a
+// single ride. Starting conservative at 3 while the driver pool is still
+// small — worth raising as the driver population grows, since a bigger
+// batch means fewer 15s rounds (faster worst-case match) for the same
+// number of nearby drivers.
+const BROADCAST_BATCH_SIZE = 3;
 
 const toRad = (deg) => deg * (Math.PI / 180);
 
@@ -16,6 +26,54 @@ const getDistanceKm = (lat1, lng1, lat2, lng2) => {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 };
 
+// Nudges drivers who haven't been online at all today whenever a trip ends
+// up unmatched — targeted rather than a blanket broadcast, since a driver
+// who's already been online (even if offline right now) already knows
+// demand exists, and one who's already hit today's reminder cap doesn't
+// need another ping stacked on top. Shares its cap with the twice-daily
+// backstop check in utils/scheduler.js so the two can't double up.
+const notifyDriversOfUnfilledDemand = async () => {
+  try {
+    await nudgeOfflineDrivers(
+      'demand_surge',
+      'Rides are coming in!',
+      "A passenger just couldn't find a driver nearby — go online now to catch the next one."
+    );
+  } catch (err) {
+    console.error('Demand-surge broadcast error:', err);
+  }
+};
+
+const notifyPassengerDriverFound = async (trip, driver) => {
+  const passengerUser = await pool.query(
+    'SELECT push_token FROM users WHERE id = $1',
+    [trip.passenger_id]
+  );
+  // ETA is a straight-line-distance estimate (same distance calc used for
+  // dispatch radius), not a routed one, since calling the Directions API on
+  // this hot path would add latency and cost for a number that's advisory
+  // at best.
+  const AVG_CAMPUS_SPEED_KMH = 25;
+  const etaMinutes = Math.max(1, Math.round((driver.distance / AVG_CAMPUS_SPEED_KMH) * 60));
+  await sendPushNotification(
+    passengerUser.rows[0]?.push_token,
+    'Driver Found!',
+    `${driver.first_name} is on the way in a ${driver.vehicle_color} ${driver.vehicle_make} ${driver.vehicle_model} (${driver.plate_number}) — ETA ${etaMinutes} min.`,
+    { type: 'driver_found', trip_id: trip.id, driver_id: driver.id, eta_minutes: etaMinutes }
+  );
+};
+
+const clearOffers = (trip_id) =>
+  pool.query('DELETE FROM trip_offers WHERE trip_id = $1', [trip_id]);
+
+const markNoDriverFound = async (trip_id, reason) => {
+  const result = await pool.query(
+    "UPDATE trips SET status = 'no_driver_found', no_driver_reason = $2 WHERE id = $1 AND status = 'requested'",
+    [trip_id, reason]
+  );
+  if (result.rowCount > 0) await notifyDriversOfUnfilledDemand();
+};
+
 const dispatchRide = async (trip_id) => {
   try {
     const tripResult = await pool.query(
@@ -27,21 +85,16 @@ const dispatchRide = async (trip_id) => {
     const trip = tripResult.rows[0];
 
     const driversResult = await pool.query(
-      `SELECT d.*, u.first_name, u.last_name, COALESCE(w.is_locked, FALSE) as is_locked
+      `SELECT d.*, u.first_name, u.last_name, u.push_token, COALESCE(w.is_locked, FALSE) as is_locked
        FROM drivers d
        JOIN users u ON u.id = d.user_id
        LEFT JOIN wallets w ON w.driver_id = d.id
        WHERE d.is_online = TRUE
        AND COALESCE(w.is_locked, FALSE) = FALSE
-       AND d.approval_status = 'approved'
-       AND d.id NOT IN (
-         SELECT driver_id FROM trips
-         WHERE status IN ('offered', 'accepted', 'in_progress')
-         AND driver_id IS NOT NULL
-       )`
+       AND d.approval_status = 'approved'`
     );
 
-    const nearbyDrivers = driversResult.rows
+    const allNearbyOnline = driversResult.rows
       .map(driver => ({
         ...driver,
         distance: (driver.current_lat && driver.current_lng)
@@ -54,151 +107,115 @@ const dispatchRide = async (trip_id) => {
       .filter(driver => driver.distance <= DISPATCH_RADIUS_KM)
       .sort((a, b) => a.distance - b.distance);
 
+    // "Busy" covers both a driver already mid-trip AND one currently
+    // sitting with a live offer out for some OTHER ride — without the
+    // latter, a driver deciding on one ride could get handed a second one
+    // at the same time.
+    const busyResult = await pool.query(
+      `SELECT driver_id FROM trips WHERE status IN ('accepted', 'in_progress') AND driver_id IS NOT NULL
+       UNION
+       SELECT driver_id FROM trip_offers`
+    );
+    const busyDriverIds = new Set(busyResult.rows.map(r => r.driver_id));
+
+    const nearbyDrivers = allNearbyOnline.filter(driver => !busyDriverIds.has(driver.id));
+
     if (nearbyDrivers.length === 0) {
-      await pool.query(
-        "UPDATE trips SET status = 'no_driver_found' WHERE id = $1",
-        [trip_id]
-      );
+      // Tell apart "nobody's even online nearby" from "drivers are online
+      // but every one of them is already on a trip" — the passenger gets a
+      // different, more honest message for the second case.
+      const reason = allNearbyOnline.length > 0 ? 'all_drivers_busy' : 'no_drivers_online';
+      await markNoDriverFound(trip_id, reason);
       return;
     }
 
-    for (const driver of nearbyDrivers) {
-      // Check trip is still waiting
+    for (let i = 0; i < nearbyDrivers.length; i += BROADCAST_BATCH_SIZE) {
+      const batch = nearbyDrivers.slice(i, i + BROADCAST_BATCH_SIZE);
+
       const currentTrip = await pool.query(
         'SELECT status FROM trips WHERE id = $1',
         [trip_id]
       );
-      if (currentTrip.rows[0].status !== 'requested') return;
+      if (currentTrip.rows[0]?.status !== 'requested') return;
 
-      // ATOMIC LOCK — use a transaction with SELECT FOR UPDATE SKIP LOCKED
-      // This prevents two dispatch loops from grabbing the same driver simultaneously
-      const client = await pool.connect();
-      let assigned = false;
-
-      try {
-        await client.query('BEGIN');
-
-        // Lock this driver row — if another dispatch already locked it, skip instantly
-        const lockResult = await client.query(
-          `SELECT id FROM drivers 
-           WHERE id = $1
-           AND is_online = TRUE
-           AND id NOT IN (
-             SELECT driver_id FROM trips
-             WHERE status IN ('offered', 'accepted', 'in_progress')
-             AND driver_id IS NOT NULL
-           )
-           FOR UPDATE SKIP LOCKED`,
-          [driver.id]
+      await pool.query(
+        "UPDATE trips SET status = 'offered', matched_at = NOW() WHERE id = $1",
+        [trip_id]
+      );
+      for (const driver of batch) {
+        await pool.query(
+          'INSERT INTO trip_offers (trip_id, driver_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          [trip_id, driver.id]
         );
-
-        if (lockResult.rows.length === 0) {
-          // Driver was grabbed by another dispatch — skip to next
-          await client.query('ROLLBACK');
-          continue;
-        }
-
-        // Driver is ours — assign the trip
-        await client.query(
-          "UPDATE trips SET driver_id = $1, status = 'offered', matched_at = NOW() WHERE id = $2",
-          [driver.id, trip_id]
-        );
-
-        await client.query('COMMIT');
-        assigned = true;
-
-      } catch (err) {
-        await client.query('ROLLBACK');
-        console.error('Dispatch lock error:', err);
-      } finally {
-        client.release();
       }
 
-      if (!assigned) continue;
-
-      // Notify driver
-      const driverUser = await pool.query(
-        'SELECT push_token FROM users WHERE id = $1',
-        [driver.user_id]
-      );
-      await sendPushNotification(
-        driverUser.rows[0]?.push_token,
+      await sendBulkPushNotifications(
+        batch.map(d => d.push_token),
         'New Ride Request!',
-        `Pickup: ${trip.pickup_address} \u2192 ${trip.dropoff_address}`,
+        `Pickup: ${trip.pickup_address} → ${trip.dropoff_address}`,
         { type: 'ride_request', trip_id: trip.id }
       );
 
-      // Wait for driver to accept or timeout — poll every second instead of
-      // sleeping blind for the full window. This closes the race condition where
-      // a driver's acceptance lands just before the old single end-of-window
-      // check, and is caught almost immediately instead of possibly losing to
-      // a blind reset.
-      let accepted = false;
+      // Poll every second instead of sleeping blind for the whole window —
+      // whichever driver in the batch accepts first wins atomically (see
+      // acceptOffer in driversController.js), so this just needs to notice
+      // that as soon as possible rather than at the end of 15s.
+      let winnerDriverId = null;
       for (let elapsed = 0; elapsed < OFFER_TIMEOUT_SECONDS; elapsed++) {
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         const check = await pool.query(
-          'SELECT status FROM trips WHERE id = $1',
+          'SELECT status, driver_id FROM trips WHERE id = $1',
           [trip_id]
         );
         const status = check.rows[0]?.status;
 
         if (status === 'accepted') {
-          accepted = true;
+          winnerDriverId = check.rows[0].driver_id;
           break;
         }
         if (status !== 'offered') {
-          // Trip left the offered state some other way (e.g. passenger cancelled
-          // mid-offer). Stop dispatching entirely rather than continuing to the
-          // next driver or resetting a trip that's no longer ours to manage.
+          // Trip left the offered state some other way (e.g. passenger
+          // cancelled mid-offer). Stop dispatching entirely.
+          await clearOffers(trip_id);
           return;
         }
       }
 
-      if (accepted) {
-        // Notify passenger with enough detail to identify the car on sight
-        // and gauge the wait — ETA is a straight-line-distance estimate
-        // (same distance calc used for dispatch radius), not a routed one,
-        // since calling the Directions API on this hot path would add
-        // latency and cost for a number that's advisory at best.
-        const passengerUser = await pool.query(
-          'SELECT push_token FROM users WHERE id = $1',
-          [trip.passenger_id]
-        );
-        const AVG_CAMPUS_SPEED_KMH = 25;
-        const etaMinutes = Math.max(1, Math.round((driver.distance / AVG_CAMPUS_SPEED_KMH) * 60));
-        await sendPushNotification(
-          passengerUser.rows[0]?.push_token,
-          'Driver Found!',
-          `${driver.first_name} is on the way in a ${driver.vehicle_color} ${driver.vehicle_make} ${driver.vehicle_model} (${driver.plate_number}) — ETA ${etaMinutes} min.`,
-          { type: 'driver_found', trip_id: trip.id, driver_id: driver.id, eta_minutes: etaMinutes }
-        );
+      if (winnerDriverId) {
+        await clearOffers(trip_id);
+        const winner = nearbyDrivers.find(d => d.id === winnerDriverId);
+        if (winner) await notifyPassengerDriverFound(trip, winner);
         return;
       }
 
-      // Genuinely timed out with no acceptance — reset and try next driver.
-      // Guarded with status = 'offered' AND driver_id = this driver so that if
-      // an acceptance landed in the same instant this write runs, the reset
-      // becomes a no-op instead of clobbering a valid accepted trip.
-      await pool.query(
-        `UPDATE trips SET driver_id = NULL, status = 'requested' 
-         WHERE id = $1 AND status = 'offered' AND driver_id = $2`,
-        [trip_id, driver.id]
-      );
-    }
-
-    // No driver in the list accepted — do a final guarded check before giving
-    // up, in case the very last driver's acceptance is still settling.
-    const finalCheck = await pool.query(
-      'SELECT status FROM trips WHERE id = $1',
-      [trip_id]
-    );
-    if (finalCheck.rows[0]?.status === 'requested') {
-      await pool.query(
-        "UPDATE trips SET status = 'no_driver_found' WHERE id = $1 AND status = 'requested'",
+      // Nobody in this batch accepted within the window. Reset and move to
+      // the next batch — guarded so a late acceptance landing in the same
+      // instant isn't clobbered by this reset.
+      const resetResult = await pool.query(
+        `UPDATE trips SET driver_id = NULL, status = 'requested'
+         WHERE id = $1 AND status = 'offered'`,
         [trip_id]
       );
+      await clearOffers(trip_id);
+
+      if (resetResult.rowCount === 0) {
+        // Someone accepted in the exact instant the reset ran — find out
+        // who and notify the passenger instead of moving on to a new batch.
+        const boundaryCheck = await pool.query(
+          'SELECT status, driver_id FROM trips WHERE id = $1',
+          [trip_id]
+        );
+        if (boundaryCheck.rows[0]?.status === 'accepted') {
+          const winner = nearbyDrivers.find(d => d.id === boundaryCheck.rows[0].driver_id);
+          if (winner) await notifyPassengerDriverFound(trip, winner);
+        }
+        return;
+      }
     }
+
+    // Every nearby driver had a shot and nobody accepted.
+    await markNoDriverFound(trip_id, 'no_drivers_accepted');
 
   } catch (err) {
     console.error('Dispatch error:', err);

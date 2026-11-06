@@ -370,7 +370,14 @@ export default function DriverFoundScreen({ trip, onCancelled }: Props) {
             </TouchableOpacity>
           )}
 
-          <Text style={styles.fareText}>GH₵{Math.round(parseFloat(trip.fare))}</Text>
+          {trip.discount_code && parseFloat(trip.original_fare) !== parseFloat(trip.fare) ? (
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={styles.fareStrike}>GH₵{Math.round(parseFloat(trip.original_fare))}</Text>
+              <Text style={styles.fareText}>GH₵{Math.round(parseFloat(trip.fare))}</Text>
+            </View>
+          ) : (
+            <Text style={styles.fareText}>GH₵{Math.round(parseFloat(trip.fare))}</Text>
+          )}
         </View>
 
         {/* Cancel */}
@@ -497,6 +504,12 @@ const getStyles = (colors: any) => StyleSheet.create({
     ...shadows.sm,
   },
   fareText: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark },
+  fareStrike: {
+    fontSize: fontSizes.xs,
+    fontWeight: '600',
+    color: colors.textMuted,
+    textDecorationLine: 'line-through',
+  },
   cancelBtn: {
     flexDirection: 'row',
     alignItems: 'center',

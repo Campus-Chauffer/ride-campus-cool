@@ -1,17 +1,19 @@
 const pool = require('../db/pool');
+const { findCodeByString, findBestAutoApplyCode, claimDiscount } = require('../utils/discounts');
 
 // Create a ride request
 const requestRide = async (req, res) => {
-  const { pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, pickup_address, dropoff_address } = req.body;
+  const { pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, pickup_address, dropoff_address, discount_code } = req.body;
   const passenger_id = req.user.id;
 
   if (!pickup_lat || !pickup_lng || !dropoff_lat || !dropoff_lng) {
     return res.status(400).json({ error: 'Pickup and dropoff coordinates required' });
   }
 
+  const client = await pool.connect();
   try {
     // Get pricing config
-    const configResult = await pool.query('SELECT key, value FROM config');
+    const configResult = await client.query('SELECT key, value FROM config');
     const config = {};
     configResult.rows.forEach(row => config[row.key] = parseFloat(row.value));
 
@@ -38,7 +40,15 @@ const requestRide = async (req, res) => {
       fare = Math.min(Math.max(fare, lowerFlat), upperFlat);
     }
 
-    const commission = Math.round(fare * config.commission_rate * 100) / 100;
+    // Hard floor, applied last regardless of which branch above produced
+    // the number — a single misconfigured tier (e.g. day_lower_flat set
+    // too low) can't silently undercut what's actually a fair minimum fare.
+    const MINIMUM_FARE_FALLBACK = 12;
+    const minimumFare = Number.isFinite(config.minimum_fare) ? config.minimum_fare : MINIMUM_FARE_FALLBACK;
+    fare = Math.max(fare, minimumFare);
+
+    const originalFare = fare;
+    const commission = Math.round(originalFare * config.commission_rate * 100) / 100;
 
    // Check if passenger is within UG LEGON geofence (polygon)
     if (!isWithinCampus(pickup_lat, pickup_lng)) {
@@ -48,15 +58,58 @@ const requestRide = async (req, res) => {
       return res.status(400).json({ error: 'Dropoff must be within University of Ghana, Legon campus area' });
     }
 
-    // Create trip
-    const result = await pool.query(
-      `INSERT INTO trips 
-        (passenger_id, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, pickup_address, dropoff_address, fare, commission, distance_km, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'requested') RETURNING *`,
-      [passenger_id, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, pickup_address, dropoff_address, fare, commission, distanceKm]
-    );
+    // Resolve which discount code (if any) applies BEFORE creating the trip
+    // row — a manually entered code that's invalid blocks the ride with a
+    // clear reason; an auto-apply candidate that turns out ineligible just
+    // means no discount, never a blocked ride.
+    let resolvedCode = null;
+    if (discount_code) {
+      try {
+        resolvedCode = await findCodeByString(client, discount_code, { passenger_id, originalFare, isNight });
+      } catch (err) {
+        return res.status(400).json({ error: err.message });
+      }
+    } else {
+      resolvedCode = await findBestAutoApplyCode(client, { passenger_id, originalFare, isNight });
+    }
 
-    const trip = result.rows[0];
+    await client.query('BEGIN');
+
+    // Create trip — inserted at the full (pre-discount) fare first, since
+    // claimDiscount needs a real trip_id to attach the redemption row to.
+    const result = await client.query(
+      `INSERT INTO trips
+        (passenger_id, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, pickup_address, dropoff_address, fare, original_fare, commission, distance_km, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'requested') RETURNING *`,
+      [passenger_id, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, pickup_address, dropoff_address, originalFare, originalFare, commission, distanceKm]
+    );
+    let trip = result.rows[0];
+
+    if (resolvedCode) {
+      const claimResult = await claimDiscount(client, {
+        code: resolvedCode, passenger_id, trip_id: trip.id, originalFare, commissionRate: config.commission_rate,
+      });
+
+      if (claimResult) {
+        const updated = await client.query(
+          `UPDATE trips SET fare = $1, commission = $2, discount_code = $3 WHERE id = $4 RETURNING *`,
+          [claimResult.fare, claimResult.commission, resolvedCode.code, trip.id]
+        );
+        trip = updated.rows[0];
+      } else if (discount_code) {
+        // The code passed validation moments ago but lost the claim race
+        // (sold out, or this user's per-use cap filled) before this trip
+        // could attach to it. Only a real problem for a code the passenger
+        // explicitly typed in — roll back the trip entirely rather than
+        // silently charging full price for a discount they asked for.
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'This code just became unavailable. Please try again without it.' });
+      }
+      // else: an auto-apply candidate that lost its claim race — proceed
+      // with the ride at full price, no rollback needed.
+    }
+
+    await client.query('COMMIT');
 
     // Trigger dispatch in background
     const { dispatchRide } = require('../controllers/dispatchController');
@@ -64,8 +117,11 @@ const requestRide = async (req, res) => {
 
     res.status(201).json(trip);
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
     console.error(err);
     res.status(500).json({ error: 'Server error' });
+  } finally {
+    client.release();
   }
 };
 
@@ -105,6 +161,7 @@ const PRICING_CONFIG_KEYS = [
   'day_upper_flat', 'night_upper_flat',
   'base_fare', 'price_per_km',
   'night_start', 'night_end',
+  'minimum_fare',
 ];
 
 // Live fare-estimate pricing for the mobile app's home screen. Without this,

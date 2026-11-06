@@ -67,11 +67,21 @@ CREATE TABLE IF NOT EXISTS trips (
   pickup_address TEXT,
   dropoff_address TEXT,
   fare DECIMAL(10,2),
+  -- What this ride would have cost with no discount applied. NULL means no
+  -- discount was used, in which case it always equals fare. Kept separate
+  -- from fare so the passenger's trip screens can show the original price
+  -- struck through next to what they actually paid.
+  original_fare DECIMAL(10,2),
+  discount_code VARCHAR(50),
   commission DECIMAL(10,2),
   distance_km DECIMAL(6,2),
   wait_penalty DECIMAL(10,2) DEFAULT 0,
   ride_type VARCHAR(20) DEFAULT 'standard',
   status VARCHAR(20) DEFAULT 'requested',
+  -- Set only when status = 'no_driver_found', to tell apart "nobody was
+  -- even online nearby" from "drivers are online but every one of them is
+  -- already on a trip" — the passenger sees a different message for each.
+  no_driver_reason VARCHAR(30),
   cancelled_by VARCHAR(20),
   passenger_rating INTEGER,
   passenger_comment TEXT,
@@ -86,6 +96,21 @@ CREATE TABLE IF NOT EXISTS trips (
   completed_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Which drivers currently have a live, unexpired offer out for a trip.
+-- Broadcast dispatch sends one ride to several drivers' phones at once
+-- (trips.driver_id stays NULL until someone actually accepts), so this is
+-- what checkOffers reads to know a trip is meant for a given driver, and
+-- what busy-driver filtering checks so a driver mid-decision on one offer
+-- isn't also handed a second one. Rows are deleted as soon as a batch
+-- resolves (accepted, timed out, or the trip leaves play some other way).
+CREATE TABLE IF NOT EXISTS trip_offers (
+  id SERIAL PRIMARY KEY,
+  trip_id INTEGER REFERENCES trips(id),
+  driver_id INTEGER REFERENCES drivers(id),
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(trip_id, driver_id)
 );
 
 CREATE TABLE IF NOT EXISTS wallets (
@@ -120,6 +145,18 @@ CREATE TABLE IF NOT EXISTS driver_sessions (
   went_offline_at TIMESTAMP
 );
 
+-- Every "go online" nudge sent to a driver who hasn't had a single online
+-- session yet today — whether triggered by real failed demand
+-- (no_driver_found) or the twice-daily backstop check. Both mechanisms
+-- share this table specifically so they can't independently stack past the
+-- same daily cap on one driver.
+CREATE TABLE IF NOT EXISTS driver_reminders (
+  id SERIAL PRIMARY KEY,
+  driver_id INTEGER REFERENCES drivers(id),
+  reason VARCHAR(20) NOT NULL, -- 'demand_surge' | 'backstop'
+  sent_at TIMESTAMP DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS reports (
   id SERIAL PRIMARY KEY,
   reporter_id INTEGER REFERENCES users(id),
@@ -136,7 +173,57 @@ CREATE TABLE IF NOT EXISTS announcements (
   title VARCHAR(200) NOT NULL,
   body TEXT NOT NULL,
   audience VARCHAR(20) NOT NULL DEFAULT 'all', -- 'all' | 'passenger' | 'driver'
+  -- When set, this is a private announcement for one specific user (e.g. a
+  -- personal loyalty discount code) and overrides audience entirely — it
+  -- shows only to this user, regardless of their role.
+  target_user_id INTEGER REFERENCES users(id),
   created_by INTEGER REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- A promo code an admin creates. General codes are listed to any eligible
+-- passenger (unless hidden); user-specific ones can only ever be redeemed
+-- by target_user_id, checked against the authenticated requester, never a
+-- client-asserted identity.
+CREATE TABLE IF NOT EXISTS discount_codes (
+  id SERIAL PRIMARY KEY,
+  code VARCHAR(50) UNIQUE NOT NULL,
+  type VARCHAR(10) NOT NULL, -- 'percent' | 'flat'
+  value DECIMAL(10,2) NOT NULL,
+  scope VARCHAR(20) NOT NULL DEFAULT 'general', -- 'general' | 'user_specific'
+  target_user_id INTEGER REFERENCES users(id),
+  -- NULL max_uses = unlimited stock. When it IS set, max_uses_per_user is
+  -- always forced to 1 at creation time — a "first 40 people" code means
+  -- 40 different people, never one person claiming several slots.
+  max_uses INTEGER,
+  max_uses_per_user INTEGER NOT NULL DEFAULT 1,
+  uses_count INTEGER NOT NULL DEFAULT 0,
+  min_fare_condition DECIMAL(10,2),
+  time_condition VARCHAR(10), -- 'day' | 'night' | NULL (any)
+  expires_at TIMESTAMP,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  -- If true, silently applied to an eligible ride with no passenger action.
+  auto_apply BOOLEAN NOT NULL DEFAULT FALSE,
+  -- If false, never listed in the passenger's browsable Discounts tab —
+  -- still redeemable, but only by typing the exact code (e.g. a flyer or
+  -- social-media promo not meant to be discoverable in-app).
+  visible BOOLEAN NOT NULL DEFAULT TRUE,
+  description TEXT,
+  created_by INTEGER REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- One row per actual redemption. amount_discounted is frozen at redemption
+-- time so it stays historically accurate even if the code is edited later.
+-- The UNIQUE constraint on trip_id is what makes "one code per ride, no
+-- stacking" a database guarantee rather than something application code
+-- has to remember to enforce.
+CREATE TABLE IF NOT EXISTS discount_redemptions (
+  id SERIAL PRIMARY KEY,
+  discount_code_id INTEGER REFERENCES discount_codes(id),
+  user_id INTEGER REFERENCES users(id),
+  trip_id INTEGER REFERENCES trips(id) UNIQUE,
+  amount_discounted DECIMAL(10,2) NOT NULL,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -163,12 +250,21 @@ INSERT INTO config (key, value) VALUES
   ('night_end', '5'),
   ('lower_distance_km', '0.7'),
   ('upper_distance_km', '4.0'),
-  ('day_lower_flat', '10'),
-  ('night_lower_flat', '13'),
-  ('day_upper_flat', '19'),
+  ('day_lower_flat', '13'),
+  ('night_lower_flat', '16'),
+  ('day_upper_flat', '20'),
   ('night_upper_flat', '20'),
-  ('base_fare', '8'),
-  ('price_per_km', '3'),
+  ('base_fare', '12'),
+  ('price_per_km', '2'),
+  -- Hard floor applied last, after every tier/branch of the fare
+  -- calculation — regardless of which config value produced a number, no
+  -- ride is ever quoted below this. Added after a short-trip flat rate
+  -- (day_lower_flat, above) was quietly priced well under what drivers
+  -- considered a fair minimum, which broke trust badly enough that drivers
+  -- stopped going online. This exists so a future misconfigured tier can't
+  -- reproduce that silently. Must stay <= the lowest of day_lower_flat/
+  -- night_lower_flat, or it would override a deliberately-set low tier.
+  ('minimum_fare', '12'),
   -- Read by checkVersion() in appController.js to power the in-app "update
   -- available" prompt. latestBuild starts at 1 (below any real build number
   -- EAS will produce) so a fresh database never nags anyone until these are

@@ -137,6 +137,12 @@ export default function RideOfferScreen({ trip, onAccepted, onDeclined, timer }:
         </View>
       </View>
 
+      {trip.discount_code && (
+        <View style={styles.promoBadge}>
+          <Text style={styles.promoBadgeText}>Promo ride — your earnings aren't affected</Text>
+        </View>
+      )}
+
       {/* Slide to accept */}
       <View style={styles.sliderContainer}>
         <Animated.View
@@ -261,6 +267,21 @@ const getStyles = (colors: any) => StyleSheet.create({
   fareValue: {
     fontSize: fontSizes.lg,
     fontWeight: '800',
+    color: colors.dark,
+  },
+  promoBadge: {
+    backgroundColor: colors.primary + '18',
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: -spacing.lg,
+    marginBottom: spacing.lg,
+    width: '100%',
+    alignItems: 'center',
+  },
+  promoBadgeText: {
+    fontSize: fontSizes.xs,
+    fontWeight: '600',
     color: colors.dark,
   },
   sliderContainer: {

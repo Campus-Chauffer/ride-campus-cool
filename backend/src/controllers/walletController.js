@@ -69,7 +69,7 @@ const getLedger = async (req, res) => {
     const driver = driverResult.rows[0];
 
     const ledgerResult = await pool.query(
-      `SELECT l.*, t.pickup_address, t.dropoff_address, t.fare
+      `SELECT l.*, t.pickup_address, t.dropoff_address, t.fare, t.discount_code
        FROM ledger l
        LEFT JOIN trips t ON l.trip_id = t.id
        WHERE l.driver_id = $1

@@ -105,9 +105,15 @@ export default function RideMatchingScreen({ route, navigation }: any) {
           navigation.replace('RideRating', { trip: updated });
         } else if (updated.status === 'no_driver_found' || updated.status === 'cancelled') {
           clearInterval(pollInterval.current);
+          // Drivers being online but all already on a trip is a different,
+          // more honest message than "no drivers available" — the latter
+          // reads like there's nobody out there at all.
+          const allBusy = updated.status === 'no_driver_found' && updated.no_driver_reason === 'all_drivers_busy';
           Alert.alert(
-            'No drivers available',
-            'Sorry, no drivers are available right now. Please try again.',
+            allBusy ? 'All drivers are busy' : 'No drivers available',
+            allBusy
+              ? 'All nearby drivers are currently on trips. Please wait a few minutes and try again.'
+              : 'Sorry, no drivers are available right now. Please try again.',
             [{ text: 'OK', onPress: () => navigation.goBack() }]
           );
         }
@@ -176,8 +182,20 @@ export default function RideMatchingScreen({ route, navigation }: any) {
           </View>
 
           <View style={styles.fareRow}>
-            <Text style={styles.fareLabel}>Estimated fare</Text>
-            <Text style={styles.fareValue}>GH₵{Math.round(parseFloat(trip.fare))}</Text>
+            <View>
+              <Text style={styles.fareLabel}>Estimated fare</Text>
+              {trip.discount_code && (
+                <Text style={styles.fareDiscountNote}>Code {trip.discount_code} applied</Text>
+              )}
+            </View>
+            {trip.discount_code && parseFloat(trip.original_fare) !== parseFloat(trip.fare) ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                <Text style={styles.fareStrike}>GH₵{Math.round(parseFloat(trip.original_fare))}</Text>
+                <Text style={styles.fareValue}>GH₵{Math.round(parseFloat(trip.fare))}</Text>
+              </View>
+            ) : (
+              <Text style={styles.fareValue}>GH₵{Math.round(parseFloat(trip.fare))}</Text>
+            )}
           </View>
 
           <TouchableOpacity style={styles.cancelBtn} onPress={cancelRide}>
@@ -312,6 +330,18 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     fontSize: fontSizes.lg,
     fontWeight: '800',
     color: colors.primary,
+  },
+  fareStrike: {
+    fontSize: fontSizes.sm,
+    fontWeight: '600',
+    color: mutedOnDark(isDark, 0.5),
+    textDecorationLine: 'line-through',
+  },
+  fareDiscountNote: {
+    fontSize: fontSizes.xs,
+    fontWeight: '600',
+    color: colors.primary,
+    marginTop: 2,
   },
   cancelBtn: {
     marginHorizontal: spacing.lg,
