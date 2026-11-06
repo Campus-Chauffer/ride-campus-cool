@@ -145,6 +145,18 @@ CREATE TABLE IF NOT EXISTS driver_sessions (
   went_offline_at TIMESTAMP
 );
 
+-- Every "go online" nudge sent to a driver who hasn't had a single online
+-- session yet today — whether triggered by real failed demand
+-- (no_driver_found) or the twice-daily backstop check. Both mechanisms
+-- share this table specifically so they can't independently stack past the
+-- same daily cap on one driver.
+CREATE TABLE IF NOT EXISTS driver_reminders (
+  id SERIAL PRIMARY KEY,
+  driver_id INTEGER REFERENCES drivers(id),
+  reason VARCHAR(20) NOT NULL, -- 'demand_surge' | 'backstop'
+  sent_at TIMESTAMP DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS reports (
   id SERIAL PRIMARY KEY,
   reporter_id INTEGER REFERENCES users(id),

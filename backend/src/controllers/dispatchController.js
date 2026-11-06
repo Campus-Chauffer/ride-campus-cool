@@ -1,5 +1,6 @@
 const pool = require('../db/pool');
 const { sendPushNotification, sendBulkPushNotifications } = require('../utils/notifications');
+const { nudgeOfflineDrivers } = require('../utils/driverReminders');
 
 const DISPATCH_RADIUS_KM = 10;
 const OFFER_TIMEOUT_SECONDS = 15;
@@ -25,22 +26,18 @@ const getDistanceKm = (lat1, lng1, lat2, lng2) => {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 };
 
-// Nudges every approved driver (online or not) to get/stay online whenever a
-// trip ends up unmatched — the whole point is reaching the OFFLINE ones who
-// weren't in the dispatch pool at all, so there's no is_online filter here.
+// Nudges drivers who haven't been online at all today whenever a trip ends
+// up unmatched — targeted rather than a blanket broadcast, since a driver
+// who's already been online (even if offline right now) already knows
+// demand exists, and one who's already hit today's reminder cap doesn't
+// need another ping stacked on top. Shares its cap with the twice-daily
+// backstop check in utils/scheduler.js so the two can't double up.
 const notifyDriversOfUnfilledDemand = async () => {
   try {
-    const result = await pool.query(
-      `SELECT u.push_token
-       FROM drivers d
-       JOIN users u ON u.id = d.user_id
-       WHERE d.approval_status = 'approved' AND u.push_token IS NOT NULL`
-    );
-    await sendBulkPushNotifications(
-      result.rows.map(r => r.push_token),
+    await nudgeOfflineDrivers(
+      'demand_surge',
       'Rides are coming in!',
-      "A passenger just couldn't find a driver nearby — go online now to catch the next one.",
-      { type: 'demand_surge' }
+      "A passenger just couldn't find a driver nearby — go online now to catch the next one."
     );
   } catch (err) {
     console.error('Demand-surge broadcast error:', err);

@@ -32,7 +32,7 @@ const driverRegistrationRoutes = require('./routes/driverRegistration');
 const announcementsRoutes = require('./routes/announcements');
 const appRoutes = require('./routes/app');
 const discountRoutes = require('./routes/discounts');
-const { scheduleDailyLockout, scheduleNightWarning, schedulePurgeDeletedAccounts, scheduleStaleOnlineCleanup } = require('./utils/scheduler');
+const { scheduleDailyLockout, scheduleNightWarning, schedulePurgeDeletedAccounts, scheduleStaleOnlineCleanup, scheduleGoOnlineBackstop } = require('./utils/scheduler');
 const pool = require('./db/pool');
 
 const app = express();
@@ -185,5 +185,6 @@ server.listen(PORT, () => {
   scheduleNightWarning();
   schedulePurgeDeletedAccounts();
   scheduleStaleOnlineCleanup();
-  console.log('Scheduled jobs running: 4AM lockout, 11PM warning, 3AM deletion purge, stale-online cleanup every 10min');
+  scheduleGoOnlineBackstop();
+  console.log('Scheduled jobs running: 4AM lockout, 11PM warning, 3AM deletion purge, stale-online cleanup every 10min, go-online backstop at 9AM/5PM');
 });
