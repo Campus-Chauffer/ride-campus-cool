@@ -12,8 +12,22 @@ function formatExpiry(ts) {
   return new Date(ts).toLocaleDateString("en-GH", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+function formatDateTime(ts) {
+  return new Date(ts).toLocaleString("en-GH", {
+    day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+}
+
+const TABS = [
+  { id: "codes", label: "Codes" },
+  { id: "redemptions", label: "Redemptions" },
+];
+
 export default function Discounts() {
+  const [activeTab, setActiveTab] = useState("codes");
   const [codes, setCodes] = useState([]);
+  const [redemptions, setRedemptions] = useState([]);
+  const [redemptionsLoading, setRedemptionsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -26,7 +40,19 @@ export default function Discounts() {
     auto_apply: false, visible: true, description: "",
   });
 
-  useEffect(() => { fetchCodes(); fetchUsers(); }, []);
+  useEffect(() => { fetchCodes(); fetchUsers(); fetchRedemptions(); }, []);
+
+  async function fetchRedemptions() {
+    try {
+      setRedemptionsLoading(true);
+      const res = await api.get("/discounts/redemptions");
+      setRedemptions(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      setError("Failed to load redemptions.");
+    } finally {
+      setRedemptionsLoading(false);
+    }
+  }
 
   async function fetchCodes() {
     try {
@@ -106,7 +132,7 @@ export default function Discounts() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={fetchCodes}
+            onClick={() => { fetchCodes(); fetchRedemptions(); }}
             className="flex items-center gap-2 bg-gray-900 border border-gray-800 text-gray-400 hover:text-white hover:border-gray-700 px-3 py-2 rounded-lg text-sm transition"
           >
             <RefreshCw size={14} /> Refresh
@@ -120,10 +146,28 @@ export default function Discounts() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="border-b border-gray-800 flex gap-1">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition ${
+              activeTab === tab.id
+                ? "border-yellow-400 text-yellow-400"
+                : "border-transparent text-gray-500 hover:text-gray-300"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg px-4 py-3 text-sm">{error}</div>
       )}
 
+      {activeTab === "codes" && (
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         {loading ? (
           <div className="text-center text-gray-500 text-sm py-16">Loading…</div>
@@ -185,6 +229,47 @@ export default function Discounts() {
           </div>
         )}
       </div>
+      )}
+
+      {activeTab === "redemptions" && (
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        {redemptionsLoading ? (
+          <div className="text-center text-gray-500 text-sm py-16">Loading…</div>
+        ) : redemptions.length === 0 ? (
+          <div className="text-center text-gray-500 text-sm py-16">No discounted rides yet</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-800 text-gray-500 text-xs">
+                  {["Rider", "Code", "Original Fare", "Discounted Fare", "Saved", "Route", "Date"].map((h) => (
+                    <th key={h} className="text-left px-4 py-3 font-medium">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {redemptions.map((r, i) => (
+                  <tr key={r.id} className={`border-b border-gray-800/50 hover:bg-gray-800/30 transition ${i === redemptions.length - 1 ? "border-none" : ""}`}>
+                    <td className="px-4 py-3">
+                      <p className="text-white font-medium">{r.first_name} {r.last_name}</p>
+                      <p className="text-gray-500 text-xs">{r.phone_number}</p>
+                    </td>
+                    <td className="px-4 py-3 text-gray-300 font-mono">{r.code}</td>
+                    <td className="px-4 py-3 text-gray-400 line-through">₵{parseFloat(r.original_fare).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-white font-medium">₵{parseFloat(r.discounted_fare).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-green-400 font-medium">₵{parseFloat(r.amount_discounted).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs max-w-[200px] truncate">
+                      {r.pickup_address} → {r.dropoff_address}
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{formatDateTime(r.trip_date)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      )}
 
       {showForm && (
         <div

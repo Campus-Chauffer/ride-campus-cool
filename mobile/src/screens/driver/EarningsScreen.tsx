@@ -238,6 +238,9 @@ export default function EarningsScreen({ navigation }: any) {
               </View>
               <View style={styles.ledgerInfo}>
                 <Text style={styles.ledgerDesc}>{item.description}</Text>
+                {item.discount_code && (
+                  <Text style={styles.ledgerPromoNote}>Promo ride — absorbed by platform, not you</Text>
+                )}
                 {item.pickup_address && (
                   <Text style={styles.ledgerRoute} numberOfLines={1}>
                     {item.pickup_address} → {item.dropoff_address}
@@ -474,6 +477,12 @@ const getStyles = (colors: any) => StyleSheet.create({
   ledgerRoute: {
     fontSize: fontSizes.xs,
     color: mutedWhite(0.4),
+    marginBottom: 2,
+  },
+  ledgerPromoNote: {
+    fontSize: fontSizes.xs,
+    fontWeight: '600',
+    color: colors.primary,
     marginBottom: 2,
   },
   ledgerDate: { fontSize: fontSizes.xs, color: mutedWhite(0.3) },

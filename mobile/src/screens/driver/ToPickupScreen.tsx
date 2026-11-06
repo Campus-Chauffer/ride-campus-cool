@@ -235,7 +235,12 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
                 <Text style={styles.passengerPhone}>{trip.passenger_phone}</Text>
               )}
             </View>
-            <Text style={styles.fareText}>GH₵{parseFloat(trip.fare).toFixed(2)}</Text>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={styles.fareText}>GH₵{parseFloat(trip.fare).toFixed(2)}</Text>
+              {trip.discount_code && (
+                <Text style={styles.promoNote}>Promo — earnings unaffected</Text>
+              )}
+            </View>
           </View>
         </View>
 
@@ -291,6 +296,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   passengerName: { fontSize: fontSizes.md, fontWeight: '700', color: colors.dark },
   passengerPhone: { fontSize: fontSizes.xs, color: colors.textMuted, marginTop: 2 },
   fareText: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark },
+  promoNote: { fontSize: fontSizes.xs, fontWeight: '600', color: colors.primary, marginTop: 2, maxWidth: 110, textAlign: 'right' },
   actionRow: { flexDirection: 'row', gap: spacing.sm },
   callBtn: {
     width: 52, height: 52, borderRadius: radius.full,

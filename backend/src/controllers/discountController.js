@@ -151,4 +151,28 @@ const getAvailableDiscounts = async (req, res) => {
   }
 };
 
-module.exports = { createDiscountCode, getAllDiscountCodes, updateDiscountCode, getAvailableDiscounts };
+// Admin: every actual redemption, with the rider, the code, and what the
+// ride cost before/after the discount — the full "who got what discount"
+// picture, not just code-level stats.
+const getDiscountRedemptions = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT dr.*, dc.code,
+              u.first_name, u.last_name, u.phone_number,
+              t.original_fare, t.fare as discounted_fare,
+              t.pickup_address, t.dropoff_address, t.created_at as trip_date
+       FROM discount_redemptions dr
+       JOIN discount_codes dc ON dc.id = dr.discount_code_id
+       JOIN users u ON u.id = dr.user_id
+       JOIN trips t ON t.id = dr.trip_id
+       ORDER BY dr.created_at DESC
+       LIMIT 200`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+module.exports = { createDiscountCode, getAllDiscountCodes, updateDiscountCode, getAvailableDiscounts, getDiscountRedemptions };
