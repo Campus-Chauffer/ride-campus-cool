@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, Alert, ActivityIndicator, StatusBar,
-  Animated, PanResponder, Dimensions, ScrollView,
+  Animated, PanResponder, useWindowDimensions, ScrollView,
   Keyboard
 } from 'react-native';
 import * as Location from 'expo-location';
@@ -16,11 +16,8 @@ import { useAuthStore } from '../../store/authStore';
 import { useRideStore } from '../../store/rideStore';
 import { useDiscountStore } from '../../store/discountStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, androidTopPadding } from '../../utils/theme';
 
-const { height } = Dimensions.get('window');
-const COLLAPSED_HEIGHT = height * 0.32;
-const EXPANDED_HEIGHT = height * 0.78;
 
 // Fallback pricing — only used until the live values load from
 // GET /rides/pricing (or if that fetch fails), so the estimate still works
@@ -116,7 +113,14 @@ export default function StudentHomeScreen({ navigation }: any) {
   const { selected: selectedDiscount, selectedCodeString, clear: clearDiscount } = useDiscountStore();
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  // useWindowDimensions (not a module-scope Dimensions.get capture) so the
+  // bottom sheet's proportions actually reflect the device it's running on
+  // — a module-level capture is fixed at whatever the JS bundle happened to
+  // load on, which especially matters on larger Android screens/tablets.
+  const { height: windowHeight } = useWindowDimensions();
+  const COLLAPSED_HEIGHT = windowHeight * 0.32;
+  const EXPANDED_HEIGHT = windowHeight * 0.78;
+  const styles = getStyles(colors, EXPANDED_HEIGHT);
   const mapRef = useRef<RNMapView>(null);
 
   const [userLocation, setUserLocation] = useState<any>(null);
@@ -150,8 +154,8 @@ export default function StudentHomeScreen({ navigation }: any) {
   const searchTimeout = useRef<any>(null);
   const pickupSearchTimeout = useRef<any>(null);
 
-  const sheetY = useRef(new Animated.Value(height - COLLAPSED_HEIGHT)).current;
-  const lastY = useRef(height - COLLAPSED_HEIGHT);
+  const sheetY = useRef(new Animated.Value(windowHeight - COLLAPSED_HEIGHT)).current;
+  const lastY = useRef(windowHeight - COLLAPSED_HEIGHT);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -159,8 +163,8 @@ export default function StudentHomeScreen({ navigation }: any) {
       onMoveShouldSetPanResponder: (_, gs) => Math.abs(gs.dy) > 8 && Math.abs(gs.dy) > Math.abs(gs.dx),
       onPanResponderMove: (_, gs) => {
         const newY = lastY.current + gs.dy;
-        const minY = height - EXPANDED_HEIGHT;
-        const maxY = height - COLLAPSED_HEIGHT;
+        const minY = windowHeight - EXPANDED_HEIGHT;
+        const maxY = windowHeight - COLLAPSED_HEIGHT;
         if (newY >= minY && newY <= maxY) sheetY.setValue(newY);
       },
       onPanResponderRelease: (_, gs) => {
@@ -173,14 +177,14 @@ export default function StudentHomeScreen({ navigation }: any) {
   ).current;
 
   const expandSheet = () => {
-    const targetY = height - EXPANDED_HEIGHT;
+    const targetY = windowHeight - EXPANDED_HEIGHT;
     Animated.spring(sheetY, { toValue: targetY, useNativeDriver: false, bounciness: 4 }).start();
     lastY.current = targetY;
     setIsExpanded(true);
   };
 
   const collapseSheet = () => {
-    const targetY = height - COLLAPSED_HEIGHT;
+    const targetY = windowHeight - COLLAPSED_HEIGHT;
     Animated.spring(sheetY, { toValue: targetY, useNativeDriver: false, bounciness: 4 }).start();
     lastY.current = targetY;
     setIsExpanded(false);
@@ -767,12 +771,12 @@ export default function StudentHomeScreen({ navigation }: any) {
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, expandedHeight: number) => StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
   menuBtn: {
     position: 'absolute',
-    top: 60,
+    top: 60 + androidTopPadding,
     left: spacing.lg,
     width: 44, height: 44,
     borderRadius: radius.full,
@@ -783,7 +787,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   recenterBtn: {
     position: 'absolute',
-    top: 60,
+    top: 60 + androidTopPadding,
     right: spacing.lg,
     width: 44, height: 44,
     borderRadius: radius.full,
@@ -809,7 +813,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   pinBanner: {
     position: 'absolute',
-    top: 120,
+    top: 120 + androidTopPadding,
     left: spacing.lg,
     right: spacing.lg,
     flexDirection: 'row',
@@ -848,7 +852,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   sheet: {
     position: 'absolute',
     left: 0, right: 0,
-    height: EXPANDED_HEIGHT,
+    height: expandedHeight,
     backgroundColor: colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
