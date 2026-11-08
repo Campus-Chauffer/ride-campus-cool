@@ -13,6 +13,10 @@ dist-ssr
 *.local
 .env
 
+# Claude Code's own local worktree checkouts for background agents —
+# full duplicate repo copies, not project content.
+.claude/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
