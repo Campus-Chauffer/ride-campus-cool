@@ -105,6 +105,34 @@ export const radius = {
   full: 999,
 };
 
+// Premium visual language, layered on top of the existing flat palette
+// above rather than replacing it — subtle depth (tinted shadows, soft
+// gradients) instead of flat single-color fills, used sparingly on the
+// handful of surfaces that should feel like the "hero" of a screen (a
+// primary CTA, a stats card, a status header), not on every element.
+// Deliberately no glow/neon shadows and no saturated accent colors beyond
+// the existing brand yellow — a tinted shadow here is barely-there (6-10%
+// opacity), closer to how light actually falls on a card than a glow effect.
+export const gradients = {
+  navyCard: ['#1A1A2E', '#2A2A52'] as const,
+  navyCardDark: ['#F0F0F0', '#D8D8E8'] as const,
+  primaryCta: ['#FFC72C', '#FFB800', '#E6A800'] as const,
+  successCta: ['#5AD9A0', '#3DD598', '#27AE60'] as const,
+};
+
+// A soft, color-matched shadow for a card/button sitting on a given
+// surface color — iOS honors shadowColor directly; Android's elevation
+// shadow is always neutral gray regardless (a platform limitation, not
+// something to work around with a fake colored view), so this only
+// visibly differs from `shadows.md` on iOS and that's expected.
+export const tintedShadow = (hexColor: string, opacity = 0.18) => ({
+  shadowColor: hexColor,
+  shadowOffset: { width: 0, height: 10 },
+  shadowOpacity: opacity,
+  shadowRadius: 20,
+  elevation: 6,
+});
+
 export const shadows = {
   sm: {
     shadowColor: '#000',

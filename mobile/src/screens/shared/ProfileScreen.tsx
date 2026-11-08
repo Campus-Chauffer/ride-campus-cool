@@ -3,14 +3,18 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, ScrollView, ActivityIndicator, StatusBar
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   ArrowLeft, Star, Car, Phone, Mail,
-  Edit, ChevronRight, Award, GraduationCap
+  Edit, ChevronRight, SlidersHorizontal, GraduationCap
 } from 'lucide-react-native';
 import { profileAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, mutedOnDark, androidTopPadding } from '../../utils/theme';
+import {
+  getColors, spacing, fontSizes, radius, shadows, navy,
+  mutedOnDark, androidTopPadding, gradients, tintedShadow,
+} from '../../utils/theme';
 
 export default function ProfileScreen({ navigation }: any) {
   const { user } = useAuthStore();
@@ -37,7 +41,7 @@ export default function ProfileScreen({ navigation }: any) {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator color={colors.primary} style={{ flex: 1 }} />
       </SafeAreaView>
     );
@@ -47,52 +51,61 @@ export default function ProfileScreen({ navigation }: any) {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle={isDark ? 'dark-content' : 'light-content'} />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <ArrowLeft size={22} color={colors.white} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity
-          style={styles.editBtn}
-          onPress={() => navigation.navigate('EditProfile')}
-        >
-          <Edit size={18} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
+      <LinearGradient
+        colors={isDark ? gradients.navyCardDark : gradients.navyCard}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.hero}
+      >
+        <View style={styles.heroTopRow}>
+          <TouchableOpacity style={styles.heroIconBtn} onPress={() => navigation.goBack()}>
+            <ArrowLeft size={20} color={colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.heroEyebrow}>Profile</Text>
+          <TouchableOpacity
+            style={styles.heroIconBtn}
+            onPress={() => navigation.navigate('EditProfile')}
+          >
+            <Edit size={18} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Avatar */}
-        <View style={styles.avatarSection}>
+        <View style={styles.avatarRow}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
               {user?.first_name?.[0]}{user?.last_name?.[0]}
             </Text>
           </View>
-          <Text style={styles.name}>{user?.first_name} {user?.last_name}</Text>
-          <View style={styles.roleBadge}>
-            {user?.role === 'driver'
-              ? <Car size={12} color={mutedOnDark(isDark, 0.6)} />
-              : <GraduationCap size={12} color={mutedOnDark(isDark, 0.6)} />
-            }
-            <Text style={styles.roleText}>
-              {user?.role === 'driver' ? 'Driver' : 'Student'}
-            </Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.name} numberOfLines={1}>{user?.first_name} {user?.last_name}</Text>
+            <View style={styles.roleBadge}>
+              {user?.role === 'driver'
+                ? <Car size={11} color={colors.primary} />
+                : <GraduationCap size={11} color={colors.primary} />
+              }
+              <Text style={styles.roleText}>
+                {user?.role === 'driver' ? 'Driver' : 'Student'}
+              </Text>
+            </View>
           </View>
         </View>
+      </LinearGradient>
 
-        {/* Stats */}
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* Stats — deliberately overlaps the hero's bottom edge, the one
+            place this screen borrows the "card floats over the header"
+            move from the passenger/driver home screens, for continuity. */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{profile?.total_trips || 0}</Text>
-            <Text style={styles.statLabel}>Total Trips</Text>
+            <Text style={styles.statLabel}>Trips</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statCard}>
             {profile?.rating_visible ? (
               <>
                 <View style={styles.ratingRow}>
-                  <Star size={16} color={colors.primary} fill={colors.primary} />
+                  <Star size={15} color={colors.primary} fill={colors.primary} />
                   <Text style={styles.statValue}>{profile?.average_rating}</Text>
                 </View>
                 <Text style={styles.statLabel}>Rating</Text>
@@ -100,7 +113,7 @@ export default function ProfileScreen({ navigation }: any) {
             ) : (
               <>
                 <Text style={styles.statValue}>—</Text>
-                <Text style={styles.statLabel}>
+                <Text style={styles.statLabel} numberOfLines={2}>
                   {5 - (profile?.total_trips || 0)} trips to unlock
                 </Text>
               </>
@@ -116,14 +129,21 @@ export default function ProfileScreen({ navigation }: any) {
         {/* Info */}
         <View style={styles.infoCard}>
           <View style={styles.infoRow}>
-            <Phone size={16} color={colors.textMuted} />
+            <View style={styles.infoIcon}>
+              <Phone size={16} color={colors.textDark} />
+            </View>
             <Text style={styles.infoText}>{user?.phone_number}</Text>
           </View>
           {user?.email && (
-            <View style={styles.infoRow}>
-              <Mail size={16} color={colors.textMuted} />
-              <Text style={styles.infoText}>{user?.email}</Text>
-            </View>
+            <>
+              <View style={styles.rowDivider} />
+              <View style={styles.infoRow}>
+                <View style={styles.infoIcon}>
+                  <Mail size={16} color={colors.textDark} />
+                </View>
+                <Text style={styles.infoText}>{user?.email}</Text>
+              </View>
+            </>
           )}
         </View>
 
@@ -132,21 +152,27 @@ export default function ProfileScreen({ navigation }: any) {
           <TouchableOpacity
             style={styles.actionRow}
             onPress={() => navigation.navigate('EditProfile')}
+            activeOpacity={0.7}
           >
-            <Edit size={18} color={colors.white} />
+            <View style={[styles.actionIcon, { backgroundColor: colors.primary + '1F' }]}>
+              <Edit size={16} color={colors.primaryDark} />
+            </View>
             <Text style={styles.actionText}>Edit Profile</Text>
-            <ChevronRight size={16} color={mutedOnDark(isDark, 0.3)} />
+            <ChevronRight size={16} color={mutedOnDark(isDark, 0.25)} />
           </TouchableOpacity>
 
-          <View style={styles.actionDivider} />
+          <View style={styles.rowDivider} />
 
           <TouchableOpacity
             style={styles.actionRow}
             onPress={() => navigation.navigate('Settings')}
+            activeOpacity={0.7}
           >
-            <Award size={18} color={colors.white} />
+            <View style={styles.actionIcon}>
+              <SlidersHorizontal size={16} color={colors.textDark} />
+            </View>
             <Text style={styles.actionText}>Settings</Text>
-            <ChevronRight size={16} color={mutedOnDark(isDark, 0.3)} />
+            <ChevronRight size={16} color={mutedOnDark(isDark, 0.25)} />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -155,143 +181,112 @@ export default function ProfileScreen({ navigation }: any) {
 }
 
 const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.dark, paddingTop: androidTopPadding },
-  header: {
+  container: { flex: 1, backgroundColor: colors.offWhite, paddingTop: androidTopPadding },
+  loadingContainer: { flex: 1, backgroundColor: colors.dark, paddingTop: androidTopPadding },
+  hero: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xxl + spacing.lg,
+    borderBottomLeftRadius: radius.xl + 8,
+    borderBottomRightRadius: radius.xl + 8,
+  },
+  heroTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
   },
-  backBtn: {
+  heroIconBtn: {
     width: 40, height: 40,
     borderRadius: radius.md,
-    backgroundColor: mutedOnDark(isDark, 0.08),
+    backgroundColor: mutedOnDark(isDark, 0.1),
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: fontSizes.lg,
+  heroEyebrow: {
+    fontSize: fontSizes.xs,
     fontWeight: '700',
-    color: colors.white,
+    color: mutedOnDark(isDark, 0.5),
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
-  editBtn: {
-    width: 40, height: 40,
-    borderRadius: radius.md,
-    backgroundColor: 'rgba(255,184,0,0.1)',
-    justifyContent: 'center',
+  avatarRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.lg,
   },
-  scroll: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  avatarSection: { alignItems: 'center', marginBottom: spacing.lg },
   avatar: {
-    width: 80, height: 80,
+    width: 68, height: 68,
     borderRadius: radius.full,
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    borderWidth: 3,
+    borderColor: mutedOnDark(isDark, 0.12),
   },
   // avatar's background is the fixed brand yellow in both themes, so its
   // initials are pinned to navy rather than colors.dark, which would invert
   // to near-white in dark mode and disappear against the still-yellow circle.
-  avatarText: {
-    fontSize: fontSizes.xl,
-    fontWeight: '800',
-    color: navy,
-  },
-  name: {
-    fontSize: fontSizes.xl,
-    fontWeight: '800',
-    color: colors.white,
-    marginBottom: spacing.xs,
-  },
+  avatarText: { fontSize: fontSizes.lg, fontWeight: '800', color: navy },
+  name: { fontSize: fontSizes.xl, fontWeight: '800', color: colors.white, letterSpacing: -0.3 },
   roleBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: mutedOnDark(isDark, 0.08),
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    gap: 5,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primary + '26',
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
     borderRadius: radius.full,
+    marginTop: spacing.xs,
   },
-  roleText: {
-    fontSize: fontSizes.xs,
-    color: mutedOnDark(isDark, 0.6),
-    fontWeight: '600',
-  },
+  roleText: { fontSize: fontSizes.xs, color: colors.primary, fontWeight: '700' },
+
+  scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
   statsRow: {
     flexDirection: 'row',
-    backgroundColor: mutedOnDark(isDark, 0.05),
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+    backgroundColor: colors.white,
+    borderRadius: radius.xl,
+    paddingVertical: spacing.lg,
+    marginTop: -spacing.xl,
     marginBottom: spacing.md,
+    ...tintedShadow(navy, isDark ? 0 : 0.1),
+    ...(isDark ? shadows.md : null),
   },
   statCard: { flex: 1, alignItems: 'center' },
-  statDivider: {
-    width: 1,
-    backgroundColor: mutedOnDark(isDark, 0.1),
-  },
-  statValue: {
-    fontSize: fontSizes.xl,
-    fontWeight: '800',
-    color: colors.white,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: fontSizes.xs,
-    color: mutedOnDark(isDark, 0.4),
-    textAlign: 'center',
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
+  statDivider: { width: 1, backgroundColor: mutedOnDark(isDark, 0.08) },
+  statValue: { fontSize: fontSizes.xl, fontWeight: '800', color: colors.textDark, marginBottom: 4 },
+  statLabel: { fontSize: fontSizes.xs, color: colors.gray3, textAlign: 'center', fontWeight: '600' },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+
   infoCard: {
-    backgroundColor: mutedOnDark(isDark, 0.05),
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+    backgroundColor: colors.white,
+    borderRadius: radius.xl,
     marginBottom: spacing.md,
-    gap: spacing.sm,
+    ...shadows.sm,
   },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
+  infoIcon: {
+    width: 36, height: 36, borderRadius: radius.md,
+    backgroundColor: colors.offWhite,
+    justifyContent: 'center', alignItems: 'center',
   },
-  infoText: {
-    fontSize: fontSizes.sm,
-    color: mutedOnDark(isDark, 0.6),
-    fontWeight: '500',
-  },
+  infoText: { fontSize: fontSizes.sm, color: colors.textDark, fontWeight: '600' },
+  rowDivider: { height: 1, backgroundColor: colors.gray, marginLeft: spacing.md + 36 + spacing.md },
+
   actionsCard: {
-    backgroundColor: mutedOnDark(isDark, 0.05),
-    borderRadius: radius.lg,
+    backgroundColor: colors.white,
+    borderRadius: radius.xl,
     overflow: 'hidden',
     ...shadows.sm,
   },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.md,
+  actionRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
+  actionIcon: {
+    width: 36, height: 36, borderRadius: radius.md,
+    backgroundColor: colors.offWhite,
+    justifyContent: 'center', alignItems: 'center',
   },
-  // This card's background is colors.dark, which inverts (navy in light
-  // mode, near-white in dark mode) — colors.white on it inverts the
-  // opposite way and stays correct in both, unlike the raw rgba(255,...)
-  // this was previously copy-pasted from elsewhere, which read fine in
-  // light mode but became near-invisible white-on-white once dark mode
-  // flipped this card's background to near-white.
-  actionText: {
-    flex: 1,
-    fontSize: fontSizes.md,
-    fontWeight: '600',
-    color: colors.white,
-  },
-  actionDivider: {
-    height: 1,
-    backgroundColor: mutedOnDark(isDark, 0.08),
-    marginLeft: spacing.lg + 18 + spacing.md,
-  },
+  actionText: { flex: 1, fontSize: fontSizes.md, fontWeight: '600', color: colors.textDark },
 });

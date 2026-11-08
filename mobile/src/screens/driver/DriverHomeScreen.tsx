@@ -5,6 +5,7 @@ import {
   StatusBar, Image, Vibration, Platform
 } from 'react-native';
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import RNMapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Menu, AlertCircle, Power } from 'lucide-react-native';
@@ -17,7 +18,7 @@ import { driverAPI, ratingsAPI, reportsAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useRideStore } from '../../store/rideStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, mutedOnDark, navy, white } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, mutedOnDark, navy, white, gradients, tintedShadow } from '../../utils/theme';
 import socketService from '../../services/socket';
 import ArrivedAtPickupScreen from './ArrivedAtPickupScreen';
 import { AppState } from 'react-native';
@@ -482,21 +483,28 @@ export default function DriverHomeScreen({ navigation }: any) {
       {tripPhase === 'idle' && (
         <View style={styles.onlineToggleRow}>
           <TouchableOpacity
-            style={[styles.onlineToggleBtn, isOnline ? styles.onlineToggleBtnOn : styles.onlineToggleBtnOff]}
             onPress={toggleOnline}
             disabled={loading}
-            activeOpacity={0.85}
+            activeOpacity={0.88}
+            style={styles.onlineToggleShadowWrap}
           >
-            {loading ? (
-              <ActivityIndicator size="small" color={isOnline ? white : navy} />
-            ) : (
-              <>
-                <Power size={22} color={isOnline ? white : navy} strokeWidth={2.5} />
-                <Text style={[styles.onlineToggleText, { color: isOnline ? white : navy }]}>
-                  {isOnline ? 'GO OFFLINE' : 'GO ONLINE'}
-                </Text>
-              </>
-            )}
+            <LinearGradient
+              colors={isOnline ? gradients.successCta : gradients.primaryCta}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.onlineToggleBtn}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color={isOnline ? white : navy} />
+              ) : (
+                <>
+                  <Power size={22} color={isOnline ? white : navy} strokeWidth={2.5} />
+                  <Text style={[styles.onlineToggleText, { color: isOnline ? white : navy }]}>
+                    {isOnline ? 'GO OFFLINE' : 'GO ONLINE'}
+                  </Text>
+                </>
+              )}
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       )}
@@ -535,7 +543,9 @@ export default function DriverHomeScreen({ navigation }: any) {
           <View style={styles.statusOverlay}>
             {isOnline ? (
               <View style={styles.onlineCard}>
-                <ActivityIndicator color={colors.primary} size="small" />
+                <View style={styles.statusIconRing}>
+                  <ActivityIndicator color={colors.primary} size="small" />
+                </View>
                 <View style={styles.onlineCardText}>
                   <Text style={styles.onlineTitle}>Waiting for rides</Text>
                   <Text style={styles.onlineSubtitle}>You'll be notified when a ride is nearby</Text>
@@ -543,7 +553,9 @@ export default function DriverHomeScreen({ navigation }: any) {
               </View>
             ) : (
               <View style={styles.offlineCard}>
-                <AlertCircle size={24} color={colors.gray3} />
+                <View style={styles.statusIconRing}>
+                  <AlertCircle size={20} color={colors.gray3} />
+                </View>
                 <View style={styles.onlineCardText}>
                   <Text style={styles.offlineTitle}>You're offline</Text>
                   <Text style={styles.onlineSubtitle}>Tap "Go Online" above to start receiving rides</Text>
@@ -631,12 +643,11 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   // width, uses a bold color + icon + text label for its state, and meets
   // a generous touch target well above the 44x44pt minimum.
   onlineToggleRow: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xs, zIndex: 10, backgroundColor: colors.dark },
+  onlineToggleShadowWrap: { borderRadius: radius.xl, ...tintedShadow(navy, isDark ? 0 : 0.22) },
   onlineToggleBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    height: 64, borderRadius: radius.xl, ...shadows.md,
+    height: 64, borderRadius: radius.xl,
   },
-  onlineToggleBtnOn: { backgroundColor: colors.success },
-  onlineToggleBtnOff: { backgroundColor: colors.primary },
   onlineToggleText: { fontSize: fontSizes.lg, fontWeight: '800', letterSpacing: 0.5 },
   mapContainer: { flex: 1, position: 'relative' },
   carIcon: { width: 30, height: 30 },
@@ -647,8 +658,21 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     ...shadows.md,
   },
   statusOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: spacing.lg, paddingBottom: spacing.xxl },
-  onlineCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.dark, borderRadius: radius.xl, padding: spacing.md, borderWidth: 1, borderColor: 'rgba(255,184,0,0.3)', ...shadows.lg },
-  offlineCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.dark, borderRadius: radius.xl, padding: spacing.md, borderWidth: 1, borderColor: mutedOnDark(isDark, 0.1), ...shadows.lg },
+  statusIconRing: {
+    width: 40, height: 40, borderRadius: radius.full,
+    backgroundColor: mutedOnDark(isDark, 0.08),
+    justifyContent: 'center', alignItems: 'center',
+  },
+  onlineCard: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.dark,
+    borderRadius: radius.xl + 4, padding: spacing.md, borderWidth: 1, borderColor: 'rgba(255,184,0,0.25)',
+    ...tintedShadow(navy, isDark ? 0 : 0.3),
+  },
+  offlineCard: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.dark,
+    borderRadius: radius.xl + 4, padding: spacing.md, borderWidth: 1, borderColor: mutedOnDark(isDark, 0.1),
+    ...tintedShadow(navy, isDark ? 0 : 0.3),
+  },
   onlineCardText: { flex: 1 },
   onlineTitle: { fontSize: fontSizes.md, fontWeight: '700', color: colors.white },
   // Sibling to onlineTitle on the same dark card — was using gray3, a token

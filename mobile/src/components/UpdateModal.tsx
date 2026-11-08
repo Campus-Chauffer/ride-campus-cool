@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Platform, Linking } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Application from 'expo-application';
 import { ArrowUpCircle } from 'lucide-react-native';
 import { useThemeStore } from '../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy } from '../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, gradients, tintedShadow } from '../utils/theme';
 import { appAPI } from '../services/api';
 
 // Dismissible by design — "Later" just closes it for this app session. It
@@ -13,7 +14,7 @@ import { appAPI } from '../services/api';
 export default function UpdateModal() {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   const [visible, setVisible] = useState(false);
   const [updateUrl, setUpdateUrl] = useState<string | null>(null);
 
@@ -43,15 +44,27 @@ export default function UpdateModal() {
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.card}>
-          <View style={styles.iconCircle}>
-            <ArrowUpCircle size={32} color={navy} strokeWidth={2} />
-          </View>
+          <LinearGradient
+            colors={gradients.primaryCta}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.iconCircle}
+          >
+            <ArrowUpCircle size={30} color={navy} strokeWidth={2} />
+          </LinearGradient>
           <Text style={styles.title}>Update available</Text>
           <Text style={styles.subtitle}>
             A newer version of Campus Chauffeur is ready, with the latest fixes and improvements.
           </Text>
-          <TouchableOpacity style={styles.updateBtn} onPress={handleUpdate} activeOpacity={0.9}>
-            <Text style={styles.updateBtnText}>Update Now</Text>
+          <TouchableOpacity style={styles.updateBtnShadowWrap} onPress={handleUpdate} activeOpacity={0.9}>
+            <LinearGradient
+              colors={gradients.primaryCta}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.updateBtn}
+            >
+              <Text style={styles.updateBtnText}>Update Now</Text>
+            </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity style={styles.laterBtn} onPress={() => setVisible(false)}>
             <Text style={styles.laterBtnText}>Later</Text>
@@ -62,17 +75,23 @@ export default function UpdateModal() {
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
-  card: { width: '100%', maxWidth: 340, backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.lg, alignItems: 'center', ...shadows.md },
-  iconCircle: {
-    width: 64, height: 64, borderRadius: radius.full,
-    backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center',
-    marginBottom: spacing.md,
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(10,10,20,0.6)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
+  card: {
+    width: '100%', maxWidth: 340, backgroundColor: colors.white,
+    borderRadius: radius.xl, padding: spacing.xl, alignItems: 'center',
+    ...tintedShadow(navy, isDark ? 0 : 0.3),
   },
-  title: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark, marginBottom: spacing.xs, textAlign: 'center' },
+  iconCircle: {
+    width: 60, height: 60, borderRadius: radius.full,
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: spacing.md,
+    ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.35),
+  },
+  title: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark, marginBottom: spacing.xs, textAlign: 'center', letterSpacing: -0.3 },
   subtitle: { fontSize: fontSizes.sm, color: colors.textMuted, textAlign: 'center', lineHeight: 20, marginBottom: spacing.lg },
-  updateBtn: { width: '100%', backgroundColor: colors.primary, padding: spacing.md, borderRadius: radius.full, alignItems: 'center', marginBottom: spacing.sm },
+  updateBtnShadowWrap: { width: '100%', borderRadius: radius.full, marginBottom: spacing.sm, ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3) },
+  updateBtn: { width: '100%', padding: spacing.md, borderRadius: radius.full, alignItems: 'center' },
   updateBtnText: { fontSize: fontSizes.md, fontWeight: '700', color: navy, letterSpacing: 0.3 },
   laterBtn: { paddingVertical: spacing.md, paddingHorizontal: spacing.lg },
   laterBtnText: { fontSize: fontSizes.sm, color: colors.textMuted, fontWeight: '600' },
