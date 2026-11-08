@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { ArrowLeft, Megaphone } from 'lucide-react-native';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, androidTopPadding } from '../../utils/theme';
 import { announcementsAPI } from '../../services/api';
 
 export default function AnnouncementsScreen({ navigation }: any) {
@@ -82,7 +82,7 @@ export default function AnnouncementsScreen({ navigation }: any) {
 }
 
 const getStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.offWhite },
+  container: { flex: 1, backgroundColor: colors.offWhite, paddingTop: androidTopPadding },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

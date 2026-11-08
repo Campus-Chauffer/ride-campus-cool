@@ -8,7 +8,7 @@ import { ArrowLeft, Phone, KeyRound, User } from 'lucide-react-native';
 import { authAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows } from '../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, androidTopPadding } from '../utils/theme';
 
 export default function AuthScreen({ route, navigation }: any) {
   const { role } = route.params;
@@ -268,7 +268,7 @@ export default function AuthScreen({ route, navigation }: any) {
 }
 
 const getStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.white },
+  container: { flex: 1, backgroundColor: colors.white, paddingTop: androidTopPadding },
   keyboardView: { flex: 1 },
   header: {
     flexDirection: 'row',

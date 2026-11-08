@@ -7,7 +7,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { ArrowLeft, Camera, ChevronRight, Check } from 'lucide-react-native';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, white } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, white, androidTopPadding } from '../../utils/theme';
 import { resizeForUpload } from '../../utils/imageResize';
 
 const CHECKLIST_ITEMS = [
@@ -269,7 +269,7 @@ export default function DriverRegistrationScreen({ route, navigation }: any) {
 }
 
 const getStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.white },
+  container: { flex: 1, backgroundColor: colors.white, paddingTop: androidTopPadding },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

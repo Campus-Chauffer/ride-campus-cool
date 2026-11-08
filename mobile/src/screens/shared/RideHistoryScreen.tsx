@@ -6,7 +6,7 @@ import {
 import { ArrowLeft, MapPin, Navigation, Clock, Star } from 'lucide-react-native';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, androidTopPadding } from '../../utils/theme';
 import { ridesAPI, driverAPI } from '../../services/api';
 
 // Depends on the current theme's colors, so it's a function computed inside
@@ -147,7 +147,7 @@ export default function RideHistoryScreen({ navigation }: any) {
 }
 
 const getStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.offWhite },
+  container: { flex: 1, backgroundColor: colors.offWhite, paddingTop: androidTopPadding },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

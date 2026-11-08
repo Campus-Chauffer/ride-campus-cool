@@ -9,7 +9,7 @@ import { ArrowLeft, Wallet, Clock, CheckCircle, TrendingUp, RefreshCw, Lock, Cop
 import * as Clipboard from 'expo-clipboard';
 import { walletAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, navy, white, mutedWhite } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, white, mutedWhite, androidTopPadding } from '../../utils/theme';
 
 // Momo stays as a fallback alongside the Paystack button below (outage,
 // or a driver who just prefers a direct transfer) rather than being
@@ -263,7 +263,7 @@ export default function EarningsScreen({ navigation }: any) {
 }
 
 const getStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: navy },
+  container: { flex: 1, backgroundColor: navy, paddingTop: androidTopPadding },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
