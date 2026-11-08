@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  Animated, Dimensions, TouchableWithoutFeedback, Alert,
+  Animated, useWindowDimensions, TouchableWithoutFeedback, Alert,
 } from 'react-native';
 import {
   User, Clock, Wallet, Settings,
@@ -9,11 +9,8 @@ import {
 } from 'lucide-react-native';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy } from '../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, androidTopPadding, bottomPadding } from '../utils/theme';
 import { authAPI, driverRegistrationAPI } from '../services/api';
-
-const { width } = Dimensions.get('window');
-const MENU_WIDTH = width * 0.78;
 
 interface Props {
   visible: boolean;
@@ -25,7 +22,10 @@ export default function SideMenu({ visible, onClose, navigation }: Props) {
   const { user, logout, setAuth } = useAuthStore();
   const { isDark } = useThemeStore();
   const c = getColors(isDark);
-  const slideAnim = useRef(new Animated.Value(-MENU_WIDTH)).current;
+  const { width } = useWindowDimensions();
+  const menuWidth = width * 0.78;
+  const styles = getStyles(menuWidth);
+  const slideAnim = useRef(new Animated.Value(-menuWidth)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [switchingRole, setSwitchingRole] = useState(false);
 
@@ -37,11 +37,11 @@ export default function SideMenu({ visible, onClose, navigation }: Props) {
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(slideAnim, { toValue: -MENU_WIDTH, duration: 220, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: -menuWidth, duration: 220, useNativeDriver: true }),
         Animated.timing(fadeAnim, { toValue: 0, duration: 220, useNativeDriver: true }),
       ]).start();
     }
-  }, [visible]);
+  }, [visible, menuWidth]);
 
   const navigate = (screen: string) => {
     onClose();
@@ -179,7 +179,7 @@ export default function SideMenu({ visible, onClose, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (menuWidth: number) => StyleSheet.create({
   overlay: {
     position: 'absolute',
     top: 0, left: 0, right: 0, bottom: 0,
@@ -193,8 +193,8 @@ const styles = StyleSheet.create({
   menu: {
     position: 'absolute',
     top: 0, left: 0, bottom: 0,
-    width: MENU_WIDTH,
-    paddingTop: 60,
+    width: menuWidth,
+    paddingTop: 60 + androidTopPadding,
   },
   profileSection: {
     paddingHorizontal: spacing.lg,
@@ -248,6 +248,10 @@ const styles = StyleSheet.create({
   },
   bottom: {
     padding: spacing.lg,
+    // Manual safe-area clearance for the home indicator / nav bar — this
+    // drawer is an absolutely-positioned overlay, not a SafeAreaView, so
+    // nothing insets it automatically.
+    paddingBottom: bottomPadding,
     borderTopWidth: 1,
   },
   logoutBtn: {

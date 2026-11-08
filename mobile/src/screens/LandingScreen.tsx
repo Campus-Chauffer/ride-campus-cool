@@ -1,19 +1,18 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  StatusBar, Dimensions, ScrollView
+  StatusBar, useWindowDimensions, ScrollView
 } from 'react-native';
 import { Image } from 'react-native';
 import { Car, GraduationCap } from 'lucide-react-native';
 import { useThemeStore } from '../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, navy, white } from '../utils/theme';
 
-const { height } = Dimensions.get('window');
-
 export default function LandingScreen({ navigation }: any) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const { height } = useWindowDimensions();
+  const styles = getStyles(colors, height);
   const [selectedRole, setSelectedRole] = useState<'passenger' | 'driver' | null>(null);
 
   return (
@@ -107,7 +106,7 @@ export default function LandingScreen({ navigation }: any) {
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, height: number) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.dark },
   topSection: {
     minHeight: height * 0.38,
