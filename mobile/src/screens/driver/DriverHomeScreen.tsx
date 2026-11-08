@@ -2,12 +2,12 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, Alert, ActivityIndicator,
-  StatusBar, Switch, Image, Vibration, Platform
+  StatusBar, Image, Vibration, Platform
 } from 'react-native';
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import * as Location from 'expo-location';
 import RNMapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
-import { Menu, AlertCircle } from 'lucide-react-native';
+import { Menu, AlertCircle, Power } from 'lucide-react-native';
 import SideMenu from '../../components/SideMenu';
 import RideOfferScreen from './RideOfferScreen';
 import ToPickupScreen from './ToPickupScreen';
@@ -17,7 +17,7 @@ import { driverAPI, ratingsAPI, reportsAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useRideStore } from '../../store/rideStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, mutedOnDark } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, mutedOnDark, navy, white } from '../../utils/theme';
 import socketService from '../../services/socket';
 import ArrivedAtPickupScreen from './ArrivedAtPickupScreen';
 import { AppState } from 'react-native';
@@ -468,20 +468,38 @@ export default function DriverHomeScreen({ navigation }: any) {
           </View>
         </View>
         <View style={styles.headerRight}>
-          <View style={styles.toggleContainer}>
-            <Switch
-              value={isOnline}
-              onValueChange={toggleOnline}
-              trackColor={{ false: mutedOnDark(isDark, 0.2), true: colors.primary }}
-              thumbColor={colors.white}
-              disabled={loading}
-            />
-          </View>
           <TouchableOpacity style={styles.menuBtn} onPress={() => setMenuOpen(true)}>
             <Menu size={18} color={mutedOnDark(isDark, 0.6)} />
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Only shown while idle (matching the map below) — once a trip is
+          underway, the full-screen offer/pickup/trip flows take over this
+          same header-overlaid space, and this button isn't relevant mid-trip
+          anyway (a driver shouldn't casually go offline out from under an
+          active ride). */}
+      {tripPhase === 'idle' && (
+        <View style={styles.onlineToggleRow}>
+          <TouchableOpacity
+            style={[styles.onlineToggleBtn, isOnline ? styles.onlineToggleBtnOn : styles.onlineToggleBtnOff]}
+            onPress={toggleOnline}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color={isOnline ? white : navy} />
+            ) : (
+              <>
+                <Power size={22} color={isOnline ? white : navy} strokeWidth={2.5} />
+                <Text style={[styles.onlineToggleText, { color: isOnline ? white : navy }]}>
+                  {isOnline ? 'GO OFFLINE' : 'GO ONLINE'}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
 
       {tripPhase === 'idle' && (
         <View style={styles.mapContainer}>
@@ -526,7 +544,7 @@ export default function DriverHomeScreen({ navigation }: any) {
                 <AlertCircle size={24} color={colors.gray3} />
                 <View style={styles.onlineCardText}>
                   <Text style={styles.offlineTitle}>You're offline</Text>
-                  <Text style={styles.onlineSubtitle}>Toggle the switch above to go online</Text>
+                  <Text style={styles.onlineSubtitle}>Tap "Go Online" above to start receiving rides</Text>
                 </View>
               </View>
             )}
@@ -604,8 +622,20 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   statusDotOnline: { backgroundColor: colors.success },
   statusText: { fontSize: fontSizes.xs, color: mutedOnDark(isDark, 0.5), fontWeight: '500' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  toggleContainer: { backgroundColor: mutedOnDark(isDark, 0.08), borderRadius: radius.full, padding: 4 },
-  menuBtn: { width: 36, height: 36, borderRadius: radius.md, backgroundColor: mutedOnDark(isDark, 0.08), justifyContent: 'center', alignItems: 'center' },
+  menuBtn: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: mutedOnDark(isDark, 0.08), justifyContent: 'center', alignItems: 'center' },
+  // A large, unmistakable button rather than a small switch — the switch's
+  // ~51x31 thumb target and subtle on/off color shift was hard to see and
+  // hard to hit reliably for older drivers. This spans most of the screen
+  // width, uses a bold color + icon + text label for its state, and meets
+  // a generous touch target well above the 44x44pt minimum.
+  onlineToggleRow: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xs, zIndex: 10, backgroundColor: colors.dark },
+  onlineToggleBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    height: 64, borderRadius: radius.xl, ...shadows.md,
+  },
+  onlineToggleBtnOn: { backgroundColor: colors.success },
+  onlineToggleBtnOff: { backgroundColor: colors.primary },
+  onlineToggleText: { fontSize: fontSizes.lg, fontWeight: '800', letterSpacing: 0.5 },
   mapContainer: { flex: 1, position: 'relative' },
   carIcon: { width: 30, height: 30 },
   statusOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: spacing.lg, paddingBottom: spacing.xxl },
