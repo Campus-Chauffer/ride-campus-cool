@@ -8,7 +8,7 @@ import { Phone, Flag } from 'lucide-react-native';
 import socketService from '../../services/socket';
 import { ridesAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, bottomPadding } from '../../utils/theme';
 import { getBearing, haversineMeters, snapToRoute, shouldRefreshRoute } from '../../utils/geo';
 import { useAnimatedRoute } from '../../hooks/useAnimatedRoute';
 
@@ -287,6 +287,10 @@ const getStyles = (colors: any) => StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: spacing.lg,
+    // Sits in normal flex flow, flush against the bottom of the screen —
+    // same home-indicator/nav-bar clearance DriverFoundScreen's bottomCard
+    // already needs, this one was just missing it.
+    paddingBottom: bottomPadding,
     ...shadows.lg,
   },
   driverRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },

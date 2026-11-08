@@ -7,7 +7,7 @@ import { Clock, XCircle, LogOut, CheckCircle } from 'lucide-react-native';
 import { authAPI, driverRegistrationAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, navy, shadows, mutedOnDark } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, shadows, mutedOnDark, androidTopPadding } from '../../utils/theme';
 
 export default function DriverPendingScreen({ navigation }: any) {
   const { logout, user, setAuth } = useAuthStore();
@@ -172,7 +172,7 @@ export default function DriverPendingScreen({ navigation }: any) {
 }
 
 const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.dark },
+  container: { flex: 1, backgroundColor: colors.dark, paddingTop: androidTopPadding },
   header: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,

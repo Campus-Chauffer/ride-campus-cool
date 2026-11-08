@@ -8,7 +8,7 @@ import { MapPin, Phone, Clock, AlertTriangle } from 'lucide-react-native';
 import { driverAPI, ridesAPI } from '../../services/api';
 import socketService from '../../services/socket';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, navy } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, navy } from '../../utils/theme';
 import { haversineMeters } from '../../utils/geo';
 
 const CAR_ICON = require('../../../assets/car-top.png');

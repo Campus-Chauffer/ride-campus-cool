@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  SafeAreaView, StatusBar, ScrollView, TextInput, Alert, Dimensions, Modal
+  SafeAreaView, StatusBar, ScrollView, TextInput, Alert, Modal
 } from 'react-native';
 import { Flag, CheckCircle, Star } from 'lucide-react-native';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, navy, white, mutedOnDark } from '../../utils/theme';
-
-const { width } = Dimensions.get('window');
 
 interface Props {
   trip: any;

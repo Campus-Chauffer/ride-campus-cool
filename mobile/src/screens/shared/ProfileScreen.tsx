@@ -10,7 +10,7 @@ import {
 import { profileAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, mutedOnDark } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, mutedOnDark, androidTopPadding } from '../../utils/theme';
 
 export default function ProfileScreen({ navigation }: any) {
   const { user } = useAuthStore();
@@ -155,7 +155,7 @@ export default function ProfileScreen({ navigation }: any) {
 }
 
 const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.dark },
+  container: { flex: 1, backgroundColor: colors.dark, paddingTop: androidTopPadding },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

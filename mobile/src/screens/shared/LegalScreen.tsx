@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, androidTopPadding } from '../../utils/theme';
 
 const EFFECTIVE_DATE = 'August 10, 2026';
 const SUPPORT_EMAIL = 'campuschauffeur1@gmail.com';
@@ -164,7 +164,7 @@ export default function LegalScreen({ navigation, route }: any) {
 }
 
 const getStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.white },
+  container: { flex: 1, backgroundColor: colors.white, paddingTop: androidTopPadding },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { ArrowLeft, Tag, Check } from 'lucide-react-native';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, androidTopPadding } from '../../utils/theme';
 import { discountAPI } from '../../services/api';
 import { useDiscountStore } from '../../store/discountStore';
 
@@ -160,7 +160,7 @@ export default function DiscountsScreen({ navigation }: any) {
 }
 
 const getStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.offWhite },
+  container: { flex: 1, backgroundColor: colors.offWhite, paddingTop: androidTopPadding },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

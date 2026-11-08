@@ -74,6 +74,6 @@ const getStyles = (colors: any) => StyleSheet.create({
   subtitle: { fontSize: fontSizes.sm, color: colors.textMuted, textAlign: 'center', lineHeight: 20, marginBottom: spacing.lg },
   updateBtn: { width: '100%', backgroundColor: colors.primary, padding: spacing.md, borderRadius: radius.full, alignItems: 'center', marginBottom: spacing.sm },
   updateBtnText: { fontSize: fontSizes.md, fontWeight: '700', color: navy, letterSpacing: 0.3 },
-  laterBtn: { padding: spacing.sm },
+  laterBtn: { paddingVertical: spacing.md, paddingHorizontal: spacing.lg },
   laterBtnText: { fontSize: fontSizes.sm, color: colors.textMuted, fontWeight: '600' },
 });

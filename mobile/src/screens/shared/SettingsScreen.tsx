@@ -9,7 +9,7 @@ import {
 } from 'lucide-react-native';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, androidTopPadding } from '../../utils/theme';
 import { authAPI, driverRegistrationAPI } from '../../services/api';
 
 export default function SettingsScreen({ navigation }: any) {
@@ -224,7 +224,7 @@ export default function SettingsScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, paddingTop: androidTopPadding },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -8,7 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { ArrowLeft, ChevronRight, Camera, Check } from 'lucide-react-native';
 import { driverRegistrationAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, white } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, white, androidTopPadding } from '../../utils/theme';
 import { resizeForUpload } from '../../utils/imageResize';
 
 export default function DriverVehicleScreen({ route, navigation }: any) {
@@ -205,7 +205,7 @@ export default function DriverVehicleScreen({ route, navigation }: any) {
 }
 
 const getStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.white },
+  container: { flex: 1, backgroundColor: colors.white, paddingTop: androidTopPadding },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

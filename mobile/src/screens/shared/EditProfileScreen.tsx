@@ -8,7 +8,7 @@ import { ArrowLeft, Check } from 'lucide-react-native';
 import { profileAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, androidTopPadding } from '../../utils/theme';
 
 export default function EditProfileScreen({ navigation }: any) {
   const { user, setAuth } = useAuthStore();
@@ -151,7 +151,7 @@ await setAuth(currentToken || '', { ...user!, ...res.data });
 }
 
 const getStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.white },
+  container: { flex: 1, backgroundColor: colors.white, paddingTop: androidTopPadding },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

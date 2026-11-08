@@ -9,7 +9,7 @@ import { Phone, CheckCircle, Flag } from 'lucide-react-native';
 import socketService from '../../services/socket';
 import { ridesAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, bottomPadding } from '../../utils/theme';
 import { shouldRefreshRoute } from '../../utils/geo';
 import { useAnimatedRoute } from '../../hooks/useAnimatedRoute';
 
@@ -220,6 +220,10 @@ const getStyles = (colors: any) => StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: spacing.lg,
+    // The complete-trip button is the last thing in here, flush against
+    // the bottom of the screen in normal flex flow — needs the same
+    // home-indicator/nav-bar clearance as the other bottom sheets.
+    paddingBottom: bottomPadding,
     ...shadows.lg,
   },
   tripInfo: { marginBottom: spacing.md },

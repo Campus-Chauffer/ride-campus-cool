@@ -8,7 +8,7 @@ import { ArrowLeft, Phone, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { authAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy } from '../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, androidTopPadding } from '../utils/theme';
 
 export default function LoginScreen({ route, navigation }: any) {
   const role = route.params?.role || 'passenger';
@@ -130,7 +130,7 @@ export default function LoginScreen({ route, navigation }: any) {
 }
 
 const getStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.white },
+  container: { flex: 1, backgroundColor: colors.white, paddingTop: androidTopPadding },
   keyboardView: { flex: 1 },
   header: {
     paddingHorizontal: spacing.lg,

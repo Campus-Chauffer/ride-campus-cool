@@ -12,7 +12,7 @@ import DriverFoundScreen from './DriverFoundScreen';
 import ActiveRideScreen from './ActiveRideScreen';
 import DriverArrivedScreen from './DriverArrivedScreen';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, mutedOnDark } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, mutedOnDark, androidTopPadding } from '../../utils/theme';
 
 type Phase = 'searching' | 'driver_found' | 'driver_arrived' | 'in_progress' | 'completed';
 
@@ -231,7 +231,9 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   searchContainer: { flex: 1, backgroundColor: colors.dark },
   header: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    // SafeAreaView is a no-op on Android — only paddingTop actually
+    // clears the status bar there, same as every other screen's header.
+    paddingTop: spacing.md + androidTopPadding,
     alignItems: 'flex-end',
   },
   closeBtn: {

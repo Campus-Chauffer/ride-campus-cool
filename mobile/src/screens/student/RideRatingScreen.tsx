@@ -6,7 +6,7 @@ import {
 import { Star, Flag, Check } from 'lucide-react-native';
 import { useRideStore } from '../../store/rideStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, white } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, white, androidTopPadding } from '../../utils/theme';
 import api from '../../services/api';
 
 export default function RideRatingScreen({ route, navigation }: any) {
@@ -221,7 +221,7 @@ export default function RideRatingScreen({ route, navigation }: any) {
 }
 
 const getStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.white },
+  container: { flex: 1, backgroundColor: colors.white, paddingTop: androidTopPadding },
   scroll: { padding: spacing.lg, paddingBottom: spacing.xxl },
   completeBadge: { alignItems: 'center', marginBottom: spacing.lg, paddingTop: spacing.md },
   checkCircle: {
