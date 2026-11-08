@@ -141,7 +141,9 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
               flat
               tracksViewChanges={false}
             >
-              <Image source={CAR_ICON} style={styles.carIcon} resizeMode="contain" />
+              <View style={styles.carMarkerBadge}>
+                <Image source={CAR_ICON} style={styles.carIcon} resizeMode="contain" />
+              </View>
             </Marker>
           )}
 
@@ -209,10 +211,16 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
 const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   mapContainer: { flex: 1 },
-  carIcon: { width: 44, height: 44 },
+  carIcon: { width: 30, height: 30 },
+  carMarkerBadge: {
+    width: 44, height: 44, borderRadius: radius.full,
+    backgroundColor: colors.white, borderWidth: 3, borderColor: colors.primary,
+    justifyContent: 'center', alignItems: 'center',
+    ...shadows.md,
+  },
   dropoffMarker: {
     width: 32, height: 32, borderRadius: radius.full,
-    backgroundColor: colors.dark, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: colors.error, justifyContent: 'center', alignItems: 'center',
     ...shadows.md,
   },
   bottomSheet: {

@@ -525,7 +525,9 @@ export default function DriverHomeScreen({ navigation }: any) {
                 flat
                 tracksViewChanges={trackCarMarker}
               >
-                <Image source={CAR_ICON} style={styles.carIcon} resizeMode="contain" />
+                <View style={styles.carMarkerBadge}>
+                  <Image source={CAR_ICON} style={styles.carIcon} resizeMode="contain" />
+                </View>
               </Marker>
             )}
           </RNMapView>
@@ -638,6 +640,12 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   onlineToggleText: { fontSize: fontSizes.lg, fontWeight: '800', letterSpacing: 0.5 },
   mapContainer: { flex: 1, position: 'relative' },
   carIcon: { width: 30, height: 30 },
+  carMarkerBadge: {
+    width: 44, height: 44, borderRadius: radius.full,
+    backgroundColor: colors.white, borderWidth: 3, borderColor: colors.primary,
+    justifyContent: 'center', alignItems: 'center',
+    ...shadows.md,
+  },
   statusOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: spacing.lg, paddingBottom: spacing.xxl },
   onlineCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.dark, borderRadius: radius.xl, padding: spacing.md, borderWidth: 1, borderColor: 'rgba(255,184,0,0.3)', ...shadows.lg },
   offlineCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.dark, borderRadius: radius.xl, padding: spacing.md, borderWidth: 1, borderColor: mutedOnDark(isDark, 0.1), ...shadows.lg },

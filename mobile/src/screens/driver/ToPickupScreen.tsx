@@ -182,7 +182,15 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
               flat
               tracksViewChanges={false}
             >
-              <Image source={CAR_ICON} style={styles.carIcon} resizeMode="contain" />
+              {/* A white halo stays a solid, unmistakable disc at marker
+                  scale no matter how the car photo rotates with heading —
+                  drivers reported confusing this marker with the pickup
+                  pin below, since the car asset is mostly dark glass/cabin
+                  from this top-down angle and read as just another dark
+                  blob next to it. */}
+              <View style={styles.carMarkerBadge}>
+                <Image source={CAR_ICON} style={styles.carIcon} resizeMode="contain" />
+              </View>
             </Marker>
           )}
 
@@ -263,10 +271,19 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
 const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   mapContainer: { flex: 1 },
-  carIcon: { width: 44, height: 44 },
+  carIcon: { width: 30, height: 30 },
+  carMarkerBadge: {
+    width: 44, height: 44, borderRadius: radius.full,
+    backgroundColor: colors.white, borderWidth: 3, borderColor: colors.primary,
+    justifyContent: 'center', alignItems: 'center',
+    ...shadows.md,
+  },
+  // Red reads as "stop point" everywhere and can't be mistaken for the
+  // white/yellow car badge above, unlike the near-black colors.dark this
+  // used before (which blended with the car photo's dark glass/cabin).
   pickupMarker: {
     width: 32, height: 32, borderRadius: radius.full,
-    backgroundColor: colors.dark, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: colors.error, justifyContent: 'center', alignItems: 'center',
     ...shadows.md,
   },
   bottomSheet: {
