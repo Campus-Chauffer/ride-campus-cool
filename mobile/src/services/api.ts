@@ -133,6 +133,7 @@ export const ridesAPI = {
     pickup_address: string;
     dropoff_address: string;
     discount_code?: string;
+    share_opted_in?: boolean;
   }) => api.post('/rides/request', data),
 
   getHistory: () => api.get('/rides/history'),
@@ -184,6 +185,7 @@ export const driverAPI = {
     api.patch(`/drivers/complete/${trip_id}`),
   
   getTripStatus: (tripId: number) => api.get(`/drivers/trip/${tripId}`),
+  getSharedGroup: (groupId: number) => api.get(`/drivers/shared-group/${groupId}`),
   getHistory: () => api.get('/drivers/history'),
 };
 

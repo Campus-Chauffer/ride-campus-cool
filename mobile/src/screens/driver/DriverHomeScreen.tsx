@@ -14,6 +14,8 @@ import RideOfferScreen from './RideOfferScreen';
 import ToPickupScreen from './ToPickupScreen';
 import ActiveRideDriverScreen from './ActiveRideDriverScreen';
 import TripCompleteScreen from './TripCompleteScreen';
+import SharedPickupScreen from './SharedPickupScreen';
+import SharedDropoffScreen from './SharedDropoffScreen';
 import { driverAPI, ratingsAPI, reportsAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useRideStore } from '../../store/rideStore';
@@ -38,8 +40,16 @@ export default function DriverHomeScreen({ navigation }: any) {
   const [isOnline, setIsOnline] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [tripPhase, setTripPhase] = useState<'idle' | 'offer' | 'topickup' | 'arrived' | 'inprogress' | 'complete'>('idle');
+  const [tripPhase, setTripPhase] = useState<'idle' | 'offer' | 'topickup' | 'arrived' | 'shared_pickup' | 'inprogress' | 'shared_dropoff' | 'complete'>('idle');
   const [activeTrip, setActiveTrip] = useState<any>(null);
+  // Every active leg of a shared trip once a real co-rider has attached
+  // (group size >= 2) — stays empty for the common solo-trip case, which
+  // never touches any of this.
+  const [sharedGroup, setSharedGroup] = useState<any[]>([]);
+  const sharedGroupRef = useRef<any[]>([]);
+  // Completed legs still waiting on their own rate/report/done screen —
+  // reuses TripCompleteScreen unmodified, shown once per passenger in turn.
+  const completionQueueRef = useRef<any[]>([]);
   const [offerTimer, setOfferTimer] = useState(15);
   const [driverLocation, setDriverLocation] = useState<any>(null);
   const [heading, setHeading] = useState(0);
@@ -70,6 +80,11 @@ export default function DriverHomeScreen({ navigation }: any) {
   const setActiveTripSync = (trip: any) => {
     activeTripRef.current = trip;
     setActiveTrip(trip);
+  };
+
+  const setSharedGroupSync = (group: any[]) => {
+    sharedGroupRef.current = group;
+    setSharedGroup(group);
   };
 
   useEffect(() => {
@@ -242,7 +257,61 @@ export default function DriverHomeScreen({ navigation }: any) {
     cancelPollInterval.current = setInterval(async () => {
       try {
         const phase = tripPhaseRef.current;
-        if (phase === 'topickup' || phase === 'inprogress') {
+
+        // Pre-match (or never-matched) phases: same cancellation check the
+        // solo flow has always run, plus a new check for a co-rider having
+        // just attached — tripId here is always the anchor leg the driver
+        // actually accepted, since a joining leg never goes through
+        // trip_offers/broadcast at all.
+        if (phase === 'topickup' || phase === 'arrived') {
+          const tripRes = await driverAPI.getTripStatus(tripId);
+          const data = tripRes.data;
+          if (data?.status === 'cancelled') {
+            clearInterval(cancelPollInterval.current);
+            Alert.alert('Ride Cancelled', 'The passenger has cancelled the ride.', [
+              {
+                text: 'OK', onPress: () => {
+                  setActiveTripSync(null);
+                  setTripPhaseSync('idle');
+                  startOfferPolling();
+                }
+              }
+            ]);
+            return;
+          }
+          if ((data?.co_riders?.length || 0) >= 1) {
+            const groupRes = await driverAPI.getSharedGroup(tripId);
+            const group = groupRes.data?.group || [];
+            if (group.length >= 2) {
+              setSharedGroupSync(group);
+              setTripPhaseSync('shared_pickup');
+            }
+          }
+          return;
+        }
+
+        if (phase === 'shared_pickup' || phase === 'shared_dropoff') {
+          // Once picked up, a leg can no longer be cancelled (same backend
+          // guard as the solo flow), so the only thing that can still
+          // change here is a not-yet-picked-up co-rider backing out —
+          // never a full-trip cancellation at this point.
+          const groupRes = await driverAPI.getSharedGroup(tripId);
+          const group = groupRes.data?.group || [];
+          if (group.length === 0) {
+            clearInterval(cancelPollInterval.current);
+            Alert.alert('Ride Cancelled', 'This ride is no longer active.', [
+              { text: 'OK', onPress: () => { setActiveTripSync(null); setTripPhaseSync('idle'); startOfferPolling(); } }
+            ]);
+            return;
+          }
+          if (group.length < sharedGroupRef.current.length) {
+            Alert.alert('Ride partner cancelled', 'Continuing with your remaining passenger(s).');
+          }
+          setSharedGroupSync(group);
+          return;
+        }
+
+        if (phase === 'inprogress') {
           const tripRes = await driverAPI.getTripStatus(tripId);
           if (tripRes.data?.status === 'cancelled') {
             clearInterval(cancelPollInterval.current);
@@ -337,6 +406,8 @@ export default function DriverHomeScreen({ navigation }: any) {
     }
     clearInterval(locationInterval.current);
     setIsOnline(false);
+    setSharedGroupSync([]);
+    completionQueueRef.current = [];
     setTripPhaseSync('idle');
   };
 
@@ -353,6 +424,8 @@ export default function DriverHomeScreen({ navigation }: any) {
     try {
       const res = await driverAPI.acceptOffer(pendingOffer.id);
       setActiveTripSync(res.data);
+      setSharedGroupSync([]);
+      completionQueueRef.current = [];
       setPendingOffer(null);
       setTripPhaseSync('topickup');
       startCancelPoll(res.data.id);
@@ -413,6 +486,49 @@ export default function DriverHomeScreen({ navigation }: any) {
     setTimeout(() => setTripPhaseSync('complete'), 1000);
   };
 
+  // Called by SharedPickupScreen after it successfully confirms one leg's
+  // pickup. If that was the last unconfirmed member, the backend's own
+  // auto-start cascade has already flipped every leg to in_progress —
+  // detect that here and move into the drop-off phase; otherwise just
+  // refresh the group so the screen shows whichever pickup is next.
+  const onGroupPickupConfirmed = async () => {
+    if (!activeTripRef.current) return;
+    try {
+      const res = await driverAPI.getSharedGroup(activeTripRef.current.id);
+      const group = res.data?.group || [];
+      setSharedGroupSync(group);
+      const allStarted = group.length > 0 && group.every((leg: any) => ['in_progress', 'completed'].includes(leg.status));
+      if (allStarted) {
+        setTripPhaseSync('shared_dropoff');
+      }
+    } catch (err) {
+      console.log('Group refresh error:', err);
+    }
+  };
+
+  // Called by SharedDropoffScreen after it completes one leg. If every leg
+  // is now done, queue up each passenger's own TripCompleteScreen (rate/
+  // report/done) one at a time, reusing that screen completely unchanged.
+  const onGroupDropoffConfirmed = async (completedLeg: any) => {
+    if (!activeTripRef.current) return;
+    try {
+      const res = await driverAPI.getSharedGroup(activeTripRef.current.id);
+      const group = res.data?.group?.length ? res.data.group : sharedGroupRef.current.map((leg: any) => (leg.id === completedLeg.id ? completedLeg : leg));
+      setSharedGroupSync(group);
+      const allDone = group.length > 0 && group.every((leg: any) => leg.status === 'completed');
+      if (allDone) {
+        clearInterval(cancelPollInterval.current);
+        const queue = [...group];
+        const first = queue.shift();
+        completionQueueRef.current = queue;
+        setActiveTripSync(first);
+        setTripPhaseSync('complete');
+      }
+    } catch (err) {
+      console.log('Group refresh error:', err);
+    }
+  };
+
   const handleRate = async (rating: number, comment: string) => {
     try {
       await ratingsAPI.ratePassenger(activeTripRef.current.id, rating, comment);
@@ -437,8 +553,18 @@ export default function DriverHomeScreen({ navigation }: any) {
   };
 
   const handleDone = () => {
+    // A completed shared trip queues up one TripCompleteScreen per
+    // passenger (same component, reused unchanged) — only reset to idle
+    // once every queued passenger has been rated/reported/dismissed.
+    if (completionQueueRef.current.length > 0) {
+      const next = completionQueueRef.current.shift();
+      setActiveTripSync(next);
+      return;
+    }
+
     clearRide();
     setActiveTripSync(null);
+    setSharedGroupSync([]);
     setTripPhaseSync('idle');
     startOfferPolling();
     // Re-center map after returning to idle
@@ -599,9 +725,21 @@ export default function DriverHomeScreen({ navigation }: any) {
         </View>
       )}
 
+      {tripPhase === 'shared_pickup' && sharedGroup.length >= 2 && (
+        <View style={StyleSheet.absoluteFillObject}>
+          <SharedPickupScreen group={sharedGroup} onPickupConfirmed={onGroupPickupConfirmed} />
+        </View>
+      )}
+
       {tripPhase === 'inprogress' && activeTrip && (
         <View style={StyleSheet.absoluteFillObject}>
           <ActiveRideDriverScreen trip={activeTrip} onCompleteTrip={completeTrip} />
+        </View>
+      )}
+
+      {tripPhase === 'shared_dropoff' && sharedGroup.length >= 1 && (
+        <View style={StyleSheet.absoluteFillObject}>
+          <SharedDropoffScreen group={sharedGroup} onDropoffConfirmed={onGroupDropoffConfirmed} />
         </View>
       )}
 

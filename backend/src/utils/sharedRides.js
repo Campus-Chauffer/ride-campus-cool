@@ -220,7 +220,22 @@ async function getGroupSiblings(db, trip) {
   return result.rows;
 }
 
+// Full trip rows (with passenger name/phone) for every active leg in a
+// group — what the driver app needs to render the multi-stop pickup/
+// drop-off screens (map coordinates, fare, who to call), as opposed to
+// getGroupSiblings' lighter public-info shape for the passenger side.
+async function getFullGroup(db, groupId) {
+  const result = await db.query(
+    `SELECT t.*, u.first_name as passenger_first_name, u.last_name as passenger_last_name, u.phone_number as passenger_phone
+     FROM trips t JOIN users u ON t.passenger_id = u.id
+     WHERE t.shared_group_id = $1 AND t.status != 'cancelled'
+     ORDER BY t.created_at ASC`,
+    [groupId]
+  );
+  return result.rows;
+}
+
 module.exports = {
   getDistanceKm, bearing, angleDiff, isNightNow,
-  recomputeGroupFares, attemptSharedMatch, tryAutoStartGroup, getGroupSiblings,
+  recomputeGroupFares, attemptSharedMatch, tryAutoStartGroup, getGroupSiblings, getFullGroup,
 };

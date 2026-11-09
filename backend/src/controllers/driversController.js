@@ -285,6 +285,26 @@ const startTrip = async (req, res) => {
 
     const trip = tripResult.rows[0];
 
+    // Ride-sharing: a match can land while the driver is already sitting on
+    // the solo ArrivedAtPickupScreen (the normal "I've arrived" flow for a
+    // trip that wasn't shared yet) — a tap on that screen's own Start Trip
+    // button in the brief window before the client notices and switches to
+    // the multi-stop flow would otherwise start this leg alone while a
+    // just-matched co-rider is still waiting to be picked up, desyncing
+    // the group's unified start. Block it here; the client's own poll will
+    // catch up and move the driver into the correct multi-stop screen,
+    // where this leg auto-starts normally once everyone's confirmed.
+    if (trip.shared_group_id) {
+      const groupResult = await pool.query(
+        `SELECT status FROM trips WHERE shared_group_id = $1 AND status != 'cancelled'`,
+        [trip.shared_group_id]
+      );
+      const allOnboard = groupResult.rows.every((t) => ['arrived', 'in_progress', 'completed'].includes(t.status));
+      if (!allOnboard) {
+        return res.status(400).json({ error: 'Waiting for the other passenger to be picked up first.' });
+      }
+    }
+
     // Calculate wait penalty
     let waitPenalty = 0;
     if (trip.arrived_at) {
