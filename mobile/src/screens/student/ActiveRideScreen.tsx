@@ -8,7 +8,7 @@ import { Phone, Flag } from 'lucide-react-native';
 import socketService from '../../services/socket';
 import { ridesAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, bottomPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, bottomPadding, tintedShadow } from '../../utils/theme';
 import { getBearing, haversineMeters, snapToRoute, shouldRefreshRoute } from '../../utils/geo';
 import { useAnimatedRoute } from '../../hooks/useAnimatedRoute';
 
@@ -31,7 +31,7 @@ interface Props {
 export default function ActiveRideScreen({ trip }: Props) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   const animatedRouteCoords = useAnimatedRoute(routeCoords);
   const initialDriverLocation = trip.driver_lat && trip.driver_lng
@@ -219,7 +219,12 @@ export default function ActiveRideScreen({ trip }: Props) {
               flat
               tracksViewChanges={trackCarMarker}
             >
-              <Image source={CAR_ICON} style={styles.carIcon} resizeMode="contain" />
+              {/* Matching the driver-side fix: a white halo keeps this a
+                  solid, unmistakable disc at marker scale, distinct from
+                  the dropoff pin below. */}
+              <View style={styles.carMarkerBadge}>
+                <Image source={CAR_ICON} style={styles.carIcon} resizeMode="contain" />
+              </View>
             </Marker>
           )}
 
@@ -273,32 +278,41 @@ export default function ActiveRideScreen({ trip }: Props) {
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   mapContainer: { flex: 1 },
-  carIcon: { width: 40, height: 40 },
+  carIcon: { width: 28, height: 28 },
+  carMarkerBadge: {
+    width: 40, height: 40, borderRadius: radius.full,
+    backgroundColor: colors.white, borderWidth: 3, borderColor: colors.primary,
+    justifyContent: 'center', alignItems: 'center',
+    ...shadows.md,
+  },
+  // Red reads as "destination" and can't be confused with the white/gold
+  // car badge above — colors.dark here used to blend with the car photo's
+  // own dark glass/cabin, same bug already fixed on the driver's screens.
   dropoffMarker: {
     width: 32, height: 32, borderRadius: radius.full,
-    backgroundColor: colors.dark, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: colors.error, justifyContent: 'center', alignItems: 'center',
     ...shadows.md,
   },
   bottomSheet: {
     backgroundColor: colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: radius.xl + 8,
+    borderTopRightRadius: radius.xl + 8,
     padding: spacing.lg,
     // Sits in normal flex flow, flush against the bottom of the screen —
     // same home-indicator/nav-bar clearance DriverFoundScreen's bottomCard
     // already needs, this one was just missing it.
     paddingBottom: bottomPadding,
-    ...shadows.lg,
+    ...tintedShadow(navy, isDark ? 0 : 0.25),
   },
   driverRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
-  driverAvatar: { width: 44, height: 44, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
+  driverAvatar: { width: 44, height: 44, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.offWhite },
   driverAvatarText: { fontSize: fontSizes.lg, fontWeight: '800', color: navy },
   driverName: { fontSize: fontSizes.md, fontWeight: '700', color: colors.dark },
   tripStatus: { fontSize: fontSizes.xs, color: colors.textMuted, marginTop: 2 },
-  callBtn: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
-  destinationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.gray, padding: spacing.md, borderRadius: radius.lg },
-  destinationText: { flex: 1, fontSize: fontSizes.sm, color: colors.dark },
+  callBtn: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3) },
+  destinationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.offWhite, padding: spacing.md, borderRadius: radius.lg },
+  destinationText: { flex: 1, fontSize: fontSizes.sm, color: colors.dark, fontWeight: '500' },
 });
