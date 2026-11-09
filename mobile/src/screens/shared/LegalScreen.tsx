@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, androidTopPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, androidTopPadding, tintedShadow } from '../../utils/theme';
 
 const EFFECTIVE_DATE = 'August 10, 2026';
 const SUPPORT_EMAIL = 'campuschauffeur1@gmail.com';
@@ -133,7 +133,7 @@ const TERMS_SECTIONS = [
 export default function LegalScreen({ navigation, route }: any) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   const isPrivacy = route.params.type === 'privacy';
   const sections = isPrivacy ? PRIVACY_SECTIONS : TERMS_SECTIONS;
 
@@ -163,7 +163,7 @@ export default function LegalScreen({ navigation, route }: any) {
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white, paddingTop: androidTopPadding },
   header: {
     flexDirection: 'row',
@@ -172,20 +172,20 @@ const getStyles = (colors: any) => StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray2,
   },
   backBtn: {
     width: 40, height: 40,
     borderRadius: radius.md,
-    backgroundColor: colors.gray,
+    backgroundColor: colors.offWhite,
     justifyContent: 'center',
     alignItems: 'center',
+    ...tintedShadow(navy, isDark ? 0 : 0.06),
   },
   headerTitle: {
     fontSize: fontSizes.lg,
-    fontWeight: '700',
+    fontWeight: '800',
     color: colors.dark,
+    letterSpacing: -0.3,
   },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },
   title: {
@@ -193,6 +193,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     fontWeight: '800',
     color: colors.dark,
     marginBottom: spacing.xs,
+    letterSpacing: -0.3,
   },
   effectiveDate: {
     fontSize: fontSizes.xs,

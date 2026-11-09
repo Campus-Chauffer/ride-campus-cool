@@ -4,17 +4,18 @@ import {
   StyleSheet, SafeAreaView, ScrollView,
   Alert, ActivityIndicator, StatusBar
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Check } from 'lucide-react-native';
 import { profileAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, androidTopPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, androidTopPadding, gradients, tintedShadow } from '../../utils/theme';
 
 export default function EditProfileScreen({ navigation }: any) {
   const { user, setAuth } = useAuthStore();
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   const [firstName, setFirstName] = useState(user?.first_name || '');
   const [lastName, setLastName] = useState(user?.last_name || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -136,42 +137,50 @@ await setAuth(currentToken || '', { ...user!, ...res.data });
         </View>
 
         <TouchableOpacity
-          style={[styles.saveFullBtn, loading && styles.saveBtnDisabled]}
+          style={[styles.saveFullBtnShadowWrap, loading && styles.saveBtnDisabled]}
           onPress={save}
           disabled={loading}
+          activeOpacity={0.88}
         >
-          {loading
-            ? <ActivityIndicator color={navy} />
-            : <Text style={styles.saveBtnText}>Save Changes</Text>
-          }
+          <LinearGradient
+            colors={gradients.primaryCta}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.saveFullBtn}
+          >
+            {loading
+              ? <ActivityIndicator color={navy} />
+              : <Text style={styles.saveBtnText}>Save Changes</Text>
+            }
+          </LinearGradient>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.white, paddingTop: androidTopPadding },
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.offWhite, paddingTop: androidTopPadding },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray2,
   },
   backBtn: {
     width: 40, height: 40,
     borderRadius: radius.md,
-    backgroundColor: colors.gray,
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
+    ...tintedShadow(navy, isDark ? 0 : 0.08),
   },
   headerTitle: {
     fontSize: fontSizes.lg,
-    fontWeight: '700',
+    fontWeight: '800',
     color: colors.dark,
+    letterSpacing: -0.3,
   },
   saveBtn: {
     width: 40, height: 40,
@@ -188,6 +197,9 @@ const getStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 3,
+    borderColor: colors.white,
+    ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3),
   },
   // avatar's background is the fixed brand yellow in both themes, so its
   // initials are pinned to navy rather than colors.dark, which would invert
@@ -207,20 +219,16 @@ const getStyles = (colors: any) => StyleSheet.create({
     letterSpacing: 0.5,
   },
   input: {
-    backgroundColor: colors.gray,
+    backgroundColor: colors.white,
     borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.gray2,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
     fontSize: fontSizes.md,
     color: colors.dark,
   },
   disabledInput: {
-    backgroundColor: colors.gray,
+    backgroundColor: colors.white,
     borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.gray2,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
     opacity: 0.5,
@@ -234,13 +242,11 @@ const getStyles = (colors: any) => StyleSheet.create({
     color: colors.textMuted,
     marginTop: spacing.xs,
   },
+  saveFullBtnShadowWrap: { borderRadius: radius.full, marginTop: spacing.lg, ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.35) },
   saveFullBtn: {
-    backgroundColor: colors.primary,
     padding: spacing.md,
     borderRadius: radius.full,
     alignItems: 'center',
-    marginTop: spacing.lg,
-    ...shadows.md,
   },
   saveBtnDisabled: { opacity: 0.5 },
   // saveFullBtn's background is the fixed brand yellow in both themes, so
