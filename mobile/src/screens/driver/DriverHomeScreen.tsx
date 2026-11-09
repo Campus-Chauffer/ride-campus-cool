@@ -304,8 +304,22 @@ export default function DriverHomeScreen({ navigation }: any) {
             ]);
             return;
           }
-          if (group.length < sharedGroupRef.current.length) {
+          const shrank = group.length < sharedGroupRef.current.length;
+          if (shrank) {
             Alert.alert('Ride partner cancelled', 'Continuing with your remaining passenger(s).');
+          }
+          // Degrade back to the ordinary solo screens once only one member
+          // is left and they're already picked up — the multi-stop pickup
+          // screen's "next unconfirmed pickup" would otherwise find none
+          // (the auto-start cascade only ever fires for 2+ members), and
+          // the regular ArrivedAtPickupScreen's explicit Start Trip button
+          // is exactly what a genuinely solo trip needs at this point.
+          if (shrank && phase === 'shared_pickup' && group.length === 1 &&
+              ['arrived', 'in_progress', 'completed'].includes(group[0].status)) {
+            setActiveTripSync(group[0]);
+            setSharedGroupSync([]);
+            setTripPhaseSync('arrived');
+            return;
           }
           setSharedGroupSync(group);
           return;
