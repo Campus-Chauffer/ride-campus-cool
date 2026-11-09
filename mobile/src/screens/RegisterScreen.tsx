@@ -4,18 +4,19 @@ import {
   StyleSheet, SafeAreaView, ActivityIndicator,
   Alert, StatusBar, KeyboardAvoidingView, Platform, ScrollView
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Phone, Lock, Eye, EyeOff, Mail } from 'lucide-react-native';
 import { authAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, androidTopPadding } from '../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, androidTopPadding, gradients, tintedShadow } from '../utils/theme';
 
 export default function RegisterScreen({ route, navigation }: any) {
   const { role } = route.params;
   const { setAuth } = useAuthStore();
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
 
   const [step, setStep] = useState<'phone' | 'otp' | 'profile'>('phone');
   const [phone, setPhone] = useState('');
@@ -195,15 +196,17 @@ export default function RegisterScreen({ route, navigation }: any) {
                 </View>
               </View>
               <TouchableOpacity
-                style={[styles.btn, loading && styles.btnDisabled]}
+                style={[styles.btnShadowWrap, loading && styles.btnDisabled]}
                 onPress={requestOTP}
                 disabled={loading}
                 activeOpacity={0.9}
               >
-                {loading
-                  ? <ActivityIndicator color={navy} />
-                  : <Text style={styles.btnText}>Send Verification Code</Text>
-                }
+                <LinearGradient colors={gradients.primaryCta} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.btn}>
+                  {loading
+                    ? <ActivityIndicator color={navy} />
+                    : <Text style={styles.btnText}>Send Verification Code</Text>
+                  }
+                </LinearGradient>
               </TouchableOpacity>
             </>
           )}
@@ -225,15 +228,17 @@ export default function RegisterScreen({ route, navigation }: any) {
                 />
               </View>
               <TouchableOpacity
-                style={[styles.btn, loading && styles.btnDisabled]}
+                style={[styles.btnShadowWrap, loading && styles.btnDisabled]}
                 onPress={verifyOTP}
                 disabled={loading}
                 activeOpacity={0.9}
               >
-                {loading
-                  ? <ActivityIndicator color={navy} />
-                  : <Text style={styles.btnText}>Verify</Text>
-                }
+                <LinearGradient colors={gradients.primaryCta} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.btn}>
+                  {loading
+                    ? <ActivityIndicator color={navy} />
+                    : <Text style={styles.btnText}>Verify</Text>
+                  }
+                </LinearGradient>
               </TouchableOpacity>
               <TouchableOpacity onPress={requestOTP} style={styles.resendBtn}>
                 <Text style={styles.resendText}>Resend code</Text>
@@ -344,15 +349,17 @@ export default function RegisterScreen({ route, navigation }: any) {
               </Text>
 
               <TouchableOpacity
-                style={[styles.btn, (loading || submitted) && styles.btnDisabled]}
+                style={[styles.btnShadowWrap, (loading || submitted) && styles.btnDisabled]}
                 onPress={register}
                 disabled={loading || submitted}
                 activeOpacity={0.9}
               >
-                {loading
-                  ? <ActivityIndicator color={navy} />
-                  : <Text style={styles.btnText}>Create Account</Text>
-                }
+                <LinearGradient colors={gradients.primaryCta} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.btn}>
+                  {loading
+                    ? <ActivityIndicator color={navy} />
+                    : <Text style={styles.btnText}>Create Account</Text>
+                  }
+                </LinearGradient>
               </TouchableOpacity>
             </>
           )}
@@ -369,7 +376,7 @@ export default function RegisterScreen({ route, navigation }: any) {
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white, paddingTop: androidTopPadding },
   keyboardView: { flex: 1 },
   header: {
@@ -434,18 +441,14 @@ const getStyles = (colors: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.gray,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.gray2,
+    backgroundColor: colors.offWhite,
+    borderRadius: radius.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
   },
   inputWrapperSimple: {
-    backgroundColor: colors.gray,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.gray2,
+    backgroundColor: colors.offWhite,
+    borderRadius: radius.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
     fontSize: fontSizes.md,
@@ -469,22 +472,18 @@ const getStyles = (colors: any) => StyleSheet.create({
     letterSpacing: 8,
     textAlign: 'center',
     fontWeight: '700',
-    backgroundColor: colors.gray,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.gray2,
+    backgroundColor: colors.offWhite,
+    borderRadius: radius.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
   },
+  btnShadowWrap: { borderRadius: radius.full, marginTop: spacing.sm, ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3) },
   btn: {
-    backgroundColor: colors.primary,
     padding: spacing.md,
     borderRadius: radius.full,
     alignItems: 'center',
-    marginTop: spacing.sm,
-    ...shadows.md,
   },
-  btnDisabled: { opacity: 0.5 },
+  btnDisabled: { opacity: 0.5, shadowOpacity: 0, elevation: 0 },
   consentText: {
     fontSize: fontSizes.xs,
     color: colors.textMuted,

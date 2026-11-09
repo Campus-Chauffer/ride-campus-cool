@@ -4,9 +4,10 @@ import {
   StatusBar, useWindowDimensions, ScrollView
 } from 'react-native';
 import { Image } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Car, GraduationCap } from 'lucide-react-native';
 import { useThemeStore } from '../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, white } from '../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, white, gradients, tintedShadow } from '../utils/theme';
 
 export default function LandingScreen({ navigation }: any) {
   const { isDark } = useThemeStore();
@@ -19,8 +20,16 @@ export default function LandingScreen({ navigation }: any) {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      {/* Top dark section */}
-      <View style={styles.topSection}>
+      {/* Top hero section — fixed navy gradient rather than flat black,
+          same brand gradient every hero surface in the app now uses. Fixed
+          (not isDark-conditional) since this is the one brand moment that
+          deliberately doesn't invert with the theme. */}
+      <LinearGradient
+        colors={gradients.navyCard}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.topSection}
+      >
         <View style={styles.logoContainer}>
           <Image
             source={require('../../assets/cc-logo.jpg')}
@@ -29,7 +38,7 @@ export default function LandingScreen({ navigation }: any) {
           <Text style={styles.appName}>Campus Chauffeur</Text>
           <Text style={styles.tagline}>We'll get you there</Text>
         </View>
-      </View>
+      </LinearGradient>
 
       {/* Bottom white section */}
       <ScrollView
@@ -83,12 +92,19 @@ export default function LandingScreen({ navigation }: any) {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.continueBtn, !selectedRole && styles.continueBtnDisabled]}
+          style={[styles.continueBtnShadowWrap, !selectedRole && styles.continueBtnDisabled]}
           disabled={!selectedRole}
           onPress={() => navigation.navigate('Login', { role: selectedRole || 'passenger' })}
           activeOpacity={0.9}
         >
-          <Text style={styles.continueBtnText}>Continue</Text>
+          <LinearGradient
+            colors={gradients.primaryCta}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.continueBtn}
+          >
+            <Text style={styles.continueBtnText}>Continue</Text>
+          </LinearGradient>
         </TouchableOpacity>
 
         <Text style={styles.terms}>
@@ -163,16 +179,16 @@ const getStyles = (colors: any, height: number) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.md,
-    borderRadius: radius.lg,
+    borderRadius: radius.lg + 4,
     borderWidth: 1.5,
-    borderColor: colors.gray2,
+    borderColor: 'transparent',
     marginBottom: spacing.sm,
     backgroundColor: colors.white,
-    ...shadows.sm,
+    ...tintedShadow(navy, 0.08),
   },
   roleCardActive: {
     borderColor: colors.primary,
-    backgroundColor: '#FFFBF0',
+    backgroundColor: colors.primary + '12',
   },
   roleIcon: {
     width: 48,
@@ -218,15 +234,13 @@ const getStyles = (colors: any, height: number) => StyleSheet.create({
     borderRadius: radius.full,
     backgroundColor: colors.primary,
   },
+  continueBtnShadowWrap: { borderRadius: radius.full, marginTop: spacing.md, ...tintedShadow(colors.primaryDark, 0.3) },
   continueBtn: {
-    backgroundColor: colors.primary,
     padding: spacing.md,
     borderRadius: radius.full,
     alignItems: 'center',
-    marginTop: spacing.md,
-    ...shadows.md,
   },
-  continueBtnDisabled: { opacity: 0.4 },
+  continueBtnDisabled: { opacity: 0.4, shadowOpacity: 0, elevation: 0 },
   // continueBtn's background is the fixed brand yellow in both themes, so
   // its text is pinned to navy rather than colors.dark, which would invert
   // to near-white in dark mode and disappear against the still-yellow button.

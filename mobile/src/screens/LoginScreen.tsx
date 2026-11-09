@@ -4,18 +4,19 @@ import {
   StyleSheet, SafeAreaView, ActivityIndicator,
   Alert, StatusBar, KeyboardAvoidingView, Platform, Image
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Phone, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { authAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, androidTopPadding } from '../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, androidTopPadding, gradients, tintedShadow } from '../utils/theme';
 
 export default function LoginScreen({ route, navigation }: any) {
   const role = route.params?.role || 'passenger';
   const { setAuth } = useAuthStore();
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -106,15 +107,17 @@ export default function LoginScreen({ route, navigation }: any) {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.btn, loading && styles.btnDisabled]}
+            style={[styles.btnShadowWrap, loading && styles.btnDisabled]}
             onPress={login}
             disabled={loading}
             activeOpacity={0.9}
           >
-            {loading
-              ? <ActivityIndicator color={navy} />
-              : <Text style={styles.btnText}>Sign In</Text>
-            }
+            <LinearGradient colors={gradients.primaryCta} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.btn}>
+              {loading
+                ? <ActivityIndicator color={navy} />
+                : <Text style={styles.btnText}>Sign In</Text>
+              }
+            </LinearGradient>
           </TouchableOpacity>
 
           <View style={styles.registerRow}>
@@ -129,7 +132,7 @@ export default function LoginScreen({ route, navigation }: any) {
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white, paddingTop: androidTopPadding },
   keyboardView: { flex: 1 },
   header: {
@@ -178,10 +181,8 @@ const getStyles = (colors: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.gray,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.gray2,
+    backgroundColor: colors.offWhite,
+    borderRadius: radius.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
   },
@@ -201,14 +202,13 @@ const getStyles = (colors: any) => StyleSheet.create({
     color: colors.dark,
     fontWeight: '600',
   },
+  btnShadowWrap: { borderRadius: radius.full, ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3) },
   btn: {
-    backgroundColor: colors.primary,
     padding: spacing.md,
     borderRadius: radius.full,
     alignItems: 'center',
-    ...shadows.md,
   },
-  btnDisabled: { opacity: 0.5 },
+  btnDisabled: { opacity: 0.5, shadowOpacity: 0, elevation: 0 },
   // btn's background is the fixed brand yellow in both themes, so its text
   // is pinned to navy rather than colors.dark, which would invert to
   // near-white in dark mode and disappear against the still-yellow button.
