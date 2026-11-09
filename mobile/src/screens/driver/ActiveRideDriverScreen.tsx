@@ -5,11 +5,12 @@ import {
 } from 'react-native';
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Phone, CheckCircle, Flag } from 'lucide-react-native';
 import socketService from '../../services/socket';
 import { ridesAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, bottomPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, bottomPadding, gradients, tintedShadow } from '../../utils/theme';
 import { shouldRefreshRoute } from '../../utils/geo';
 import { useAnimatedRoute } from '../../hooks/useAnimatedRoute';
 
@@ -29,7 +30,7 @@ interface Props {
 export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [driverHeading, setDriverHeading] = useState(0);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
@@ -199,16 +200,23 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
           </View>
         </View>
 
-        <TouchableOpacity style={styles.completeBtn} onPress={onCompleteTrip}>
-          <CheckCircle size={20} color={navy} />
-          <Text style={styles.completeBtnText}>Complete Trip</Text>
+        <TouchableOpacity style={styles.completeBtnShadowWrap} onPress={onCompleteTrip} activeOpacity={0.88}>
+          <LinearGradient
+            colors={gradients.primaryCta}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.completeBtn}
+          >
+            <CheckCircle size={20} color={navy} />
+            <Text style={styles.completeBtnText}>Complete Trip</Text>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   mapContainer: { flex: 1 },
   carIcon: { width: 30, height: 30 },
@@ -225,14 +233,14 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   bottomSheet: {
     backgroundColor: colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: radius.xl + 8,
+    borderTopRightRadius: radius.xl + 8,
     padding: spacing.lg,
     // The complete-trip button is the last thing in here, flush against
     // the bottom of the screen in normal flex flow — needs the same
     // home-indicator/nav-bar clearance as the other bottom sheets.
     paddingBottom: bottomPadding,
-    ...shadows.lg,
+    ...tintedShadow(navy, isDark ? 0 : 0.2),
   },
   tripInfo: { marginBottom: spacing.md },
   passengerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
@@ -241,8 +249,9 @@ const getStyles = (colors: any) => StyleSheet.create({
   passengerName: { fontSize: fontSizes.md, fontWeight: '700', color: colors.dark },
   tripStatus: { fontSize: fontSizes.xs, color: colors.textMuted, marginTop: 2 },
   callBtn: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
-  destinationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.gray, padding: spacing.md, borderRadius: radius.lg },
+  destinationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.offWhite, padding: spacing.md, borderRadius: radius.lg },
   destinationText: { flex: 1, fontSize: fontSizes.sm, color: colors.dark },
-  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.primary, padding: spacing.md, borderRadius: radius.full, ...shadows.md },
+  completeBtnShadowWrap: { borderRadius: radius.full, ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3) },
+  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: spacing.md, borderRadius: radius.full },
   completeBtnText: { fontSize: fontSizes.sm, fontWeight: '700', color: navy },
 });

@@ -5,11 +5,12 @@ import {
   StatusBar, RefreshControl, Alert
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Wallet, Clock, CheckCircle, TrendingUp, RefreshCw, Lock, Copy, Check, CreditCard } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import { walletAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, navy, white, mutedWhite, androidTopPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, white, mutedWhite, androidTopPadding, gradients, tintedShadow } from '../../utils/theme';
 
 // Momo stays as a fallback alongside the Paystack button below (outage,
 // or a driver who just prefers a direct transfer) rather than being
@@ -176,19 +177,26 @@ export default function EarningsScreen({ navigation }: any) {
             stays as a fallback. */}
         {commissionOwed > 0 && (
           <TouchableOpacity
-            style={styles.paystackBtn}
+            style={styles.paystackBtnShadowWrap}
             onPress={payWithPaystack}
             disabled={payingWithPaystack}
-            activeOpacity={0.8}
+            activeOpacity={0.88}
           >
-            {payingWithPaystack ? (
-              <ActivityIndicator color={navy} size="small" />
-            ) : (
-              <>
-                <CreditCard size={16} color={navy} />
-                <Text style={styles.paystackBtnText}>Pay with Paystack</Text>
-              </>
-            )}
+            <LinearGradient
+              colors={gradients.primaryCta}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.paystackBtn}
+            >
+              {payingWithPaystack ? (
+                <ActivityIndicator color={navy} size="small" />
+              ) : (
+                <>
+                  <CreditCard size={16} color={navy} />
+                  <Text style={styles.paystackBtnText}>Pay with Paystack</Text>
+                </>
+              )}
+            </LinearGradient>
           </TouchableOpacity>
         )}
 
@@ -295,18 +303,20 @@ const getStyles = (colors: any) => StyleSheet.create({
   scroll: { padding: spacing.lg, paddingBottom: spacing.xxl },
   earningsCard: {
     backgroundColor: 'rgba(76,175,80,0.08)',
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
     marginBottom: spacing.md,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(76,175,80,0.2)',
     gap: spacing.xs,
+    ...tintedShadow('#4CAF50', 0.12),
   },
   earningsValue: {
     fontSize: fontSizes.xxxl,
     fontWeight: '800',
     color: white,
+    letterSpacing: -0.5,
   },
   earningsLabel: {
     fontSize: fontSizes.md,
@@ -322,7 +332,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: mutedWhite(0.05),
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     padding: spacing.lg,
     marginBottom: spacing.sm,
     borderWidth: 1,
@@ -357,15 +367,14 @@ const getStyles = (colors: any) => StyleSheet.create({
     fontWeight: '700',
     color: white,
   },
+  paystackBtnShadowWrap: { borderRadius: radius.lg, marginBottom: spacing.sm, ...tintedShadow(colors.primaryDark, 0.3) },
   paystackBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.primary,
     borderRadius: radius.lg,
     paddingVertical: spacing.md,
-    marginBottom: spacing.sm,
   },
   paystackBtnText: {
     fontSize: fontSizes.sm,
@@ -374,7 +383,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   momoCard: {
     backgroundColor: mutedWhite(0.05),
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     padding: spacing.lg,
     marginBottom: spacing.sm,
     borderWidth: 1,
@@ -455,7 +464,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     backgroundColor: mutedWhite(0.04),
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
   },

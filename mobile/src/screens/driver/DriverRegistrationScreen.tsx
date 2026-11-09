@@ -5,9 +5,10 @@ import {
   Alert, StatusBar, Image
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Camera, ChevronRight, Check } from 'lucide-react-native';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, white, androidTopPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, white, androidTopPadding, gradients, tintedShadow } from '../../utils/theme';
 import { resizeForUpload } from '../../utils/imageResize';
 
 const CHECKLIST_ITEMS = [
@@ -21,7 +22,7 @@ const CHECKLIST_ITEMS = [
 export default function DriverRegistrationScreen({ route, navigation }: any) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   // Reached either fresh (no draft — a brand-new applicant) or from
   // DriverPendingScreen's "Update your application" button, which fetches
   // everything previously submitted so a driver only has to fix or add
@@ -256,19 +257,26 @@ export default function DriverRegistrationScreen({ route, navigation }: any) {
         )}
 
         <TouchableOpacity
-          style={[styles.nextBtn, !allChecked && styles.nextBtnDisabled]}
+          style={[styles.nextBtnShadowWrap, !allChecked && styles.nextBtnDisabled]}
           onPress={next}
           activeOpacity={0.9}
         >
-          <Text style={styles.nextBtnText}>Continue</Text>
-          <ChevronRight size={20} color={navy} />
+          <LinearGradient
+            colors={gradients.primaryCta}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.nextBtn}
+          >
+            <Text style={styles.nextBtnText}>Continue</Text>
+            <ChevronRight size={20} color={navy} />
+          </LinearGradient>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white, paddingTop: androidTopPadding },
   header: {
     flexDirection: 'row',
@@ -345,7 +353,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   uploadBox: {
     backgroundColor: colors.gray,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     borderWidth: 1.5,
     borderColor: colors.gray2,
     borderStyle: 'dashed',
@@ -407,11 +415,9 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   checklistCard: {
     backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    borderColor: colors.gray2,
+    borderRadius: radius.xl,
     overflow: 'hidden',
-    ...shadows.sm,
+    ...tintedShadow(navy, isDark ? 0 : 0.1),
   },
   checklistItem: {
     flexDirection: 'row',
@@ -458,15 +464,13 @@ const getStyles = (colors: any) => StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
   },
+  nextBtnShadowWrap: { borderRadius: radius.full, marginTop: spacing.lg, ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3) },
   nextBtn: {
     flexDirection: 'row',
-    backgroundColor: colors.primary,
     padding: spacing.md,
     borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: spacing.lg,
-    ...shadows.md,
   },
   nextBtnDisabled: { opacity: 0.4 },
   // nextBtn's background is the fixed brand yellow in both themes, so its
