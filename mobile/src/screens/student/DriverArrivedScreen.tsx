@@ -4,11 +4,12 @@ import {
   StatusBar, Linking, Alert, Image
 } from 'react-native';
 import RNMapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { LinearGradient } from 'expo-linear-gradient';
 import { MapPin, Phone, Clock, AlertTriangle } from 'lucide-react-native';
 import { driverAPI, ridesAPI } from '../../services/api';
 import socketService from '../../services/socket';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, navy } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, navy, white, gradients, tintedShadow } from '../../utils/theme';
 import { haversineMeters } from '../../utils/geo';
 
 const CAR_ICON = require('../../../assets/car-top.png');
@@ -39,7 +40,7 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
   // This screen re-renders every second for its wait timer plus every few
   // seconds for live GPS updates — without memoizing, getStyles reruns
   // StyleSheet.create on every one of those ticks for no reason.
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const [waitSeconds, setWaitSeconds] = useState(0);
   const [currentFare, setCurrentFare] = useState(parseFloat(trip.fare));
   const [waitPenalty, setWaitPenalty] = useState(0);
@@ -290,15 +291,21 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
           </View>
         </View>
 
-        {/* Fare */}
-        <View style={styles.fareRow}>
+        {/* Fare — the one gradient "hero" card on this screen, same
+            treatment as the passenger home screen's fare estimate. */}
+        <LinearGradient
+          colors={isDark ? gradients.navyCardDark : gradients.navyCard}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.fareRow}
+        >
           <Text style={styles.fareLabel}>
             {waitPenalty > 0 ? 'Updated fare' : 'Estimated fare'}
           </Text>
-          <Text style={[styles.fareValue, isInPenalty && { color: '#FF4444' }]}>
+          <Text style={[styles.fareValue, isInPenalty && { color: '#FF8A8A' }]}>
             GH₵{currentFare.toFixed(2)}
           </Text>
-        </View>
+        </LinearGradient>
 
         {/* Cancel */}
         <TouchableOpacity style={styles.cancelBtn} onPress={cancelRide}>
@@ -310,16 +317,16 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   mapContainer: { flex: 1 },
   bottomSheet: {
     backgroundColor: colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: radius.xl + 8,
+    borderTopRightRadius: radius.xl + 8,
     padding: spacing.lg,
     paddingBottom: bottomPadding,
-    ...shadows.lg,
+    ...tintedShadow(navy, isDark ? 0 : 0.25),
   },
   arrivedHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
   arrivedIconContainer: {
@@ -350,23 +357,23 @@ const getStyles = (colors: any) => StyleSheet.create({
   timerBold: { fontWeight: '800' },
   timerWarning: { fontSize: fontSizes.xs, color: colors.textMuted, marginTop: 2 },
   driverCard: {
-    backgroundColor: colors.gray,
+    backgroundColor: colors.offWhite,
     borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
   driverRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  driverAvatar: { width: 48, height: 48, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
+  driverAvatar: { width: 48, height: 48, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.white },
   driverAvatarText: { fontSize: fontSizes.lg, fontWeight: '800', color: navy },
   driverName: { fontSize: fontSizes.md, fontWeight: '700', color: colors.dark },
   driverVehicle: { fontSize: fontSizes.xs, color: colors.textMuted, marginTop: 2 },
   // Card background is light gray — brand yellow text there is ~1.9:1
   // contrast, so use navy instead.
   driverPlate: { fontSize: fontSizes.xs, color: colors.dark, fontWeight: '600', marginTop: 2 },
-  callBtn: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
-  fareRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
-  fareLabel: { fontSize: fontSizes.sm, color: colors.textMuted },
-  fareValue: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark },
+  callBtn: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3) },
+  fareRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md, padding: spacing.md, borderRadius: radius.lg, ...tintedShadow(navy, isDark ? 0 : 0.2) },
+  fareLabel: { fontSize: fontSizes.xs, color: 'rgba(255,255,255,0.55)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  fareValue: { fontSize: fontSizes.lg, fontWeight: '800', color: white },
   cancelBtn: { padding: spacing.md, borderRadius: radius.full, borderWidth: 1.5, borderColor: colors.gray2, alignItems: 'center' },
   cancelText: { fontSize: fontSizes.sm, color: colors.textMuted, fontWeight: '600' },
   pickupMarker: { width: 32, height: 32, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', ...shadows.md },

@@ -3,10 +3,11 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, Alert, TextInput, StatusBar, ScrollView, Modal
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Star, Flag, Check } from 'lucide-react-native';
 import { useRideStore } from '../../store/rideStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, white, androidTopPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, white, androidTopPadding, gradients, tintedShadow } from '../../utils/theme';
 import api from '../../services/api';
 
 export default function RideRatingScreen({ route, navigation }: any) {
@@ -14,7 +15,7 @@ export default function RideRatingScreen({ route, navigation }: any) {
   const { clearRide } = useRideStore();
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
@@ -86,7 +87,12 @@ export default function RideRatingScreen({ route, navigation }: any) {
           <Text style={styles.completeSubtitle}>You've arrived at your destination</Text>
         </View>
 
-        <View style={styles.fareCard}>
+        <LinearGradient
+          colors={gradients.navyCard}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.fareCard}
+        >
           <View style={styles.fareRow}>
             <View>
               <Text style={styles.fareLabel}>Total fare</Text>
@@ -108,7 +114,7 @@ export default function RideRatingScreen({ route, navigation }: any) {
               <Text style={styles.fareRoute} numberOfLines={1}>{trip.dropoff_address}</Text>
             </View>
           </View>
-        </View>
+        </LinearGradient>
 
         <Text style={styles.sectionTitle}>Rate your driver</Text>
         <View style={styles.starsRow}>
@@ -158,12 +164,19 @@ export default function RideRatingScreen({ route, navigation }: any) {
         />
 
         <TouchableOpacity
-          style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
+          style={[styles.submitBtnShadowWrap, loading && styles.submitBtnDisabled]}
           onPress={submit}
           disabled={loading}
           activeOpacity={0.9}
         >
-          <Text style={styles.submitBtnText}>Submit Rating</Text>
+          <LinearGradient
+            colors={gradients.primaryCta}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.submitBtn}
+          >
+            <Text style={styles.submitBtnText}>Submit Rating</Text>
+          </LinearGradient>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={goHome} style={styles.skipBtn}>
@@ -220,7 +233,7 @@ export default function RideRatingScreen({ route, navigation }: any) {
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white, paddingTop: androidTopPadding },
   scroll: { padding: spacing.lg, paddingBottom: spacing.xxl },
   completeBadge: { alignItems: 'center', marginBottom: spacing.lg, paddingTop: spacing.md },
@@ -231,15 +244,16 @@ const getStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.md,
-    ...shadows.md,
+    ...tintedShadow(colors.success, isDark ? 0 : 0.3),
   },
-  completeTitle: { fontSize: fontSizes.xl, fontWeight: '800', color: colors.dark, marginBottom: spacing.xs },
+  completeTitle: { fontSize: fontSizes.xl, fontWeight: '800', color: colors.dark, marginBottom: spacing.xs, letterSpacing: -0.3 },
   completeSubtitle: { fontSize: fontSizes.sm, color: colors.textMuted },
   // This is a fixed-dark "receipt" card by design (translucent-white label,
-  // brand-yellow value) — pinned to navy rather than colors.dark, which
-  // would invert to near-white in dark mode and break every child's
+  // brand-yellow value) — pinned to navy (via the gradients.navyCard
+  // gradient, not the isDark-switched variant) rather than colors.dark,
+  // which would invert to near-white in dark mode and break every child's
   // contrast (translucent white and brand yellow both assume a dark card).
-  fareCard: { backgroundColor: navy, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg, ...shadows.md },
+  fareCard: { borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.lg, ...tintedShadow(navy, isDark ? 0 : 0.25) },
   fareRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
   fareLabel: { fontSize: fontSizes.xs, color: 'rgba(255,255,255,0.5)', fontWeight: '500', marginBottom: spacing.xs, textAlign: 'center' },
   fareValue: { fontSize: fontSizes.xxl, fontWeight: '800', color: colors.primary, textAlign: 'center' },
@@ -258,26 +272,31 @@ const getStyles = (colors: any) => StyleSheet.create({
   // brand yellow text there is ~1.7:1 contrast, so use navy instead.
   ratingText: { textAlign: 'center', fontSize: fontSizes.md, fontWeight: '700', color: colors.dark, marginBottom: spacing.lg },
   tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
-  tag: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full, borderWidth: 1.5, borderColor: colors.gray2, backgroundColor: colors.gray },
-  tagActive: { borderColor: colors.primary, backgroundColor: '#FFFBF0' },
+  tag: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full, backgroundColor: colors.offWhite },
+  tagActive: { backgroundColor: colors.primary + '26', borderWidth: 1, borderColor: colors.primary + '40' },
   tagText: { fontSize: fontSizes.xs, fontWeight: '600', color: colors.textMuted },
   // tagActive's background is a fixed cream tone in both themes, so its
   // text is pinned to navy rather than colors.dark, which would invert to
   // near-white and disappear against it in dark mode.
   tagTextActive: { color: navy },
-  commentInput: { backgroundColor: colors.gray, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.gray2, padding: spacing.md, fontSize: fontSizes.sm, color: colors.dark, marginBottom: spacing.lg, minHeight: 80, textAlignVertical: 'top' },
-  submitBtn: { backgroundColor: colors.primary, padding: spacing.md, borderRadius: radius.full, alignItems: 'center', ...shadows.md },
+  commentInput: { backgroundColor: colors.offWhite, borderRadius: radius.md, padding: spacing.md, fontSize: fontSizes.sm, color: colors.dark, marginBottom: spacing.lg, minHeight: 80, textAlignVertical: 'top' },
+  submitBtnShadowWrap: { borderRadius: radius.full, ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.35) },
+  submitBtn: { padding: spacing.md, borderRadius: radius.full, alignItems: 'center' },
   submitBtnDisabled: { opacity: 0.5 },
   submitBtnText: { fontSize: fontSizes.md, fontWeight: '700', color: navy, letterSpacing: 0.3 },
   skipBtn: { alignItems: 'center', padding: spacing.md, marginTop: spacing.sm },
   skipText: { fontSize: fontSizes.sm, color: colors.textMuted, fontWeight: '600' },
   reportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: spacing.md, marginTop: spacing.xs },
   reportBtnText: { fontSize: fontSizes.sm, fontWeight: '600', color: colors.error },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, paddingBottom: spacing.xxl },
-  modalTitle: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark, marginBottom: spacing.xs },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(10,10,20,0.55)', justifyContent: 'flex-end' },
+  modalCard: {
+    backgroundColor: colors.white, borderTopLeftRadius: radius.xl + 8, borderTopRightRadius: radius.xl + 8,
+    padding: spacing.lg, paddingBottom: spacing.xxl,
+    ...tintedShadow(navy, isDark ? 0 : 0.25),
+  },
+  modalTitle: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark, marginBottom: spacing.xs, letterSpacing: -0.3 },
   modalSubtitle: { fontSize: fontSizes.sm, color: colors.textMuted, marginBottom: spacing.lg, lineHeight: 20 },
-  modalInput: { backgroundColor: colors.gray, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.gray2, padding: spacing.md, fontSize: fontSizes.sm, color: colors.dark, minHeight: 100, textAlignVertical: 'top', marginBottom: spacing.lg },
+  modalInput: { backgroundColor: colors.offWhite, borderRadius: radius.md, padding: spacing.md, fontSize: fontSizes.sm, color: colors.dark, minHeight: 100, textAlignVertical: 'top', marginBottom: spacing.lg },
   modalActions: { flexDirection: 'row', gap: spacing.sm },
   modalCancelBtn: { flex: 1, padding: spacing.md, borderRadius: radius.full, borderWidth: 1.5, borderColor: colors.gray2, alignItems: 'center' },
   modalCancelText: { fontSize: fontSizes.sm, fontWeight: '600', color: colors.textMuted },
