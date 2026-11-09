@@ -8,7 +8,7 @@ import {
 import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 import RNMapView, { Marker, Polyline, Polygon, PROVIDER_GOOGLE, Region } from 'react-native-maps';
-import { MapPin, Navigation, Menu, X, LocateFixed, Tag, ArrowRight } from 'lucide-react-native';
+import { MapPin, Navigation, Menu, X, LocateFixed, Tag, ArrowRight, Check, Users } from 'lucide-react-native';
 import SideMenu from '../../components/SideMenu';
 import RingPinIcon from '../../components/icons/RingPinIcon';
 import { useAnimatedRoute } from '../../hooks/useAnimatedRoute';
@@ -133,6 +133,7 @@ export default function StudentHomeScreen({ navigation }: any) {
   const [routeCoords, setRouteCoords] = useState<any[]>([]);
   const animatedRouteCoords = useAnimatedRoute(routeCoords);
   const [loading, setLoading] = useState(false);
+  const [shareOptedIn, setShareOptedIn] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -497,9 +498,11 @@ export default function StudentHomeScreen({ navigation }: any) {
         pickup_address: selectedPickup ? selectedPickup.name : userLocationName,
         dropoff_address: selectedDest.name,
         discount_code: selectedCodeString || undefined,
+        share_opted_in: shareOptedIn,
       });
       setActiveRide(res.data);
       clearDiscount();
+      setShareOptedIn(false);
       navigation.navigate('RideMatching', { trip: res.data });
     } catch (err: any) {
       Alert.alert('Error', err.response?.data?.error || 'Could not request ride');
@@ -747,6 +750,27 @@ export default function StudentHomeScreen({ navigation }: any) {
                     </View>
                   )}
 
+                  {/* Off by default — the fare shown above is always the
+                      real solo estimate, since a match isn't guaranteed.
+                      The actual discount only applies once a co-rider
+                      lands, which the server handles after the request. */}
+                  <TouchableOpacity
+                    style={styles.shareToggleRow}
+                    onPress={() => setShareOptedIn((v) => !v)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.shareCheckbox, shareOptedIn && styles.shareCheckboxOn]}>
+                      {shareOptedIn && <Check size={14} color={navy} strokeWidth={3} />}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.shareToggleTitle}>Share & Save</Text>
+                      <Text style={styles.shareToggleSubtitle}>
+                        Save GH₵3 if matched with another rider headed your way
+                      </Text>
+                    </View>
+                    <Users size={18} color={shareOptedIn ? colors.primary : colors.gray3} />
+                  </TouchableOpacity>
+
                   <TouchableOpacity
                     style={[styles.requestBtnShadowWrap, loading && styles.requestBtnDisabled]}
                     onPress={requestRide}
@@ -961,6 +985,20 @@ const getStyles = (colors: any, expandedHeight: number, isDark: boolean) => Styl
     marginTop: spacing.sm,
   },
   discountChipText: { flex: 1, fontSize: fontSizes.xs, fontWeight: '600', color: colors.dark },
+
+  shareToggleRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.offWhite, borderRadius: radius.lg,
+    padding: spacing.sm, marginTop: spacing.sm,
+  },
+  shareCheckbox: {
+    width: 22, height: 22, borderRadius: radius.sm,
+    borderWidth: 2, borderColor: colors.gray2,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  shareCheckboxOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  shareToggleTitle: { fontSize: fontSizes.sm, fontWeight: '700', color: colors.dark },
+  shareToggleSubtitle: { fontSize: fontSizes.xs, color: colors.textMuted, marginTop: 1 },
 
   requestBtnShadowWrap: { borderRadius: radius.full, ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.35) },
   requestBtn: {

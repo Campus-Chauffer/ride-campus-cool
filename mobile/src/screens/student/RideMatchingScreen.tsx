@@ -12,10 +12,11 @@ import socketService from '../../services/socket';
 import DriverFoundScreen from './DriverFoundScreen';
 import ActiveRideScreen from './ActiveRideScreen';
 import DriverArrivedScreen from './DriverArrivedScreen';
+import PickingUpPartnerScreen from './PickingUpPartnerScreen';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, shadows, navy, mutedOnDark, androidTopPadding, gradients, tintedShadow } from '../../utils/theme';
 
-type Phase = 'searching' | 'driver_found' | 'driver_arrived' | 'in_progress' | 'completed';
+type Phase = 'searching' | 'driver_found' | 'driver_arrived' | 'picking_up_partner' | 'in_progress' | 'completed';
 
 export default function RideMatchingScreen({ route, navigation }: any) {
   const { trip } = route.params;
@@ -94,11 +95,26 @@ export default function RideMatchingScreen({ route, navigation }: any) {
 
         const currentPhase = phaseRef.current;
 
+        // Ride-sharing: a co-rider not yet picked up means the driver still
+        // has another stop before the trip actually gets moving — this
+        // passenger is already onboard, so driver_arrived's "waiting on
+        // you" copy no longer fits; picking_up_partner takes over for that
+        // gap until the group's own auto-start flips everyone to
+        // in_progress at once.
+        const pendingPartner = (updated.co_riders || []).some(
+          (c: any) => !['arrived', 'in_progress', 'completed'].includes(c.status)
+        );
+
         if (updated.status === 'accepted' && currentPhase === 'searching') {
           updatePhase('driver_found');
-        } else if (updated.status === 'arrived' && (currentPhase === 'searching' || currentPhase === 'driver_found')) {
+        } else if (updated.status === 'arrived' && pendingPartner) {
+          updatePhase('picking_up_partner');
+        } else if (updated.status === 'arrived' && (currentPhase === 'searching' || currentPhase === 'driver_found' || currentPhase === 'picking_up_partner')) {
+          // The last branch also covers a matched partner cancelling before
+          // pickup — pendingPartner just went false, so this passenger
+          // falls back to the ordinary "waiting to start" screen.
           updatePhase('driver_arrived');
-        } else if (updated.status === 'in_progress' && (currentPhase === 'driver_found' || currentPhase === 'driver_arrived')) {
+        } else if (updated.status === 'in_progress' && (currentPhase === 'driver_found' || currentPhase === 'driver_arrived' || currentPhase === 'picking_up_partner')) {
           updatePhase('in_progress');
         } else if (updated.status === 'completed') {
           clearInterval(pollInterval.current);
@@ -162,7 +178,13 @@ export default function RideMatchingScreen({ route, navigation }: any) {
           </View>
 
           <Text style={styles.title}>Finding your driver</Text>
-          <Text style={styles.subtitle}>Looking for nearby drivers...</Text>
+          <Text style={styles.subtitle}>
+            {currentTrip.ride_type === 'shared'
+              ? ((currentTrip.co_riders?.length || 0) >= 1
+                  ? `Matched with ${currentTrip.co_riders[0].first_name} — fare updated!`
+                  : 'Looking for a rider to share with...')
+              : 'Looking for nearby drivers...'}
+          </Text>
 
           <View style={styles.tripCard}>
             <View style={styles.tripRow}>
@@ -193,17 +215,20 @@ export default function RideMatchingScreen({ route, navigation }: any) {
           >
             <View>
               <Text style={styles.fareLabel}>Estimated fare</Text>
-              {trip.discount_code && (
-                <Text style={styles.fareDiscountNote}>Code {trip.discount_code} applied</Text>
+              {currentTrip.discount_code && (
+                <Text style={styles.fareDiscountNote}>Code {currentTrip.discount_code} applied</Text>
+              )}
+              {!currentTrip.discount_code && (currentTrip.co_riders?.length || 0) >= 1 && (
+                <Text style={styles.fareDiscountNote}>Shared fare applied</Text>
               )}
             </View>
-            {trip.discount_code && parseFloat(trip.original_fare) !== parseFloat(trip.fare) ? (
+            {parseFloat(currentTrip.original_fare) !== parseFloat(currentTrip.fare) ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Text style={styles.fareStrike}>GH₵{Math.round(parseFloat(trip.original_fare))}</Text>
-                <Text style={styles.fareValue}>GH₵{Math.round(parseFloat(trip.fare))}</Text>
+                <Text style={styles.fareStrike}>GH₵{Math.round(parseFloat(currentTrip.original_fare))}</Text>
+                <Text style={styles.fareValue}>GH₵{Math.round(parseFloat(currentTrip.fare))}</Text>
               </View>
             ) : (
-              <Text style={styles.fareValue}>GH₵{Math.round(parseFloat(trip.fare))}</Text>
+              <Text style={styles.fareValue}>GH₵{Math.round(parseFloat(currentTrip.fare))}</Text>
             )}
           </LinearGradient>
 
@@ -226,6 +251,10 @@ export default function RideMatchingScreen({ route, navigation }: any) {
           onTripStarted={() => updatePhase('in_progress')}
           onCancelled={() => navigation.goBack()}
         />
+      )}
+
+      {phase === 'picking_up_partner' && (
+        <PickingUpPartnerScreen trip={currentTrip} />
       )}
 
       {phase === 'in_progress' && (

@@ -183,6 +183,14 @@ export default function Trips() {
                       <div className="flex items-center gap-2">
                         <MapPin size={13} className="text-yellow-400" />
                         <span className="text-white font-medium">#{trip.id}</span>
+                        {trip.ride_type === "shared" && (
+                          <span
+                            className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-yellow-400/10 text-yellow-400"
+                            title={trip.shared_group_id ? `Group #${trip.shared_group_id}` : undefined}
+                          >
+                            Shared
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-gray-400">{trip.passenger_id || "—"}</td>

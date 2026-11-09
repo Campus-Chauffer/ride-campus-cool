@@ -370,7 +370,7 @@ export default function DriverFoundScreen({ trip, onCancelled }: Props) {
             </TouchableOpacity>
           )}
 
-          {trip.discount_code && parseFloat(trip.original_fare) !== parseFloat(trip.fare) ? (
+          {parseFloat(trip.original_fare) !== parseFloat(trip.fare) ? (
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={styles.fareStrike}>GH₵{Math.round(parseFloat(trip.original_fare))}</Text>
               <Text style={styles.fareText}>GH₵{Math.round(parseFloat(trip.fare))}</Text>
