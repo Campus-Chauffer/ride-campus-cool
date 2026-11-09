@@ -117,7 +117,12 @@ export default function DiscountsScreen({ navigation }: any) {
 
                 <Text style={styles.sectionLabel}>Available to you</Text>
                 {active.length === 0 ? (
-                  <Text style={styles.emptyText}>No active codes right now</Text>
+                  <View style={styles.emptyState}>
+                    <View style={styles.emptyIcon}>
+                      <Tag size={20} color={colors.gray3} />
+                    </View>
+                    <Text style={styles.emptyText}>No active codes right now</Text>
+                  </View>
                 ) : (
                   active.map((item) => (
                     <View key={item.id} style={styles.card}>
@@ -198,20 +203,30 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   },
   appliedBannerText: { fontSize: fontSizes.sm, fontWeight: '600', color: colors.dark, flex: 1 },
   appliedBannerClear: { fontSize: fontSizes.sm, fontWeight: '700', color: colors.error },
-  manualRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
+  // A card-backed row, not a bare input — colors.offWhite on this screen's
+  // own colors.offWhite page background rendered with zero visible
+  // separation (no fill contrast, no border, nothing), effectively
+  // invisible. White + a soft shadow, matching the "card" style already
+  // used below for each discount code, actually reads as a field.
+  manualRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.white, borderRadius: radius.xl,
+    padding: spacing.xs + 2, marginBottom: spacing.lg,
+    ...tintedShadow(navy, isDark ? 0 : 0.1),
+  },
   manualInput: {
     flex: 1,
-    backgroundColor: colors.offWhite,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
     fontSize: fontSizes.sm,
     color: colors.dark,
   },
   manualBtn: {
     borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
+    height: 40,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   manualBtnText: { fontSize: fontSizes.sm, fontWeight: '700', color: navy },
   sectionLabel: {
@@ -222,7 +237,21 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: spacing.sm,
   },
-  emptyText: { fontSize: fontSizes.sm, color: colors.textMuted, marginBottom: spacing.md },
+  emptyState: {
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    marginBottom: spacing.md,
+    ...tintedShadow(navy, isDark ? 0 : 0.06),
+  },
+  emptyIcon: {
+    width: 44, height: 44, borderRadius: radius.full,
+    backgroundColor: colors.offWhite,
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  emptyText: { fontSize: fontSizes.sm, color: colors.textMuted, textAlign: 'center' },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
