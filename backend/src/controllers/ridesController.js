@@ -1,9 +1,12 @@
 const pool = require('../db/pool');
 const { findCodeByString, findBestAutoApplyCode, claimDiscount } = require('../utils/discounts');
+const { calculateFare } = require('../utils/fareCalc');
+const { attemptSharedMatch, recomputeGroupFares, getGroupSiblings } = require('../utils/sharedRides');
+const { sendPushNotification } = require('../utils/notifications');
 
 // Create a ride request
 const requestRide = async (req, res) => {
-  const { pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, pickup_address, dropoff_address, discount_code } = req.body;
+  const { pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, pickup_address, dropoff_address, discount_code, share_opted_in } = req.body;
   const passenger_id = req.user.id;
 
   if (!pickup_lat || !pickup_lng || !dropoff_lat || !dropoff_lng) {
@@ -24,29 +27,7 @@ const requestRide = async (req, res) => {
     // Calculate distance between pickup and dropoff
     const distanceKm = getDistanceKm(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
 
-    // Dynamic pricing logic
-    let fare;
-    const lowerDist = config.lower_distance_km;
-    const upperDist = config.upper_distance_km;
-    const lowerFlat = isNight ? config.night_lower_flat : config.day_lower_flat;
-    const upperFlat = isNight ? config.night_upper_flat : config.day_upper_flat;
-
-    if (distanceKm <= lowerDist) {
-      fare = lowerFlat;
-    } else if (distanceKm >= upperDist) {
-      fare = upperFlat;
-    } else {
-      fare = Math.round(config.base_fare + distanceKm * config.price_per_km);
-      fare = Math.min(Math.max(fare, lowerFlat), upperFlat);
-    }
-
-    // Hard floor, applied last regardless of which branch above produced
-    // the number — a single misconfigured tier (e.g. day_lower_flat set
-    // too low) can't silently undercut what's actually a fair minimum fare.
-    const MINIMUM_FARE_FALLBACK = 12;
-    const minimumFare = Number.isFinite(config.minimum_fare) ? config.minimum_fare : MINIMUM_FARE_FALLBACK;
-    fare = Math.max(fare, minimumFare);
-
+    const fare = calculateFare(distanceKm, config, isNight);
     const originalFare = fare;
     const commission = Math.round(originalFare * config.commission_rate * 100) / 100;
 
@@ -109,11 +90,67 @@ const requestRide = async (req, res) => {
       // with the ride at full price, no rollback needed.
     }
 
+    // Ride-sharing: try to attach to an existing open, compatible group
+    // BEFORE committing, so a lost match attempt just falls through to
+    // this trip becoming its own (brand new) anchor rather than needing a
+    // second round-trip. Either way this trip is dispatched/assigned
+    // exactly once — either directly (driver already on the matched
+    // group), implicitly (rides along with the anchor's own in-flight
+    // dispatch), or via a normal fresh broadcast as a new anchor.
+    let matchOutcome = null;
+    if (share_opted_in) {
+      matchOutcome = await attemptSharedMatch(client, trip, config);
+      if (matchOutcome.attached) {
+        trip = matchOutcome.trip;
+      } else {
+        const anchorResult = await client.query(
+          `UPDATE trips SET shared_group_id = id, ride_type = 'shared' WHERE id = $1 RETURNING *`,
+          [trip.id]
+        );
+        trip = anchorResult.rows[0];
+      }
+    }
+
     await client.query('COMMIT');
 
-    // Trigger dispatch in background
-    const { dispatchRide } = require('../controllers/dispatchController');
-    dispatchRide(trip.id);
+    if (!matchOutcome || !matchOutcome.attached) {
+      // No match found — this trip is its own (brand new) anchor, dispatch
+      // exactly like a normal solo request, unchanged.
+      const { dispatchRide } = require('../controllers/dispatchController');
+      dispatchRide(trip.id);
+    } else if (matchOutcome.driverIdToNotify) {
+      // Attached directly onto a group that already has a driver — notify
+      // that driver of the new stop instead of dispatching.
+      const driverUser = await pool.query(
+        `SELECT u.push_token FROM drivers d JOIN users u ON d.user_id = u.id WHERE d.id = $1`,
+        [matchOutcome.driverIdToNotify]
+      );
+      sendPushNotification(
+        driverUser.rows[0]?.push_token,
+        'New stop added',
+        `A rider is sharing this trip — pick them up at ${trip.pickup_address}, along your route.`,
+        { type: 'shared_ride_matched', trip_id: trip.id }
+      ).catch(() => {});
+    }
+    // else: attached to a group with no driver yet — rides along with the
+    // anchor's own dispatch (already triggered when the anchor was
+    // created), nothing further to do here.
+
+    if (matchOutcome?.attached) {
+      // Tell the anchor passenger they've been matched and their fare just
+      // dropped — they're off on RideMatchingScreen/PickingUpPartnerScreen
+      // with no other way to learn this landed.
+      const anchorUser = await pool.query(
+        `SELECT push_token FROM users WHERE id = $1`,
+        [matchOutcome.anchorPassengerId]
+      );
+      sendPushNotification(
+        anchorUser.rows[0]?.push_token,
+        "You've been matched!",
+        `Another rider is sharing your trip — your fare just dropped to GH₵${trip.fare}.`,
+        { type: 'shared_ride_matched', trip_id: trip.id }
+      ).catch(() => {});
+    }
 
     res.status(201).json(trip);
   } catch (err) {
@@ -211,7 +248,9 @@ const getTripStatus = async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Trip not found' });
     }
-    res.json(result.rows[0]);
+    const trip = result.rows[0];
+    const co_riders = await getGroupSiblings(pool, trip);
+    res.json({ ...trip, co_riders });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
@@ -233,7 +272,47 @@ const cancelRide = async (req, res) => {
       return res.status(400).json({ error: 'Trip not found or cannot be cancelled' });
     }
 
-    res.json(result.rows[0]);
+    const trip = result.rows[0];
+
+    // Ride-sharing: this guard (status IN requested/offered/accepted) is
+    // already exactly the right cutoff for a matched co-rider cancelling —
+    // once someone's been picked up ('arrived' or later) they can't
+    // self-cancel via this endpoint at all, so there's nothing to revert
+    // for that case. If the group is back down to 1 active member, their
+    // fare reverts to full solo and both they and the driver (if assigned
+    // by then) are alerted.
+    if (trip.shared_group_id) {
+      const configResult = await pool.query('SELECT key, value FROM config');
+      const config = {};
+      configResult.rows.forEach((row) => { config[row.key] = parseFloat(row.value); });
+
+      const updatedMembers = await recomputeGroupFares(pool, trip.shared_group_id, config);
+      if (updatedMembers.length === 1) {
+        const remaining = updatedMembers[0];
+        const remainingUser = await pool.query('SELECT push_token FROM users WHERE id = $1', [remaining.passenger_id]);
+        sendPushNotification(
+          remainingUser.rows[0]?.push_token,
+          'Ride partner cancelled',
+          `Your ride partner cancelled — continuing as a solo trip at GH₵${remaining.fare}.`,
+          { type: 'shared_ride_partner_cancelled', trip_id: remaining.id }
+        ).catch(() => {});
+
+        if (remaining.driver_id) {
+          const driverUser = await pool.query(
+            `SELECT u.push_token FROM drivers d JOIN users u ON d.user_id = u.id WHERE d.id = $1`,
+            [remaining.driver_id]
+          );
+          sendPushNotification(
+            driverUser.rows[0]?.push_token,
+            'Ride partner cancelled',
+            'The second passenger cancelled — this is now a solo trip.',
+            { type: 'shared_ride_partner_cancelled', trip_id: remaining.id }
+          ).catch(() => {});
+        }
+      }
+    }
+
+    res.json(trip);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
