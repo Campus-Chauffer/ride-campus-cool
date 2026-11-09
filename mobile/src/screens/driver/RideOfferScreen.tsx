@@ -3,11 +3,12 @@ import {
   View, Text, StyleSheet, Animated, PanResponder,
   Dimensions, Alert, StatusBar
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { MapPin, Navigation, Clock } from 'lucide-react-native';
 import { driverAPI } from '../../services/api';
 import { useRideStore } from '../../store/rideStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, androidTopPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, white, androidTopPadding, gradients, tintedShadow } from '../../utils/theme';
 
 const { width } = Dimensions.get('window');
 // Fallback estimate used only until the track's real width is measured —
@@ -31,7 +32,7 @@ export default function RideOfferScreen({ trip, onAccepted, onDeclined, timer }:
   // This screen re-renders once a second for its countdown timer — without
   // memoizing, getStyles(colors) reruns StyleSheet.create on every one of
   // those ticks for no reason, since colors itself hasn't changed.
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const slideX = useRef(new Animated.Value(0)).current;
   const [accepted, setAccepted] = useState(false);
   const [trackWidth, setTrackWidth] = useState(FALLBACK_SLIDER_WIDTH);
@@ -115,8 +116,15 @@ export default function RideOfferScreen({ trip, onAccepted, onDeclined, timer }:
         </View>
       </View>
 
-      {/* Fare */}
-      <View style={styles.fareRow}>
+      {/* Fare — the one hero moment on this screen, so it gets the gradient
+          card treatment rather than the flat gray fill the route card
+          below still uses. */}
+      <LinearGradient
+        colors={isDark ? gradients.navyCardDark : gradients.navyCard}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.fareRow}
+      >
         <View style={styles.fareItem}>
           <Text style={styles.fareLabel}>Fare</Text>
           <Text style={styles.fareValue}>GH₵{trip.fare}</Text>
@@ -135,7 +143,7 @@ export default function RideOfferScreen({ trip, onAccepted, onDeclined, timer }:
             GH₵{(parseFloat(trip.fare) - parseFloat(trip.commission)).toFixed(2)}
           </Text>
         </View>
-      </View>
+      </LinearGradient>
 
       {trip.discount_code && (
         <View style={styles.promoBadge}>
@@ -169,7 +177,7 @@ export default function RideOfferScreen({ trip, onAccepted, onDeclined, timer }:
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.white,
@@ -188,6 +196,8 @@ const getStyles = (colors: any) => StyleSheet.create({
     borderWidth: 3,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: colors.white,
+    ...tintedShadow(navy, isDark ? 0 : 0.12),
   },
   timerText: {
     fontSize: fontSizes.xxl,
@@ -211,8 +221,8 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   routeCard: {
     width: '100%',
-    backgroundColor: colors.gray,
-    borderRadius: radius.lg,
+    backgroundColor: colors.offWhite,
+    borderRadius: radius.xl,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
@@ -246,10 +256,10 @@ const getStyles = (colors: any) => StyleSheet.create({
   fareRow: {
     flexDirection: 'row',
     width: '100%',
-    backgroundColor: colors.gray,
-    borderRadius: radius.lg,
-    padding: spacing.md,
+    borderRadius: radius.xl,
+    padding: spacing.md + 2,
     marginBottom: spacing.xl,
+    ...tintedShadow(navy, isDark ? 0 : 0.25),
   },
   fareItem: {
     flex: 1,
@@ -257,24 +267,24 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   fareDivider: {
     width: 1,
-    backgroundColor: colors.gray2,
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
   fareLabel: {
     fontSize: fontSizes.xs,
-    color: colors.textMuted,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '600',
     marginBottom: 4,
   },
   fareValue: {
     fontSize: fontSizes.lg,
     fontWeight: '800',
-    color: colors.dark,
+    color: white,
   },
   promoBadge: {
     backgroundColor: colors.primary + '18',
     borderRadius: radius.md,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    marginTop: -spacing.lg,
     marginBottom: spacing.lg,
     width: '100%',
     alignItems: 'center',
@@ -310,7 +320,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.dark,
     justifyContent: 'center',
     alignItems: 'center',
-    ...shadows.md,
+    ...tintedShadow(navy, isDark ? 0 : 0.2),
   },
   declineText: {
     fontSize: fontSizes.md,
