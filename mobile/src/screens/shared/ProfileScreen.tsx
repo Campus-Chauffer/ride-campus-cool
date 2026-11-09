@@ -91,7 +91,7 @@ export default function ProfileScreen({ navigation }: any) {
         </View>
       </LinearGradient>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollBg} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Stats — deliberately overlaps the hero's bottom edge, the one
             place this screen borrows the "card floats over the header"
             move from the passenger/driver home screens, for continuity. */}
@@ -181,8 +181,16 @@ export default function ProfileScreen({ navigation }: any) {
 }
 
 const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.offWhite, paddingTop: androidTopPadding },
+  // Matches the hero's own backdrop (colors.dark), not the page's offWhite
+  // — SafeAreaView's top inset reservation on iOS shows whatever
+  // background sits behind it, and since the hero is a child rendered
+  // below that inset, a lighter container color here left a visible gray
+  // gap above the hero instead of it reading as one continuous navy
+  // surface behind the status bar. The actual page background now lives
+  // on the ScrollView itself (scrollBg, below).
+  container: { flex: 1, backgroundColor: colors.dark, paddingTop: androidTopPadding },
   loadingContainer: { flex: 1, backgroundColor: colors.dark, paddingTop: androidTopPadding },
+  scrollBg: { flex: 1, backgroundColor: colors.offWhite },
   hero: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
