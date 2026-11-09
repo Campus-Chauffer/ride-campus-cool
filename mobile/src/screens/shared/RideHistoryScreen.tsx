@@ -6,7 +6,7 @@ import {
 import { ArrowLeft, MapPin, Navigation, Clock, Star } from 'lucide-react-native';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, androidTopPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, androidTopPadding, tintedShadow } from '../../utils/theme';
 import { ridesAPI, driverAPI } from '../../services/api';
 
 // Depends on the current theme's colors, so it's a function computed inside
@@ -33,7 +33,7 @@ export default function RideHistoryScreen({ navigation }: any) {
   const { user } = useAuthStore();
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   const STATUS_COLORS = getStatusColors(colors);
   const [rides, setRides] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,7 +146,7 @@ export default function RideHistoryScreen({ navigation }: any) {
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.offWhite, paddingTop: androidTopPadding },
   header: {
     flexDirection: 'row',
@@ -154,28 +154,28 @@ const getStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray2,
+    backgroundColor: colors.offWhite,
   },
   backBtn: {
     width: 40, height: 40,
     borderRadius: radius.md,
-    backgroundColor: colors.gray,
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
+    ...tintedShadow(navy, isDark ? 0 : 0.08),
   },
   headerTitle: {
     fontSize: fontSizes.lg,
-    fontWeight: '700',
+    fontWeight: '800',
     color: colors.dark,
+    letterSpacing: -0.3,
   },
-  list: { padding: spacing.lg, gap: spacing.sm },
+  list: { padding: spacing.lg, gap: spacing.md },
   rideCard: {
     backgroundColor: colors.white,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     padding: spacing.md,
-    ...shadows.sm,
+    ...tintedShadow(navy, isDark ? 0 : 0.1),
   },
   rideHeader: {
     flexDirection: 'row',
@@ -205,7 +205,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     color: colors.dark,
   },
   routeSection: {
-    backgroundColor: colors.gray,
+    backgroundColor: colors.offWhite,
     borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.sm,
@@ -255,19 +255,15 @@ const getStyles = (colors: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#FFFBF0',
+    backgroundColor: colors.primary + '26',
     paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.primary,
   },
   rateBtnText: {
     fontSize: fontSizes.xs,
     fontWeight: '700',
-    // Fixed cream background in both themes, so pinned to navy — colors.dark
-    // would invert to near-white in dark mode and disappear against it.
-    color: navy,
+    color: colors.primaryDark,
   },
   emptyState: {
     flex: 1,
