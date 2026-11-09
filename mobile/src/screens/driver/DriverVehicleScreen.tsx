@@ -5,16 +5,17 @@ import {
   Alert, ActivityIndicator, StatusBar, Image
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, ChevronRight, Camera, Check } from 'lucide-react-native';
 import { driverRegistrationAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, white, androidTopPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, white, androidTopPadding, gradients, tintedShadow } from '../../utils/theme';
 import { resizeForUpload } from '../../utils/imageResize';
 
 export default function DriverVehicleScreen({ route, navigation }: any) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   const { draft, ...docData } = route.params;
 
   const [vehicleMake, setVehicleMake] = useState(draft?.vehicle_make || '');
@@ -186,25 +187,32 @@ export default function DriverVehicleScreen({ route, navigation }: any) {
         </View>
 
         <TouchableOpacity
-          style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
+          style={[styles.submitBtnShadowWrap, loading && styles.submitBtnDisabled]}
           onPress={submit}
           disabled={loading}
           activeOpacity={0.9}
         >
-          {loading
-            ? <ActivityIndicator color={navy} />
-            : <>
-                <Text style={styles.submitBtnText}>Submit for Approval</Text>
-                <ChevronRight size={20} color={navy} />
-              </>
-          }
+          <LinearGradient
+            colors={gradients.primaryCta}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.submitBtn}
+          >
+            {loading
+              ? <ActivityIndicator color={navy} />
+              : <>
+                  <Text style={styles.submitBtnText}>Submit for Approval</Text>
+                  <ChevronRight size={20} color={navy} />
+                </>
+            }
+          </LinearGradient>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white, paddingTop: androidTopPadding },
   header: {
     flexDirection: 'row',
@@ -292,7 +300,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   uploadBox: {
     flex: 1,
     backgroundColor: colors.gray,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     borderWidth: 1.5,
     borderColor: colors.gray2,
     borderStyle: 'dashed',
@@ -324,14 +332,13 @@ const getStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  submitBtnShadowWrap: { borderRadius: radius.full, ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3) },
   submitBtn: {
     flexDirection: 'row',
-    backgroundColor: colors.primary,
     padding: spacing.md,
     borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadows.md,
   },
   submitBtnDisabled: { opacity: 0.5 },
   // submitBtn's background is the fixed brand yellow in both themes, so its

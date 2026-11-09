@@ -3,11 +3,12 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, StatusBar, ActivityIndicator, Alert
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Clock, XCircle, LogOut, CheckCircle } from 'lucide-react-native';
 import { authAPI, driverRegistrationAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, navy, shadows, mutedOnDark, androidTopPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, mutedOnDark, androidTopPadding, gradients, tintedShadow } from '../../utils/theme';
 
 export default function DriverPendingScreen({ navigation }: any) {
   const { logout, user, setAuth } = useAuthStore();
@@ -88,9 +89,14 @@ export default function DriverPendingScreen({ navigation }: any) {
       <View style={styles.content}>
         {status === 'pending' && (
           <>
-            <View style={styles.iconContainer}>
-              <Clock size={48} color={colors.primary} />
-            </View>
+            <LinearGradient
+              colors={gradients.primaryCta}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.iconContainer}
+            >
+              <Clock size={44} color={navy} />
+            </LinearGradient>
             <Text style={styles.title}>Application Submitted</Text>
             <Text style={styles.subtitle}>
               Your documents are being reviewed by our team. This usually takes 24-48 hours.
@@ -132,22 +138,35 @@ export default function DriverPendingScreen({ navigation }: any) {
 
         {status === 'approved' && isPassengerApplying && (
           <>
-            <View style={styles.iconContainer}>
-              <CheckCircle size={48} color={colors.success} />
-            </View>
+            <LinearGradient
+              colors={gradients.successCta}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.iconContainer}
+            >
+              <CheckCircle size={44} color={navy} />
+            </LinearGradient>
             <Text style={styles.title}>You're Approved!</Text>
             <Text style={styles.subtitle}>
               Your driver application has been approved. Switch to driver mode whenever you're ready to start earning — you can always switch back.
             </Text>
             <TouchableOpacity
-              style={styles.switchBtn}
+              style={styles.switchBtnShadowWrap}
               onPress={switchToDriverMode}
               disabled={switching}
+              activeOpacity={0.88}
             >
-              {switching
-                ? <ActivityIndicator color={navy} />
-                : <Text style={styles.switchBtnText}>Switch to Driver Mode</Text>
-              }
+              <LinearGradient
+                colors={gradients.primaryCta}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.switchBtn}
+              >
+                {switching
+                  ? <ActivityIndicator color={navy} />
+                  : <Text style={styles.switchBtnText}>Switch to Driver Mode</Text>
+                }
+              </LinearGradient>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => navigation.goBack()}>
               <Text style={styles.laterText}>Maybe later</Text>
@@ -194,12 +213,10 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   iconContainer: {
     width: 100, height: 100,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(255,184,0,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(255,184,0,0.2)',
+    ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3),
   },
   iconError: {
     backgroundColor: 'rgba(244,67,54,0.1)',
@@ -222,7 +239,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   },
   stepsCard: {
     backgroundColor: mutedOnDark(isDark, 0.05),
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     padding: spacing.lg,
     width: '100%',
     marginBottom: spacing.lg,
@@ -254,13 +271,12 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     color: mutedOnDark(isDark, 0.3),
     textAlign: 'center',
   },
+  switchBtnShadowWrap: { borderRadius: radius.full, marginTop: spacing.sm, ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3) },
   switchBtn: {
-    backgroundColor: colors.primary,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
     borderRadius: radius.full,
-    marginTop: spacing.sm,
-    ...shadows.md,
+    alignItems: 'center',
   },
   // switchBtn's background is the fixed brand yellow in both themes, so its
   // text is pinned to navy rather than colors.dark, which would invert to

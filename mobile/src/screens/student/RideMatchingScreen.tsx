@@ -4,6 +4,7 @@ import {
   TouchableOpacity, Alert, Animated, StatusBar,
   BackHandler
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { X, MapPin, Navigation } from 'lucide-react-native';
 import { ridesAPI } from '../../services/api';
 import { useRideStore } from '../../store/rideStore';
@@ -12,7 +13,7 @@ import DriverFoundScreen from './DriverFoundScreen';
 import ActiveRideScreen from './ActiveRideScreen';
 import DriverArrivedScreen from './DriverArrivedScreen';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, mutedOnDark, androidTopPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, mutedOnDark, androidTopPadding, gradients, tintedShadow } from '../../utils/theme';
 
 type Phase = 'searching' | 'driver_found' | 'driver_arrived' | 'in_progress' | 'completed';
 
@@ -181,7 +182,15 @@ export default function RideMatchingScreen({ route, navigation }: any) {
             </View>
           </View>
 
-          <View style={styles.fareRow}>
+          {/* Gold gradient here rather than the navy hero card used
+              elsewhere — this screen's own background is already dark navy,
+              so the gold card is what actually stands out against it. */}
+          <LinearGradient
+            colors={gradients.primaryCta}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.fareRow}
+          >
             <View>
               <Text style={styles.fareLabel}>Estimated fare</Text>
               {trip.discount_code && (
@@ -196,7 +205,7 @@ export default function RideMatchingScreen({ route, navigation }: any) {
             ) : (
               <Text style={styles.fareValue}>GH₵{Math.round(parseFloat(trip.fare))}</Text>
             )}
-          </View>
+          </LinearGradient>
 
           <TouchableOpacity style={styles.cancelBtn} onPress={cancelRide}>
             <Text style={styles.cancelText}>Cancel Ride</Text>
@@ -278,10 +287,12 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   },
   tripCard: {
     backgroundColor: mutedOnDark(isDark, 0.08),
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     padding: spacing.md,
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: mutedOnDark(isDark, 0.06),
   },
   tripRow: {
     flexDirection: 'row',
@@ -317,32 +328,35 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: spacing.lg,
     marginBottom: spacing.xl,
-    backgroundColor: 'rgba(255,184,0,0.1)',
     padding: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(255,184,0,0.2)',
+    borderRadius: radius.lg + 2,
+    ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3),
   },
   fareLabel: {
-    fontSize: fontSizes.sm,
-    color: mutedOnDark(isDark, 0.6),
-    fontWeight: '500',
+    fontSize: fontSizes.xs,
+    color: navy,
+    opacity: 0.6,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   fareValue: {
     fontSize: fontSizes.lg,
     fontWeight: '800',
-    color: colors.primary,
+    color: navy,
   },
   fareStrike: {
     fontSize: fontSizes.sm,
     fontWeight: '600',
-    color: mutedOnDark(isDark, 0.5),
+    color: navy,
+    opacity: 0.45,
     textDecorationLine: 'line-through',
   },
   fareDiscountNote: {
     fontSize: fontSizes.xs,
     fontWeight: '600',
-    color: colors.primary,
+    color: navy,
+    opacity: 0.7,
     marginTop: 2,
   },
   cancelBtn: {

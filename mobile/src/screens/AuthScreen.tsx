@@ -4,18 +4,19 @@ import {
   StyleSheet, SafeAreaView, ActivityIndicator,
   Alert, StatusBar, KeyboardAvoidingView, Platform
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Phone, KeyRound, User } from 'lucide-react-native';
 import { authAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, androidTopPadding } from '../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, androidTopPadding, gradients, tintedShadow } from '../utils/theme';
 
 export default function AuthScreen({ route, navigation }: any) {
   const { role } = route.params;
   const { setAuth } = useAuthStore();
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
 
   const [step, setStep] = useState<'phone' | 'otp' | 'profile'>('phone');
   const [phone, setPhone] = useState('');
@@ -101,17 +102,17 @@ export default function AuthScreen({ route, navigation }: any) {
 
   const stepConfig = {
     phone: {
-      icon: <Phone size={22} color={colors.primary} />,
+      icon: <Phone size={22} color={navy} />,
       title: 'Enter your number',
       subtitle: "We'll send a verification code",
     },
     otp: {
-      icon: <KeyRound size={22} color={colors.primary} />,
+      icon: <KeyRound size={22} color={navy} />,
       title: 'Verify your number',
       subtitle: 'Check your server terminal for the code',
     },
     profile: {
-      icon: <User size={22} color={colors.primary} />,
+      icon: <User size={22} color={navy} />,
       title: 'Complete your profile',
       subtitle: 'Tell us a bit about yourself',
     },
@@ -148,9 +149,14 @@ export default function AuthScreen({ route, navigation }: any) {
         </View>
 
         <View style={styles.content}>
-          <View style={styles.iconContainer}>
+          <LinearGradient
+            colors={gradients.primaryCta}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.iconContainer}
+          >
             {current.icon}
-          </View>
+          </LinearGradient>
           <Text style={styles.title}>{current.title}</Text>
           <Text style={styles.subtitle}>{current.subtitle}</Text>
 
@@ -171,15 +177,17 @@ export default function AuthScreen({ route, navigation }: any) {
                 </View>
               </View>
               <TouchableOpacity
-                style={[styles.btn, loading && styles.btnDisabled]}
+                style={[styles.btnShadowWrap, loading && styles.btnDisabled]}
                 onPress={requestOTP}
                 disabled={loading}
                 activeOpacity={0.8}
               >
-                {loading
-                  ? <ActivityIndicator color={colors.dark} />
-                  : <Text style={styles.btnText}>Send Code</Text>
-                }
+                <LinearGradient colors={gradients.primaryCta} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.btn}>
+                  {loading
+                    ? <ActivityIndicator color={navy} />
+                    : <Text style={styles.btnText}>Send Code</Text>
+                  }
+                </LinearGradient>
               </TouchableOpacity>
             </>
           )}
@@ -199,15 +207,17 @@ export default function AuthScreen({ route, navigation }: any) {
                 />
               </View>
               <TouchableOpacity
-                style={[styles.btn, loading && styles.btnDisabled]}
+                style={[styles.btnShadowWrap, loading && styles.btnDisabled]}
                 onPress={verifyOTP}
                 disabled={loading}
                 activeOpacity={0.8}
               >
-                {loading
-                  ? <ActivityIndicator color={colors.dark} />
-                  : <Text style={styles.btnText}>Verify</Text>
-                }
+                <LinearGradient colors={gradients.primaryCta} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.btn}>
+                  {loading
+                    ? <ActivityIndicator color={navy} />
+                    : <Text style={styles.btnText}>Verify</Text>
+                  }
+                </LinearGradient>
               </TouchableOpacity>
               <TouchableOpacity onPress={requestOTP} style={styles.resendBtn}>
                 <Text style={styles.resendText}>Resend code</Text>
@@ -249,15 +259,17 @@ export default function AuthScreen({ route, navigation }: any) {
                 />
               </View>
               <TouchableOpacity
-                style={[styles.btn, loading && styles.btnDisabled]}
+                style={[styles.btnShadowWrap, loading && styles.btnDisabled]}
                 onPress={completeProfile}
                 disabled={loading}
                 activeOpacity={0.8}
               >
-                {loading
-                  ? <ActivityIndicator color={colors.dark} />
-                  : <Text style={styles.btnText}>Get Started</Text>
-                }
+                <LinearGradient colors={gradients.primaryCta} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.btn}>
+                  {loading
+                    ? <ActivityIndicator color={navy} />
+                    : <Text style={styles.btnText}>Get Started</Text>
+                  }
+                </LinearGradient>
               </TouchableOpacity>
             </>
           )}
@@ -267,7 +279,7 @@ export default function AuthScreen({ route, navigation }: any) {
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white, paddingTop: androidTopPadding },
   keyboardView: { flex: 1 },
   header: {
@@ -307,12 +319,12 @@ const getStyles = (colors: any) => StyleSheet.create({
     paddingTop: spacing.xl,
   },
   iconContainer: {
-    width: 48, height: 48,
-    borderRadius: radius.md,
-    backgroundColor: 'rgba(255,184,0,0.12)',
+    width: 52, height: 52,
+    borderRadius: radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.md,
+    ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3),
   },
   title: {
     fontSize: fontSizes.xl,
@@ -339,10 +351,8 @@ const getStyles = (colors: any) => StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.gray,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.gray2,
+    backgroundColor: colors.offWhite,
+    borderRadius: radius.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
     fontSize: fontSizes.md,
@@ -368,19 +378,17 @@ const getStyles = (colors: any) => StyleSheet.create({
     textAlign: 'center',
     fontWeight: '700',
   },
+  btnShadowWrap: { borderRadius: radius.full, marginTop: spacing.sm, ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3) },
   btn: {
-    backgroundColor: colors.primary,
     padding: spacing.md,
     borderRadius: radius.full,
     alignItems: 'center',
-    marginTop: spacing.sm,
-    ...shadows.md,
   },
-  btnDisabled: { opacity: 0.5 },
+  btnDisabled: { opacity: 0.5, shadowOpacity: 0, elevation: 0 },
   btnText: {
     fontSize: fontSizes.md,
     fontWeight: '700',
-    color: colors.dark,
+    color: navy,
     letterSpacing: 0.3,
   },
   resendBtn: {

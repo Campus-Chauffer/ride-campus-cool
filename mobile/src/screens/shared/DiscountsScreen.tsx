@@ -4,9 +4,10 @@ import {
   SafeAreaView, ScrollView, ActivityIndicator, StatusBar,
   TextInput, Alert, KeyboardAvoidingView, Platform
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Tag, Check } from 'lucide-react-native';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, androidTopPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, androidTopPadding, gradients, tintedShadow } from '../../utils/theme';
 import { discountAPI } from '../../services/api';
 import { useDiscountStore } from '../../store/discountStore';
 
@@ -28,7 +29,7 @@ function describeCode(item: any): string {
 export default function DiscountsScreen({ navigation }: any) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   const { selectedCodeString, setSelectedCode, setManualCode, clear } = useDiscountStore();
 
   const [active, setActive] = useState<any[]>([]);
@@ -102,8 +103,15 @@ export default function DiscountsScreen({ navigation }: any) {
                     value={manualEntry}
                     onChangeText={setManualEntry}
                   />
-                  <TouchableOpacity style={styles.manualBtn} onPress={applyManualCode}>
-                    <Text style={styles.manualBtnText}>Apply</Text>
+                  <TouchableOpacity onPress={applyManualCode} activeOpacity={0.88}>
+                    <LinearGradient
+                      colors={gradients.primaryCta}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.manualBtn}
+                    >
+                      <Text style={styles.manualBtnText}>Apply</Text>
+                    </LinearGradient>
                   </TouchableOpacity>
                 </View>
 
@@ -159,7 +167,7 @@ export default function DiscountsScreen({ navigation }: any) {
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.offWhite, paddingTop: androidTopPadding },
   header: {
     flexDirection: 'row',
@@ -167,18 +175,17 @@ const getStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray2,
+    backgroundColor: colors.offWhite,
   },
   backBtn: {
     width: 40, height: 40,
     borderRadius: radius.md,
-    backgroundColor: colors.gray,
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
+    ...tintedShadow(navy, isDark ? 0 : 0.08),
   },
-  headerTitle: { fontSize: fontSizes.lg, fontWeight: '700', color: colors.dark },
+  headerTitle: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark, letterSpacing: -0.3 },
   list: { padding: spacing.lg, gap: spacing.sm },
   appliedBanner: {
     flexDirection: 'row',
@@ -194,17 +201,14 @@ const getStyles = (colors: any) => StyleSheet.create({
   manualRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
   manualInput: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.offWhite,
     borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.gray2,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
     fontSize: fontSizes.sm,
     color: colors.dark,
   },
   manualBtn: {
-    backgroundColor: colors.primary,
     borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
     justifyContent: 'center',
@@ -224,16 +228,16 @@ const getStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     backgroundColor: colors.white,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     padding: spacing.md,
     marginBottom: spacing.sm,
-    ...shadows.sm,
+    ...tintedShadow(navy, isDark ? 0 : 0.1),
   },
   cardDisabled: { opacity: 0.55 },
   cardIcon: {
     width: 36, height: 36,
     borderRadius: radius.md,
-    backgroundColor: colors.gray,
+    backgroundColor: colors.offWhite,
     justifyContent: 'center',
     alignItems: 'center',
   },

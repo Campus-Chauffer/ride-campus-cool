@@ -5,11 +5,12 @@ import {
 } from 'react-native';
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
+import { LinearGradient } from 'expo-linear-gradient';
 import { CheckCircle, MapPin, Phone } from 'lucide-react-native';
 import socketService from '../../services/socket';
 import { ridesAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, navy } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, navy, gradients, tintedShadow } from '../../utils/theme';
 import { shouldRefreshRoute, haversineMeters } from '../../utils/geo';
 import { useAnimatedRoute } from '../../hooks/useAnimatedRoute';
 
@@ -38,7 +39,7 @@ interface Props {
 export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [driverHeading, setDriverHeading] = useState(0);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
@@ -182,7 +183,15 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
               flat
               tracksViewChanges={false}
             >
-              <Image source={CAR_ICON} style={styles.carIcon} resizeMode="contain" />
+              {/* A white halo stays a solid, unmistakable disc at marker
+                  scale no matter how the car photo rotates with heading —
+                  drivers reported confusing this marker with the pickup
+                  pin below, since the car asset is mostly dark glass/cabin
+                  from this top-down angle and read as just another dark
+                  blob next to it. */}
+              <View style={styles.carMarkerBadge}>
+                <Image source={CAR_ICON} style={styles.carIcon} resizeMode="contain" />
+              </View>
             </Marker>
           )}
 
@@ -250,9 +259,16 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
               <Phone size={18} color={colors.dark} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.arrivedBtn} onPress={confirmArrival}>
-            <CheckCircle size={20} color={navy} />
-            <Text style={styles.arrivedBtnText}>I've Arrived at Pickup</Text>
+          <TouchableOpacity style={styles.arrivedBtnShadowWrap} onPress={confirmArrival} activeOpacity={0.88}>
+            <LinearGradient
+              colors={gradients.primaryCta}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.arrivedBtn}
+            >
+              <CheckCircle size={20} color={navy} />
+              <Text style={styles.arrivedBtnText}>I've Arrived at Pickup</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </View>
@@ -260,22 +276,31 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   mapContainer: { flex: 1 },
-  carIcon: { width: 44, height: 44 },
+  carIcon: { width: 30, height: 30 },
+  carMarkerBadge: {
+    width: 44, height: 44, borderRadius: radius.full,
+    backgroundColor: colors.white, borderWidth: 3, borderColor: colors.primary,
+    justifyContent: 'center', alignItems: 'center',
+    ...shadows.md,
+  },
+  // Red reads as "stop point" everywhere and can't be mistaken for the
+  // white/yellow car badge above, unlike the near-black colors.dark this
+  // used before (which blended with the car photo's dark glass/cabin).
   pickupMarker: {
     width: 32, height: 32, borderRadius: radius.full,
-    backgroundColor: colors.dark, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: colors.error, justifyContent: 'center', alignItems: 'center',
     ...shadows.md,
   },
   bottomSheet: {
     backgroundColor: colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: radius.xl + 8,
+    borderTopRightRadius: radius.xl + 8,
     padding: spacing.lg,
     paddingBottom: bottomPadding,
-    ...shadows.lg,
+    ...tintedShadow(navy, isDark ? 0 : 0.2),
   },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
   headerIcon: {
@@ -285,8 +310,8 @@ const getStyles = (colors: any) => StyleSheet.create({
   headerTitle: { fontSize: fontSizes.md, fontWeight: '800', color: colors.dark },
   headerSubtitle: { fontSize: fontSizes.xs, color: colors.textMuted, marginTop: 2 },
   passengerCard: {
-    backgroundColor: colors.gray,
-    borderRadius: radius.lg,
+    backgroundColor: colors.offWhite,
+    borderRadius: radius.xl,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
@@ -300,13 +325,13 @@ const getStyles = (colors: any) => StyleSheet.create({
   actionRow: { flexDirection: 'row', gap: spacing.sm },
   callBtn: {
     width: 52, height: 52, borderRadius: radius.full,
-    backgroundColor: colors.gray, justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1.5, borderColor: colors.gray2,
+    backgroundColor: colors.offWhite, justifyContent: 'center', alignItems: 'center',
   },
+  arrivedBtnShadowWrap: { flex: 1, borderRadius: radius.full, ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3) },
   arrivedBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, backgroundColor: colors.primary, padding: spacing.md,
-    borderRadius: radius.full, ...shadows.md,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.sm, padding: spacing.md,
+    borderRadius: radius.full,
   },
   arrivedBtnText: { fontSize: fontSizes.sm, fontWeight: '700', color: navy },
 });

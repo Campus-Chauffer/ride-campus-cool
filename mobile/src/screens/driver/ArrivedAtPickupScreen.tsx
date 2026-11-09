@@ -4,11 +4,12 @@ import {
   StatusBar, Alert, Linking,
 } from 'react-native';
 import * as Location from 'expo-location';
+import { LinearGradient } from 'expo-linear-gradient';
 import { CheckCircle, MapPin, Phone, Clock, AlertTriangle } from 'lucide-react-native';
 import { driverAPI } from '../../services/api';
 import socketService from '../../services/socket';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, navy, mutedOnDark } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, bottomPadding, androidTopPadding, navy, white, mutedOnDark, gradients, tintedShadow } from '../../utils/theme';
 
 // Below this, GPS-derived heading is a known-unreliable reading — better to
 // keep transmitting the last reliable heading than forward jitter.
@@ -214,14 +215,22 @@ export default function ArrivedAtPickupScreen({ trip, onStartTrip, onCancelled }
       {/* Start trip button */}
       <View style={styles.actionContainer}>
         <TouchableOpacity
-          style={[styles.startBtn, isStarting && { opacity: 0.6 }]}
+          style={[styles.startBtnShadowWrap, isStarting && { opacity: 0.6 }]}
           onPress={handleStartTrip}
           disabled={isStarting}
+          activeOpacity={0.88}
         >
-          <CheckCircle size={20} color={navy} />
-          <Text style={styles.startBtnText}>
-            {isStarting ? 'Starting...' : 'Passenger Onboard — Start Trip'}
-          </Text>
+          <LinearGradient
+            colors={gradients.successCta}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.startBtn}
+          >
+            <CheckCircle size={20} color={white} />
+            <Text style={styles.startBtnText}>
+              {isStarting ? 'Starting...' : 'Passenger Onboard — Start Trip'}
+            </Text>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     </View>
@@ -272,8 +281,8 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   fareCard: {
     marginHorizontal: spacing.lg,
     marginBottom: spacing.sm,
-    backgroundColor: colors.gray,
-    borderRadius: radius.lg,
+    backgroundColor: colors.offWhite,
+    borderRadius: radius.xl,
     padding: spacing.md,
   },
   fareRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.xs },
@@ -286,10 +295,9 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     marginHorizontal: spacing.lg,
     marginBottom: spacing.sm,
     backgroundColor: colors.white,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.gray2,
+    ...tintedShadow(navy, isDark ? 0 : 0.1),
   },
   passengerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   passengerAvatar: { width: 44, height: 44, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
@@ -300,6 +308,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   warningRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginHorizontal: spacing.lg, marginBottom: spacing.sm },
   warningText: { flex: 1, fontSize: fontSizes.xs, color: colors.textMuted },
   actionContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: spacing.lg, paddingBottom: bottomPadding, backgroundColor: colors.white },
-  startBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.primary, padding: spacing.md, borderRadius: radius.full, ...shadows.md },
-  startBtnText: { fontSize: fontSizes.sm, fontWeight: '700', color: navy },
+  startBtnShadowWrap: { borderRadius: radius.full, ...tintedShadow('#27AE60', isDark ? 0 : 0.3) },
+  startBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: spacing.md, borderRadius: radius.full },
+  startBtnText: { fontSize: fontSizes.sm, fontWeight: '700', color: white },
 });

@@ -9,7 +9,7 @@ import { MapPin, X, Phone, Check } from 'lucide-react-native';
 import { ridesAPI } from '../../services/api';
 import socketService from '../../services/socket';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, navy, white } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, navy, white, tintedShadow } from '../../utils/theme';
 import { getBearing, haversineMeters, snapToRoute, shouldRefreshRoute } from '../../utils/geo';
 import { useAnimatedRoute } from '../../hooks/useAnimatedRoute';
 
@@ -36,7 +36,7 @@ interface Props {
 export default function DriverFoundScreen({ trip, onCancelled }: Props) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   const mapRef = useRef<any>(null);
   const carMarkerRef = useRef<any>(null);
   const userLocationRef = useRef<any>(null);
@@ -390,7 +390,7 @@ export default function DriverFoundScreen({ trip, onCancelled }: Props) {
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
   carMarkerContainer: { alignItems: 'center' },
@@ -422,17 +422,18 @@ const getStyles = (colors: any) => StyleSheet.create({
     position: 'absolute',
     bottom: 0, left: 0, right: 0,
     backgroundColor: colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: radius.xl + 8,
+    borderTopRightRadius: radius.xl + 8,
     padding: spacing.lg,
     paddingBottom: bottomPadding,
-    ...shadows.lg,
+    ...tintedShadow(navy, isDark ? 0 : 0.25),
   },
   arrivingText: {
     fontSize: fontSizes.xl,
     fontWeight: '800',
     color: colors.dark,
     marginBottom: spacing.xs,
+    letterSpacing: -0.3,
   },
   vehicleRow: {
     flexDirection: 'row',
@@ -447,11 +448,10 @@ const getStyles = (colors: any) => StyleSheet.create({
     flex: 1,
   },
   platePill: {
-    borderWidth: 1.5,
-    borderColor: colors.dark,
+    backgroundColor: colors.offWhite,
     borderRadius: radius.md,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
+    paddingVertical: 4,
   },
   plateText: {
     fontSize: fontSizes.sm,
@@ -473,6 +473,8 @@ const getStyles = (colors: any) => StyleSheet.create({
     width: 52, height: 52,
     borderRadius: radius.full,
     backgroundColor: colors.gray2,
+    borderWidth: 2,
+    borderColor: colors.offWhite,
   },
   driverAvatar: {
     width: 52, height: 52,
@@ -480,6 +482,8 @@ const getStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.offWhite,
   },
   driverAvatarText: { fontSize: fontSizes.lg, fontWeight: '800', color: navy },
   verifiedBadge: {
@@ -501,7 +505,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    ...shadows.sm,
+    ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3),
   },
   fareText: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark },
   fareStrike: {

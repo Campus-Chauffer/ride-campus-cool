@@ -5,13 +5,13 @@ import {
 } from 'react-native';
 import { ArrowLeft, Megaphone } from 'lucide-react-native';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, androidTopPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, androidTopPadding, tintedShadow } from '../../utils/theme';
 import { announcementsAPI } from '../../services/api';
 
 export default function AnnouncementsScreen({ navigation }: any) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -41,8 +41,10 @@ export default function AnnouncementsScreen({ navigation }: any) {
   const renderItem = ({ item }: any) => (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <Megaphone size={16} color={colors.primary} />
-        <Text style={styles.cardTitle}>{item.title}</Text>
+        <View style={styles.cardIcon}>
+          <Megaphone size={15} color={colors.primaryDark} />
+        </View>
+        <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
       </View>
       <Text style={styles.cardBody}>{item.body}</Text>
       <Text style={styles.cardDate}>{formatDate(item.created_at)}</Text>
@@ -81,7 +83,7 @@ export default function AnnouncementsScreen({ navigation }: any) {
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.offWhite, paddingTop: androidTopPadding },
   header: {
     flexDirection: 'row',
@@ -89,36 +91,42 @@ const getStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray2,
+    backgroundColor: colors.offWhite,
   },
   backBtn: {
     width: 40, height: 40,
     borderRadius: radius.md,
-    backgroundColor: colors.gray,
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
+    ...tintedShadow(navy, isDark ? 0 : 0.08),
   },
   headerTitle: {
     fontSize: fontSizes.lg,
-    fontWeight: '700',
+    fontWeight: '800',
     color: colors.dark,
+    letterSpacing: -0.3,
   },
-  list: { padding: spacing.lg, gap: spacing.sm },
+  list: { padding: spacing.lg, gap: spacing.md },
   card: {
     backgroundColor: colors.white,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     padding: spacing.md,
-    ...shadows.sm,
+    ...tintedShadow(navy, isDark ? 0 : 0.1),
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
     marginBottom: spacing.xs,
   },
+  cardIcon: {
+    width: 30, height: 30, borderRadius: radius.sm + 2,
+    backgroundColor: colors.primary + '1F',
+    justifyContent: 'center', alignItems: 'center',
+  },
   cardTitle: {
+    flex: 1,
     fontSize: fontSizes.md,
     fontWeight: '700',
     color: colors.dark,

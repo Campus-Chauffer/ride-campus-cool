@@ -9,7 +9,7 @@ import {
 } from 'lucide-react-native';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, androidTopPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, androidTopPadding, tintedShadow } from '../../utils/theme';
 import { authAPI, driverRegistrationAPI } from '../../services/api';
 
 export default function SettingsScreen({ navigation }: any) {
@@ -96,7 +96,7 @@ export default function SettingsScreen({ navigation }: any) {
       onPress={onPress}
       activeOpacity={toggle ? 1 : 0.7}
     >
-      <View style={[styles.settingIcon, { backgroundColor: c.gray }, danger && { backgroundColor: 'rgba(244,67,54,0.1)' }]}>
+      <View style={[styles.settingIcon, { backgroundColor: c.offWhite }, danger && { backgroundColor: 'rgba(244,67,54,0.1)' }]}>
         {icon}
       </View>
       <Text style={[styles.settingLabel, { color: danger ? c.error : c.dark }]}>
@@ -118,9 +118,9 @@ export default function SettingsScreen({ navigation }: any) {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: c.offWhite }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-      <View style={[styles.header, { backgroundColor: c.white, borderBottomColor: c.gray2 }]}>
+      <View style={styles.header}>
         <TouchableOpacity
-          style={[styles.backBtn, { backgroundColor: c.gray }]}
+          style={[styles.backBtn, { backgroundColor: c.white }, tintedShadow(navy, isDark ? 0 : 0.08)]}
           onPress={() => {
             if (navigation.canGoBack()) {
               navigation.goBack();
@@ -131,13 +131,13 @@ export default function SettingsScreen({ navigation }: any) {
         >
           <ArrowLeft size={22} color={c.dark} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: c.dark }]}>Settings</Text>
+        <Text style={[styles.headerTitle, { color: c.dark, fontWeight: '800', letterSpacing: -0.3 }]}>Settings</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Section title="Preferences" />
-        <View style={[styles.card, { backgroundColor: c.white }]}>
+        <View style={[styles.card, { backgroundColor: c.white }, tintedShadow(navy, isDark ? 0 : 0.1)]}>
           <SettingRow
             icon={<Bell size={18} color={c.dark} />}
             label="Push Notifications"
@@ -156,7 +156,7 @@ export default function SettingsScreen({ navigation }: any) {
         </View>
 
         <Section title="Support" />
-        <View style={[styles.card, { backgroundColor: c.white }]}>
+        <View style={[styles.card, { backgroundColor: c.white }, tintedShadow(navy, isDark ? 0 : 0.1)]}>
           <SettingRow
             icon={<HelpCircle size={18} color={c.dark} />}
             label="Help & FAQ"
@@ -183,7 +183,7 @@ export default function SettingsScreen({ navigation }: any) {
         </View>
 
         <Section title="Account" />
-        <View style={[styles.card, { backgroundColor: c.white }]}>
+        <View style={[styles.card, { backgroundColor: c.white }, tintedShadow(navy, isDark ? 0 : 0.1)]}>
           {user?.role === 'driver' && (
             <>
               <SettingRow
@@ -231,7 +231,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    borderBottomWidth: 1,
   },
   backBtn: {
     width: 40, height: 40,
@@ -252,10 +251,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     marginTop: spacing.md,
   },
+  // No overflow:hidden here (it would clip the tinted shadow applied inline
+  // where this is used) — safe to drop since nothing inside this card has
+  // its own background that would otherwise bleed past the rounded corner.
   card: {
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    ...shadows.sm,
+    borderRadius: radius.xl,
+    marginBottom: spacing.xs,
   },
   settingRow: {
     flexDirection: 'row',

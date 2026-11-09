@@ -6,8 +6,9 @@ import {
   Keyboard
 } from 'react-native';
 import * as Location from 'expo-location';
+import { LinearGradient } from 'expo-linear-gradient';
 import RNMapView, { Marker, Polyline, Polygon, PROVIDER_GOOGLE, Region } from 'react-native-maps';
-import { MapPin, Navigation, Menu, X, LocateFixed, Tag } from 'lucide-react-native';
+import { MapPin, Navigation, Menu, X, LocateFixed, Tag, ArrowRight } from 'lucide-react-native';
 import SideMenu from '../../components/SideMenu';
 import RingPinIcon from '../../components/icons/RingPinIcon';
 import { useAnimatedRoute } from '../../hooks/useAnimatedRoute';
@@ -16,7 +17,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useRideStore } from '../../store/rideStore';
 import { useDiscountStore } from '../../store/discountStore';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, androidTopPadding } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, white, androidTopPadding, gradients, tintedShadow } from '../../utils/theme';
 
 
 // Fallback pricing — only used until the live values load from
@@ -120,7 +121,7 @@ export default function StudentHomeScreen({ navigation }: any) {
   const { height: windowHeight } = useWindowDimensions();
   const COLLAPSED_HEIGHT = windowHeight * 0.32;
   const EXPANDED_HEIGHT = windowHeight * 0.78;
-  const styles = getStyles(colors, EXPANDED_HEIGHT);
+  const styles = getStyles(colors, EXPANDED_HEIGHT, isDark);
   const mapRef = useRef<RNMapView>(null);
 
   const [userLocation, setUserLocation] = useState<any>(null);
@@ -712,7 +713,12 @@ export default function StudentHomeScreen({ navigation }: any) {
                 <View style={styles.requestSection}>
                   {/* Fare estimate — rounded, no day/night label (issue 8, 12) */}
                   {estimatedFare !== null && (
-                    <View style={styles.fareEstimate}>
+                    <LinearGradient
+                      colors={isDark ? gradients.navyCardDark : gradients.navyCard}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.fareEstimate}
+                    >
                       <Text style={styles.fareEstimateLabel}>Estimated fare</Text>
                       {selectedDiscount ? (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
@@ -726,7 +732,7 @@ export default function StudentHomeScreen({ navigation }: any) {
                       ) : (
                         <Text style={styles.fareEstimateValue}>GH₵{estimatedFare}</Text>
                       )}
-                    </View>
+                    </LinearGradient>
                   )}
 
                   {selectedCodeString && (
@@ -742,17 +748,28 @@ export default function StudentHomeScreen({ navigation }: any) {
                   )}
 
                   <TouchableOpacity
-                    style={[styles.requestBtn, loading && styles.requestBtnDisabled]}
+                    style={[styles.requestBtnShadowWrap, loading && styles.requestBtnDisabled]}
                     onPress={requestRide}
                     disabled={loading}
                     activeOpacity={0.9}
                   >
-                    {loading
-                      ? <ActivityIndicator color={navy} />
-                      : <Text style={styles.requestBtnText}>
-                          Request Ride{estimatedFare ? ` · GH₵${estimatedFare}` : ''}
-                        </Text>
-                    }
+                    <LinearGradient
+                      colors={gradients.primaryCta}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.requestBtn}
+                    >
+                      {loading ? (
+                        <ActivityIndicator color={navy} />
+                      ) : (
+                        <>
+                          <ArrowRight size={18} color={navy} strokeWidth={2.6} />
+                          <Text style={styles.requestBtnText}>
+                            Request Ride{estimatedFare ? ` · GH₵${estimatedFare}` : ''}
+                          </Text>
+                        </>
+                      )}
+                    </LinearGradient>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -771,7 +788,7 @@ export default function StudentHomeScreen({ navigation }: any) {
   );
 }
 
-const getStyles = (colors: any, expandedHeight: number) => StyleSheet.create({
+const getStyles = (colors: any, expandedHeight: number, isDark: boolean) => StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
   menuBtn: {
@@ -783,7 +800,7 @@ const getStyles = (colors: any, expandedHeight: number) => StyleSheet.create({
     backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
-    ...shadows.md,
+    ...tintedShadow(navy, isDark ? 0 : 0.15),
   },
   recenterBtn: {
     position: 'absolute',
@@ -794,7 +811,7 @@ const getStyles = (colors: any, expandedHeight: number) => StyleSheet.create({
     backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
-    ...shadows.md,
+    ...tintedShadow(navy, isDark ? 0 : 0.15),
   },
   pinIconBtn: { padding: 4, marginLeft: 4 },
   centerPin: {
@@ -854,9 +871,9 @@ const getStyles = (colors: any, expandedHeight: number) => StyleSheet.create({
     left: 0, right: 0,
     height: expandedHeight,
     backgroundColor: colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    ...shadows.lg,
+    borderTopLeftRadius: radius.xl + 8,
+    borderTopRightRadius: radius.xl + 8,
+    ...tintedShadow(navy, isDark ? 0 : 0.2),
   },
   handleArea: { alignItems: 'center', paddingVertical: spacing.sm },
   handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.gray2 },
@@ -864,16 +881,13 @@ const getStyles = (colors: any, expandedHeight: number) => StyleSheet.create({
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
-  greetingText: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark },
+  greetingText: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark, letterSpacing: -0.3 },
   whereCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.offWhite,
     marginHorizontal: spacing.lg,
     borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
-    borderWidth: 1.5,
-    borderColor: colors.gray2,
-    ...shadows.sm,
   },
   whereRow: {
     flexDirection: 'row',
@@ -914,26 +928,26 @@ const getStyles = (colors: any, expandedHeight: number) => StyleSheet.create({
   searchResultSub: { fontSize: fontSizes.xs, color: colors.textMuted, marginTop: 2 },
   sheetContent: { padding: spacing.lg, paddingBottom: spacing.xxl },
   requestSection: { gap: spacing.sm },
+  // A gradient-navy card rather than the previous flat cream fill — this is
+  // the one "hero" moment on the sheet (the actual price), so it gets the
+  // strongest visual treatment on the screen. Text is pinned to fixed
+  // white/gold (not colors.white/colors.primary) since this card is
+  // deliberately the same dark gradient in both themes, same reasoning as
+  // every other fixed-navy-surface card in this codebase.
   fareEstimate: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFFBF0',
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(255,184,0,0.3)',
+    padding: spacing.md + 2,
+    borderRadius: radius.lg + 2,
+    ...tintedShadow(navy, isDark ? 0 : 0.25),
   },
-  // fareEstimate's card background is a fixed cream tone in both themes, so
-  // its text is pinned to navy rather than colors.dark/textMuted, which
-  // would invert to near-white and disappear against it in dark mode.
-  fareEstimateLabel: { fontSize: fontSizes.sm, color: navy, opacity: 0.6, fontWeight: '500' },
-  fareEstimateValue: { fontSize: fontSizes.xl, fontWeight: '800', color: navy },
+  fareEstimateLabel: { fontSize: fontSizes.xs, color: 'rgba(255,255,255,0.55)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  fareEstimateValue: { fontSize: fontSizes.xl, fontWeight: '800', color: white },
   fareEstimateStrike: {
     fontSize: fontSizes.md,
     fontWeight: '600',
-    color: navy,
-    opacity: 0.45,
+    color: 'rgba(255,255,255,0.4)',
     textDecorationLine: 'line-through',
   },
   discountChip: {
@@ -948,12 +962,14 @@ const getStyles = (colors: any, expandedHeight: number) => StyleSheet.create({
   },
   discountChipText: { flex: 1, fontSize: fontSizes.xs, fontWeight: '600', color: colors.dark },
 
+  requestBtnShadowWrap: { borderRadius: radius.full, ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.35) },
   requestBtn: {
-    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
     padding: spacing.md,
     borderRadius: radius.full,
-    alignItems: 'center',
-    ...shadows.md,
   },
   requestBtnDisabled: { opacity: 0.5 },
   // requestBtn's background is the fixed brand yellow in both themes, so its

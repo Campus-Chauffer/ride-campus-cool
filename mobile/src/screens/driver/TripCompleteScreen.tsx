@@ -3,9 +3,10 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, StatusBar, ScrollView, TextInput, Alert, Modal
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Flag, CheckCircle, Star } from 'lucide-react-native';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, androidTopPadding, navy, white, mutedOnDark } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, bottomPadding, androidTopPadding, navy, white, mutedOnDark, gradients, tintedShadow } from '../../utils/theme';
 
 interface Props {
   trip: any;
@@ -60,9 +61,14 @@ export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: P
       >
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.checkCircle}>
-            <CheckCircle size={40} color={colors.primary} />
-          </View>
+          <LinearGradient
+            colors={gradients.primaryCta}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.checkCircle}
+          >
+            <CheckCircle size={36} color={navy} />
+          </LinearGradient>
           <Text style={styles.title}>Trip Complete!</Text>
           <Text style={styles.subtitle} numberOfLines={2}>
             {trip.pickup_address} → {trip.dropoff_address}
@@ -121,8 +127,15 @@ export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: P
               multiline
               numberOfLines={2}
             />
-            <TouchableOpacity style={styles.submitBtn} onPress={submitRating}>
-              <Text style={styles.submitBtnText}>Submit Rating</Text>
+            <TouchableOpacity style={styles.submitBtnShadowWrap} onPress={submitRating} activeOpacity={0.88}>
+              <LinearGradient
+                colors={gradients.primaryCta}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.submitBtn}
+              >
+                <Text style={styles.submitBtnText}>Submit Rating</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         ) : (
@@ -196,12 +209,10 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   checkCircle: {
     width: 60, height: 60,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(255,184,0,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.xs,
-    borderWidth: 1,
-    borderColor: 'rgba(255,184,0,0.2)',
+    ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3),
   },
   title: {
     fontSize: fontSizes.xl,
@@ -218,8 +229,8 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   },
   earningsCard: {
     backgroundColor: mutedOnDark(isDark, 0.05),
-    borderRadius: radius.lg,
-    padding: spacing.sm,
+    borderRadius: radius.xl,
+    padding: spacing.md,
     marginBottom: spacing.sm,
   },
   earningsRow: { flexDirection: 'row', justifyContent: 'space-between' },
@@ -238,10 +249,11 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   },
   ratingCard: {
     backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    padding: spacing.sm,
+    borderRadius: radius.xl,
+    padding: spacing.md,
     marginBottom: spacing.sm,
     alignItems: 'center',
+    ...tintedShadow(navy, isDark ? 0 : 0.2),
   },
   ratingTitle: {
     fontSize: fontSizes.md,
@@ -272,13 +284,12 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     textAlignVertical: 'top',
     minHeight: 60,
   },
+  submitBtnShadowWrap: { width: '100%', borderRadius: radius.full, ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3) },
   submitBtn: {
     width: '100%',
-    backgroundColor: colors.primary,
     padding: spacing.sm + 2,
     borderRadius: radius.full,
     alignItems: 'center',
-    ...shadows.sm,
   },
   submitBtnDisabled: { opacity: 0.5 },
   // submitBtn's background is the fixed brand yellow in both themes, so its
@@ -290,7 +301,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     color: navy,
   },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, paddingBottom: spacing.xxl },
+  modalCard: { backgroundColor: colors.white, borderTopLeftRadius: radius.xl + 8, borderTopRightRadius: radius.xl + 8, padding: spacing.lg, paddingBottom: spacing.xxl, ...tintedShadow(navy, isDark ? 0 : 0.25) },
   modalTitle: { fontSize: fontSizes.lg, fontWeight: '800', color: colors.dark, marginBottom: spacing.xs },
   modalSubtitle: { fontSize: fontSizes.sm, color: colors.textMuted, marginBottom: spacing.lg, lineHeight: 20 },
   modalInput: { backgroundColor: colors.gray, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.gray2, padding: spacing.md, fontSize: fontSizes.sm, color: colors.dark, minHeight: 100, textAlignVertical: 'top', marginBottom: spacing.lg },
@@ -308,7 +319,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     gap: spacing.sm,
     backgroundColor: 'rgba(76,175,80,0.1)',
     padding: spacing.md,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     marginBottom: spacing.md,
     justifyContent: 'center',
   },

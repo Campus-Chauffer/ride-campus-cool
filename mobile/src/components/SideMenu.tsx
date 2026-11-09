@@ -9,7 +9,7 @@ import {
 } from 'lucide-react-native';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, androidTopPadding, bottomPadding } from '../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, androidTopPadding, bottomPadding, tintedShadow } from '../utils/theme';
 import { authAPI, driverRegistrationAPI } from '../services/api';
 
 interface Props {
@@ -24,7 +24,7 @@ export default function SideMenu({ visible, onClose, navigation }: Props) {
   const c = getColors(isDark);
   const { width } = useWindowDimensions();
   const menuWidth = width * 0.78;
-  const styles = getStyles(menuWidth);
+  const styles = getStyles(menuWidth, isDark);
   const slideAnim = useRef(new Animated.Value(-menuWidth)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [switchingRole, setSwitchingRole] = useState(false);
@@ -124,7 +124,7 @@ export default function SideMenu({ visible, onClose, navigation }: Props) {
                 its initials are pinned to navy rather than c.dark, which would
                 invert to near-white in dark mode and disappear against the
                 still-yellow circle. */}
-            <View style={[styles.avatar, { backgroundColor: c.primary }]}>
+            <View style={[styles.avatar, { backgroundColor: c.primary }, tintedShadow(c.primaryDark, isDark ? 0 : 0.3)]}>
               <Text style={[styles.avatarText, { color: navy }]}>
                 {user?.first_name?.[0]}{user?.last_name?.[0]}
               </Text>
@@ -179,7 +179,7 @@ export default function SideMenu({ visible, onClose, navigation }: Props) {
   );
 }
 
-const getStyles = (menuWidth: number) => StyleSheet.create({
+const getStyles = (menuWidth: number, isDark: boolean) => StyleSheet.create({
   overlay: {
     position: 'absolute',
     top: 0, left: 0, right: 0, bottom: 0,
@@ -195,6 +195,12 @@ const getStyles = (menuWidth: number) => StyleSheet.create({
     top: 0, left: 0, bottom: 0,
     width: menuWidth,
     paddingTop: 60 + androidTopPadding,
+    // Rounded leading edge and a real shadow — this drawer previously sat
+    // flush against the screen edge with no elevation of its own, reading
+    // as a flat panel rather than a surface lifted above the backdrop.
+    borderTopRightRadius: radius.xl,
+    borderBottomRightRadius: radius.xl,
+    ...tintedShadow(navy, isDark ? 0 : 0.25),
   },
   profileSection: {
     paddingHorizontal: spacing.lg,
@@ -233,7 +239,7 @@ const getStyles = (menuWidth: number) => StyleSheet.create({
     gap: spacing.md,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
   },
   menuItemIcon: {
     width: 36, height: 36,
