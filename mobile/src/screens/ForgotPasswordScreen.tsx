@@ -4,15 +4,16 @@ import {
   StyleSheet, SafeAreaView, ActivityIndicator,
   Alert, StatusBar, KeyboardAvoidingView, Platform
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { authAPI } from '../services/api';
 import { useThemeStore } from '../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, androidTopPadding } from '../utils/theme';
+import { getColors, spacing, fontSizes, radius, navy, androidTopPadding, gradients, tintedShadow } from '../utils/theme';
 
 export default function ForgotPasswordScreen({ navigation }: any) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
   const [step, setStep] = useState<'email' | 'otp' | 'reset'>('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
@@ -103,15 +104,17 @@ export default function ForgotPasswordScreen({ navigation }: any) {
                 </View>
               </View>
               <TouchableOpacity
-                style={[styles.btn, loading && styles.btnDisabled]}
+                style={[styles.btnShadowWrap, loading && styles.btnDisabled]}
                 onPress={sendReset}
                 disabled={loading}
                 activeOpacity={0.9}
               >
-                {loading
-                  ? <ActivityIndicator color={navy} />
-                  : <Text style={styles.btnText}>Send Reset Code</Text>
-                }
+                <LinearGradient colors={gradients.primaryCta} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.btn}>
+                  {loading
+                    ? <ActivityIndicator color={navy} />
+                    : <Text style={styles.btnText}>Send Reset Code</Text>
+                  }
+                </LinearGradient>
               </TouchableOpacity>
             </>
           )}
@@ -133,7 +136,7 @@ export default function ForgotPasswordScreen({ navigation }: any) {
                 />
               </View>
               <TouchableOpacity
-                style={[styles.btn, loading && styles.btnDisabled]}
+                style={[styles.btnShadowWrap, loading && styles.btnDisabled]}
                 onPress={() => {
                   if (!otp) return Alert.alert('Error', 'Enter the reset code');
                   setStep('reset');
@@ -141,7 +144,9 @@ export default function ForgotPasswordScreen({ navigation }: any) {
                 disabled={loading}
                 activeOpacity={0.9}
               >
-                <Text style={styles.btnText}>Continue</Text>
+                <LinearGradient colors={gradients.primaryCta} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.btn}>
+                  <Text style={styles.btnText}>Continue</Text>
+                </LinearGradient>
               </TouchableOpacity>
             </>
           )}
@@ -195,15 +200,17 @@ export default function ForgotPasswordScreen({ navigation }: any) {
                 </View>
               </View>
               <TouchableOpacity
-                style={[styles.btn, loading && styles.btnDisabled]}
+                style={[styles.btnShadowWrap, loading && styles.btnDisabled]}
                 onPress={resetPassword}
                 disabled={loading}
                 activeOpacity={0.9}
               >
-                {loading
-                  ? <ActivityIndicator color={navy} />
-                  : <Text style={styles.btnText}>Reset Password</Text>
-                }
+                <LinearGradient colors={gradients.primaryCta} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.btn}>
+                  {loading
+                    ? <ActivityIndicator color={navy} />
+                    : <Text style={styles.btnText}>Reset Password</Text>
+                  }
+                </LinearGradient>
               </TouchableOpacity>
             </>
           )}
@@ -213,7 +220,7 @@ export default function ForgotPasswordScreen({ navigation }: any) {
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white, paddingTop: androidTopPadding },
   keyboardView: { flex: 1 },
   header: {
@@ -257,10 +264,8 @@ const getStyles = (colors: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.gray,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.gray2,
+    backgroundColor: colors.offWhite,
+    borderRadius: radius.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
   },
@@ -274,22 +279,18 @@ const getStyles = (colors: any) => StyleSheet.create({
     letterSpacing: 8,
     textAlign: 'center',
     fontWeight: '700',
-    backgroundColor: colors.gray,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.gray2,
+    backgroundColor: colors.offWhite,
+    borderRadius: radius.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
   },
+  btnShadowWrap: { borderRadius: radius.full, marginTop: spacing.sm, ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3) },
   btn: {
-    backgroundColor: colors.primary,
     padding: spacing.md,
     borderRadius: radius.full,
     alignItems: 'center',
-    marginTop: spacing.sm,
-    ...shadows.md,
   },
-  btnDisabled: { opacity: 0.5 },
+  btnDisabled: { opacity: 0.5, shadowOpacity: 0, elevation: 0 },
   // btn's background is the fixed brand yellow in both themes, so its text
   // is pinned to navy rather than colors.dark, which would invert to
   // near-white in dark mode and disappear against the still-yellow button.
