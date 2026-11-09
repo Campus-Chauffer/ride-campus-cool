@@ -38,6 +38,13 @@ const isNightNow = (config) => {
   return hour >= config.night_start || hour < config.night_end;
 };
 
+// `config.x || fallback` looks like a safe default but silently discards a
+// real, deliberately-set 0 (e.g. an admin disabling the match radius, or a
+// 0% commission elsewhere in this codebase) — 0 is falsy in JS, so
+// `0 || fallback` evaluates to `fallback`. Only fall back when the config
+// value is genuinely missing/unparseable (NaN), not just falsy.
+const numOr = (value, fallback) => (Number.isFinite(value) ? value : fallback);
+
 // Recomputes fare/commission for every active (non-cancelled) leg in a
 // group, from scratch, off each leg's own stored distance_km — the single
 // function both "a match just landed" (fare goes down) and "a co-rider just
@@ -50,8 +57,8 @@ async function recomputeGroupFares(db, groupId, config) {
     `SELECT * FROM trips WHERE shared_group_id = $1 AND status != 'cancelled'`,
     [groupId]
   );
-  const discount = members.rows.length >= 2 ? (config.shared_fare_discount || 0) : 0;
-  const minimumFare = config.minimum_fare || 12;
+  const discount = members.rows.length >= 2 ? numOr(config.shared_fare_discount, 0) : 0;
+  const minimumFare = numOr(config.minimum_fare, 12);
 
   const updated = [];
   for (const leg of members.rows) {
@@ -80,10 +87,10 @@ async function recomputeGroupFares(db, groupId, config) {
 // capacity. Candidates are pre-filtered by pickup proximity + bearing
 // similarity before anything takes a row lock.
 async function attemptSharedMatch(client, newTrip, config) {
-  const windowSeconds = config.shared_match_window_seconds || 120;
-  const radiusKm = config.shared_match_radius_km || 1.5;
-  const bearingDeg = config.shared_match_bearing_deg || 45;
-  const maxPassengers = config.shared_max_passengers || 2;
+  const windowSeconds = numOr(config.shared_match_window_seconds, 120);
+  const radiusKm = numOr(config.shared_match_radius_km, 1.5);
+  const bearingDeg = numOr(config.shared_match_bearing_deg, 45);
+  const maxPassengers = numOr(config.shared_max_passengers, 2);
 
   const candidates = await client.query(
     `SELECT t.* FROM trips t
