@@ -289,7 +289,12 @@ const startTrip = async (req, res) => {
 
     const newFare = parseFloat(trip.fare) + waitPenalty;
     const configResult = await pool.query("SELECT value FROM config WHERE key = 'commission_rate'");
-    const commissionRate = parseFloat(configResult.rows[0]?.value) || 0.15;
+    // `|| 0.15` looks like a safe fallback but silently discards a real,
+    // deliberately-set commission_rate of 0 — 0 is falsy in JS, so
+    // `0 || 0.15` evaluates to 0.15. Only fall back when the config value
+    // is genuinely missing/unparseable (NaN), not just falsy.
+    const rawCommissionRate = parseFloat(configResult.rows[0]?.value);
+    const commissionRate = Number.isFinite(rawCommissionRate) ? rawCommissionRate : 0.15;
     const newCommission = Math.round(newFare * commissionRate * 100) / 100;
 
     const result = await pool.query(
