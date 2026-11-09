@@ -279,7 +279,6 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   actionsCard: {
     backgroundColor: colors.white,
     borderRadius: radius.xl,
-    overflow: 'hidden',
     ...shadows.sm,
   },
   actionRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
