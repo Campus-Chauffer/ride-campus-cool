@@ -86,6 +86,7 @@ export default {
         }
       ],
       "expo-task-manager",
+      "expo-video",
       [
         "expo-build-properties",
         {
