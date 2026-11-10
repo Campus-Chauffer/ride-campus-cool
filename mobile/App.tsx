@@ -25,16 +25,23 @@ fetchRemoteBackendConfig().then((config) => {
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const splashOpacity = useRef(new Animated.Value(1)).current;
+  const fadedRef = useRef(false);
+
+  const fadeOutSplash = () => {
+    if (fadedRef.current) return;
+    fadedRef.current = true;
+    Animated.timing(splashOpacity, {
+      toValue: 0,
+      duration: 400,
+      useNativeDriver: true,
+    }).start(() => setShowSplash(false));
+  };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      Animated.timing(splashOpacity, {
-        toValue: 0,
-        duration: 400,
-        useNativeDriver: true,
-      }).start(() => setShowSplash(false));
-    }, 3000);
-
+    // Primary trigger is the video's own onFinished callback. This is only
+    // a last-resort fallback in case that callback chain never fires for
+    // some unforeseen reason — the app must never be stuck behind the splash.
+    const timer = setTimeout(fadeOutSplash, 6000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -52,7 +59,7 @@ export default function App() {
             opacity: splashOpacity,
           }}
         >
-          <SplashScreen />
+          <SplashScreen onFinished={fadeOutSplash} />
         </Animated.View>
       )}
     </Sentry.ErrorBoundary>
