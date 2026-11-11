@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS users (
   deletion_requested_at TIMESTAMP,
   emergency_contact_name VARCHAR(100),
   emergency_contact_phone VARCHAR(20),
+  referral_code VARCHAR(6) UNIQUE,
+  referred_by INTEGER REFERENCES users(id),
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -295,5 +297,19 @@ INSERT INTO config (key, value) VALUES
   ('ios_latest_build', '1'),
   ('ios_update_url', ''),
   ('android_latest_build', '1'),
-  ('android_update_url', 'https://play.google.com/store/apps/details?id=com.campuschauffeur.app')
+  ('android_update_url', 'https://play.google.com/store/apps/details?id=com.campuschauffeur.app'),
+  -- Referral program: every referral_reward_threshold qualifying referrals
+  -- (a referred user's first completed trip) earns the referrer a genuinely
+  -- free ride — see claimDiscount's 'free_ride' branch in discounts.js.
+  -- referral_welcome_discount is a flat discount off a NEW signup's first
+  -- ride when they entered someone else's code, same ordinary 'flat'
+  -- discount type as any other promo code.
+  ('referral_reward_threshold', '5'),
+  ('referral_welcome_discount', '3'),
+  -- "What's new" popup (ChangelogModal.tsx): bump changelog_version and
+  -- update changelog_items (one bullet per line) via the admin Config page
+  -- whenever there's something worth telling existing users about. The app
+  -- shows it once per version, tracked locally per device.
+  ('changelog_version', '0'),
+  ('changelog_items', '')
 ON CONFLICT (key) DO NOTHING;

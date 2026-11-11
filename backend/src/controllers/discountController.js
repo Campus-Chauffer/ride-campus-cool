@@ -157,14 +157,18 @@ const getAvailableDiscounts = async (req, res) => {
 const getDiscountRedemptions = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT dr.*, dc.code,
+      `SELECT dr.*, dc.code, dc.type as discount_type,
               u.first_name, u.last_name, u.phone_number,
               t.original_fare, t.fare as discounted_fare,
-              t.pickup_address, t.dropoff_address, t.created_at as trip_date
+              t.pickup_address, t.dropoff_address, t.created_at as trip_date,
+              du.first_name as driver_first_name, du.last_name as driver_last_name,
+              du.phone_number as driver_phone_number
        FROM discount_redemptions dr
        JOIN discount_codes dc ON dc.id = dr.discount_code_id
        JOIN users u ON u.id = dr.user_id
        JOIN trips t ON t.id = dr.trip_id
+       LEFT JOIN drivers d ON d.id = t.driver_id
+       LEFT JOIN users du ON du.id = d.user_id
        ORDER BY dr.created_at DESC
        LIMIT 200`
     );

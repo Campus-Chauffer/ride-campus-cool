@@ -175,6 +175,7 @@ export default function Users() {
                     <th className="text-left px-4 py-3 font-medium">Phone</th>
                     <th className="text-left px-4 py-3 font-medium">Role</th>
                     <th className="text-left px-4 py-3 font-medium">Status</th>
+                    <th className="text-left px-4 py-3 font-medium">Referrals</th>
                     <th className="text-left px-4 py-3 font-medium">Joined</th>
                     <th className="text-left px-4 py-3 font-medium">Action</th>
                   </tr>
@@ -226,6 +227,7 @@ export default function Users() {
                           {statusBadge(user.status).label}
                         </span>
                       </td>
+                      <td className="px-4 py-3 text-gray-400">{user.referral_count || 0}</td>
                       <td className="px-4 py-3 text-gray-500 text-xs">{formatDate(user.created_at)}</td>
                       <td className="px-4 py-3">
                         {(user.status === "pending_deletion" || user.status === "deleted") ? (
@@ -321,6 +323,11 @@ export default function Users() {
               <div className="text-sm flex justify-between">
                 <span className="text-gray-500">Joined</span>
                 <span className="text-white">{formatDate(selected.created_at)}</span>
+              </div>
+
+              <div className="text-sm flex justify-between">
+                <span className="text-gray-500">Referrals</span>
+                <span className="text-white">{selected.referral_count || 0}</span>
               </div>
 
               {/* Ride history, ratings & complaints */}

@@ -320,9 +320,17 @@ const getAllUsers = async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT u.id, u.phone_number, u.email, u.first_name, u.last_name,
-              u.role, u.status, u.created_at, d.approval_status as driver_status
+              u.role, u.status, u.created_at, d.approval_status as driver_status,
+              COALESCE(rc.referral_count, 0) as referral_count
        FROM users u
        LEFT JOIN drivers d ON d.user_id = u.id
+       LEFT JOIN (
+         SELECT ru.referred_by, COUNT(DISTINCT ru.id) AS referral_count
+         FROM users ru
+         JOIN trips t ON t.passenger_id = ru.id AND t.status = 'completed'
+         WHERE ru.referred_by IS NOT NULL
+         GROUP BY ru.referred_by
+       ) rc ON rc.referred_by = u.id
        ORDER BY u.created_at DESC`
     );
     res.json(result.rows);

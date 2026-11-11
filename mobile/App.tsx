@@ -5,6 +5,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import SplashScreen from './src/components/SplashScreen';
 import CrashFallbackScreen from './src/components/CrashFallbackScreen';
 import UpdateModal from './src/components/UpdateModal';
+import ChangelogModal from './src/components/ChangelogModal';
 import './src/utils/backgroundLocation'; // register background task on app start
 import { fetchRemoteBackendConfig } from './src/utils/remoteConfig';
 import { applyRemoteApiBaseUrl } from './src/services/api';
@@ -51,6 +52,7 @@ export default function App() {
     >
       <AppNavigator />
       <UpdateModal />
+      <ChangelogModal />
       {showSplash && (
         <Animated.View
           style={{

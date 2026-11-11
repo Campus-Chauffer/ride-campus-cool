@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const { sendRatingReminder, sendEmailChangedAlert, sendPasswordResetOTP } = require('../utils/email');
 const { sendSMS } = require('../utils/sms');
 const { takeDriverOffline } = require('./driversController');
+const { generateUniqueCode, issueWelcomeDiscount } = require('../utils/referrals');
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -72,7 +73,7 @@ const verifyOTP = async (req, res) => {
 
 // Register new user
 const register = async (req, res) => {
-  const { phone_number, first_name, last_name, email, password, role } = req.body;
+  const { phone_number, first_name, last_name, email, password, role, referral_code } = req.body;
 
   if (!phone_number || !first_name || !last_name || !password) {
     return res.status(400).json({ error: 'All fields are required' });
@@ -93,14 +94,31 @@ const register = async (req, res) => {
     }
 
     const password_hash = await bcrypt.hash(password, 10);
+    const newReferralCode = await generateUniqueCode(pool, 'users', 'referral_code', 6);
+
+    // An invalid/unknown referral code is silently ignored rather than
+    // blocking signup — it's an optional field, so a typo shouldn't become
+    // a hard failure point.
+    let referredBy = null;
+    if (referral_code) {
+      const referrerResult = await pool.query(
+        'SELECT id FROM users WHERE referral_code = $1',
+        [referral_code.toUpperCase()]
+      );
+      referredBy = referrerResult.rows[0]?.id || null;
+    }
 
     const result = await pool.query(
-      `INSERT INTO users (phone_number, first_name, last_name, email, role, password_hash)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [phone_number, first_name, last_name, email, requestedRole, password_hash]
+      `INSERT INTO users (phone_number, first_name, last_name, email, role, password_hash, referral_code, referred_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [phone_number, first_name, last_name, email, requestedRole, password_hash, newReferralCode, referredBy]
     );
 
     const user = result.rows[0];
+
+    if (referredBy) {
+      await issueWelcomeDiscount(pool, user.id).catch((err) => console.error('Welcome discount error:', err));
+    }
 
     if (requestedRole === 'driver') {
       const driverResult = await pool.query(

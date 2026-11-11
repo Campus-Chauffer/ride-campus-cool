@@ -1,6 +1,7 @@
 const pool = require('../db/pool');
 const { sendPushNotification } = require('../utils/notifications');
 const { sendRatingReminder, sendRideReceipt } = require('../utils/email');
+const { recordReferralProgress } = require('../utils/referrals');
 
 
 // Driver goes online
@@ -399,6 +400,12 @@ const completeTrip = async (req, res) => {
     }
 
     const trip = result.rows[0];
+
+    // Referral program: if this was the passenger's first completed trip
+    // and they were referred by someone, this may push the referrer over
+    // another reward threshold. Never blocks trip completion on failure —
+    // recordReferralProgress handles/logs its own errors internally.
+    recordReferralProgress(trip.passenger_id).catch(() => {});
 
     // Record commission in ledger
     await pool.query(

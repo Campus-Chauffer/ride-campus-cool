@@ -5,7 +5,7 @@ import {
   Alert, StatusBar, KeyboardAvoidingView, Platform, ScrollView
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Phone, Lock, Eye, EyeOff, Mail } from 'lucide-react-native';
+import { ArrowLeft, Phone, Lock, Eye, EyeOff, Mail, Gift } from 'lucide-react-native';
 import { authAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
@@ -26,6 +26,7 @@ export default function RegisterScreen({ route, navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -86,6 +87,7 @@ export default function RegisterScreen({ route, navigation }: any) {
         email,
         password: trimmedPassword,
         role,
+        referral_code: referralCode.trim() || undefined,
       });
     } catch (regErr: any) {
       // If not "already exists", rethrow
@@ -333,6 +335,22 @@ export default function RegisterScreen({ route, navigation }: any) {
                       : <Eye size={18} color={colors.textMuted} />
                     }
                   </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Referral Code (Optional)</Text>
+                <View style={styles.inputWrapper}>
+                  <Gift size={18} color={colors.textMuted} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. AB3XYZ"
+                    value={referralCode}
+                    onChangeText={setReferralCode}
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                    placeholderTextColor={colors.gray3}
+                  />
                 </View>
               </View>
 

@@ -102,6 +102,7 @@ export const authAPI = {
     email: string;
     password: string;
     role: string;
+    referral_code?: string;
   }) => api.post('/auth/register', data),
 
   login: (identifier: string, password: string) =>

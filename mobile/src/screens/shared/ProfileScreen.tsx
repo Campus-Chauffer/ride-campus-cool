@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, ScrollView, ActivityIndicator, StatusBar
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Clipboard from 'expo-clipboard';
 import {
   ArrowLeft, Star, Car, Phone, Mail,
-  Edit, ChevronRight, SlidersHorizontal, GraduationCap
+  Edit, ChevronRight, SlidersHorizontal, GraduationCap, Gift, Check
 } from 'lucide-react-native';
 import { profileAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
@@ -23,6 +24,18 @@ export default function ProfileScreen({ navigation }: any) {
   const styles = getStyles(colors, isDark);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+  }, []);
+  const copyReferralCode = async () => {
+    if (!user?.referral_code) return;
+    await Clipboard.setStringAsync(user.referral_code);
+    setCodeCopied(true);
+    if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+    copiedTimeoutRef.current = setTimeout(() => setCodeCopied(false), 1500);
+  };
 
   useEffect(() => {
     loadProfile();
@@ -146,6 +159,25 @@ export default function ProfileScreen({ navigation }: any) {
             </>
           )}
         </View>
+
+        {/* Referral code */}
+        {user?.referral_code && (
+          <View style={styles.referralCard}>
+            <View style={styles.referralIcon}>
+              <Gift size={18} color={colors.primaryDark} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.referralLabel}>Your referral code</Text>
+              <Text style={styles.referralCode}>{user.referral_code}</Text>
+            </View>
+            <TouchableOpacity style={styles.referralCopyBtn} onPress={copyReferralCode} activeOpacity={0.7}>
+              {codeCopied
+                ? <Check size={16} color={colors.primaryDark} />
+                : <Text style={styles.referralCopyText}>Copy</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Actions */}
         <View style={styles.actionsCard}>
@@ -275,6 +307,30 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     marginBottom: spacing.md,
     ...shadows.sm,
   },
+  referralCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.white,
+    borderRadius: radius.xl,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadows.sm,
+  },
+  referralIcon: {
+    width: 36, height: 36, borderRadius: radius.md,
+    backgroundColor: colors.primary + '1F',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  referralLabel: { fontSize: fontSizes.xs, color: colors.textMuted, fontWeight: '600' },
+  referralCode: { fontSize: fontSizes.md, color: colors.textDark, fontWeight: '800', letterSpacing: 1, marginTop: 2 },
+  referralCopyBtn: {
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.offWhite,
+    minWidth: 48, alignItems: 'center', justifyContent: 'center',
+  },
+  referralCopyText: { fontSize: fontSizes.xs, color: colors.primaryDark, fontWeight: '700' },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
   infoIcon: {
     width: 36, height: 36, borderRadius: radius.md,
