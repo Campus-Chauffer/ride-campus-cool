@@ -20,6 +20,8 @@ export default function EditProfileScreen({ navigation }: any) {
   const [lastName, setLastName] = useState(user?.last_name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [currentPassword, setCurrentPassword] = useState('');
+  const [emergencyContactName, setEmergencyContactName] = useState(user?.emergency_contact_name || '');
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState(user?.emergency_contact_phone || '');
   const [loading, setLoading] = useState(false);
   // Email doubles as the account's only recovery channel (that's where a
   // "Forgot Password" reset code goes), so changing it needs proof you're
@@ -41,6 +43,8 @@ export default function EditProfileScreen({ navigation }: any) {
         first_name: firstName,
         last_name: lastName,
         email,
+        emergency_contact_name: emergencyContactName,
+        emergency_contact_phone: emergencyContactPhone,
         ...(emailChanging ? { current_password: currentPassword } : {}),
       });
       const currentToken = await import('@react-native-async-storage/async-storage')
@@ -134,6 +138,30 @@ await setAuth(currentToken || '', { ...user!, ...res.data });
             <Text style={styles.disabledText}>{user?.phone_number}</Text>
           </View>
           <Text style={styles.hint}>Phone number cannot be changed</Text>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Emergency Contact Name</Text>
+          <TextInput
+            style={styles.input}
+            value={emergencyContactName}
+            onChangeText={setEmergencyContactName}
+            placeholder="e.g. Mum"
+            placeholderTextColor={colors.gray3}
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Emergency Contact Phone</Text>
+          <TextInput
+            style={styles.input}
+            value={emergencyContactPhone}
+            onChangeText={setEmergencyContactPhone}
+            keyboardType="phone-pad"
+            placeholder="024XXXXXXX"
+            placeholderTextColor={colors.gray3}
+          />
+          <Text style={styles.hint}>Used for the Safety alert during an active ride</Text>
         </View>
 
         <TouchableOpacity

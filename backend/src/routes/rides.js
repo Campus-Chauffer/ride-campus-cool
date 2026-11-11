@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   requestRide, getRideHistory, getTripStatus, cancelRide, getDirections,
   getGeocode, getPlaceAutocomplete, getPlaceDetails, getPricingConfig,
+  sendSafetyAlert,
 } = require('../controllers/ridesController');
 const { authenticate } = require('../middleware/auth');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
@@ -24,6 +25,7 @@ router.post('/request', authenticate, rideLimiter, requestRide);
 router.get('/history', authenticate, getRideHistory);
 router.get('/status/:trip_id', authenticate, getTripStatus);
 router.delete('/cancel/:trip_id', authenticate, cancelRide);
+router.post('/:trip_id/safety-alert', authenticate, sendSafetyAlert);
 router.get('/pricing', authenticate, getPricingConfig);
 router.get('/directions', authenticate, getDirections);
 router.get('/geocode', authenticate, getGeocode);

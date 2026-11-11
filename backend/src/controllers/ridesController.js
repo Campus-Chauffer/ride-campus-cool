@@ -3,6 +3,7 @@ const { findCodeByString, findBestAutoApplyCode, claimDiscount } = require('../u
 const { calculateFare } = require('../utils/fareCalc');
 const { attemptSharedMatch, recomputeGroupFares, getGroupSiblings } = require('../utils/sharedRides');
 const { sendPushNotification } = require('../utils/notifications');
+const { sendSMS } = require('../utils/sms');
 
 // Create a ride request
 const requestRide = async (req, res) => {
@@ -252,6 +253,90 @@ const getTripStatus = async (req, res) => {
     const co_riders = await getGroupSiblings(pool, trip);
     res.json({ ...trip, co_riders });
   } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Passenger-triggered safety alert during an active ride. One-shot SMS to
+// the passenger's own emergency contact (not a live-updating tracking
+// link — a static map pin at wherever the driver was when this fired),
+// plus a log entry on the existing reports table so Campus Chauffeur's
+// own team sees it on the admin Reports page alongside ordinary reports.
+const sendSafetyAlert = async (req, res) => {
+  const passenger_id = req.user.id;
+  const { trip_id } = req.params;
+
+  try {
+    const tripResult = await pool.query(
+      `SELECT t.*,
+              u.first_name as driver_first_name,
+              u.last_name as driver_last_name,
+              d.user_id as driver_user_id,
+              d.vehicle_make, d.vehicle_model, d.vehicle_color, d.plate_number,
+              d.current_lat as driver_lat, d.current_lng as driver_lng,
+              d.location_updated_at
+       FROM trips t
+       LEFT JOIN drivers d ON t.driver_id = d.id
+       LEFT JOIN users u ON d.user_id = u.id
+       WHERE t.id = $1 AND t.passenger_id = $2`,
+      [trip_id, passenger_id]
+    );
+    if (tripResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    const trip = tripResult.rows[0];
+    if (!trip.driver_user_id) {
+      // Nobody to name in the alert or log against yet — safety alerts
+      // only make sense once a driver is actually assigned to the trip.
+      return res.status(400).json({ error: 'A safety alert is available once a driver is assigned to your ride.' });
+    }
+
+    const passengerResult = await pool.query(
+      'SELECT emergency_contact_name, emergency_contact_phone FROM users WHERE id = $1',
+      [passenger_id]
+    );
+    const { emergency_contact_name, emergency_contact_phone } = passengerResult.rows[0] || {};
+    if (!emergency_contact_phone) {
+      return res.status(400).json({ error: 'No emergency contact set' });
+    }
+
+    const locationIsFresh = trip.location_updated_at &&
+      (Date.now() - new Date(trip.location_updated_at).getTime()) < 5 * 60 * 1000;
+    const locationLine = (locationIsFresh && trip.driver_lat && trip.driver_lng)
+      ? `Driver's last known location: https://www.google.com/maps?q=${trip.driver_lat},${trip.driver_lng}`
+      : `Pickup location: ${trip.pickup_address}`;
+
+    const driverName = trip.driver_first_name
+      ? `${trip.driver_first_name} ${trip.driver_last_name || ''}`.trim()
+      : 'their driver';
+    const vehicleLine = trip.vehicle_make
+      ? `Vehicle: ${trip.vehicle_make} ${trip.vehicle_model}, ${trip.vehicle_color} (${trip.plate_number})`
+      : '';
+
+    const message = [
+      `Campus Chauffeur safety alert: a rider you're listed as an emergency contact for has triggered a safety alert during a ride.`,
+      `Driver: ${driverName}`,
+      vehicleLine,
+      `Route: ${trip.pickup_address} to ${trip.dropoff_address}`,
+      locationLine,
+    ].filter(Boolean).join('\n');
+
+    const smsResult = await sendSMS(emergency_contact_phone, message);
+
+    await pool.query(
+      `INSERT INTO reports (reporter_id, reported_id, trip_id, type, description)
+       VALUES ($1, $2, $3, 'safety_alert', $4)`,
+      [
+        passenger_id,
+        trip.driver_user_id,
+        trip_id,
+        `Passenger triggered a safety alert mid-trip. Emergency contact: ${emergency_contact_name || 'unnamed'} (${emergency_contact_phone}).`,
+      ]
+    );
+
+    res.json({ success: true, sms_sent: smsResult.success });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -530,4 +615,5 @@ const isWithinCampus = (lat, lng) => {
 module.exports = {
   requestRide, getRideHistory, getTripStatus, cancelRide, getDirections,
   getGeocode, getPlaceAutocomplete, getPlaceDetails, getPricingConfig,
+  sendSafetyAlert,
 };

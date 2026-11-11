@@ -143,6 +143,9 @@ export const ridesAPI = {
   cancelRide: (trip_id: number) =>
     api.delete(`/rides/cancel/${trip_id}`),
 
+  sendSafetyAlert: (trip_id: number) =>
+    api.post(`/rides/${trip_id}/safety-alert`),
+
   getPricing: () => api.get('/rides/pricing'),
 
   getDirections: (origin_lat: number, origin_lng: number, dest_lat: number, dest_lng: number) =>
@@ -203,7 +206,14 @@ export const driverRegistrationAPI = {
 
 export const profileAPI = {
   getProfile: (user_id: number) => api.get(`/ratings/profile/${user_id}`),
-  updateProfile: (data: any) => api.patch('/auth/profile', data),
+  updateProfile: (data: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    current_password?: string;
+    emergency_contact_name?: string;
+    emergency_contact_phone?: string;
+  }) => api.patch('/auth/profile', data),
 };
 
 export const ratingsAPI = {

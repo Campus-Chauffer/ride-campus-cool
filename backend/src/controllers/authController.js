@@ -271,7 +271,7 @@ const savePushToken = async (req, res) => {
 
 // Update profile
 const updateProfile = async (req, res) => {
-  const { first_name, last_name, email, current_password } = req.body;
+  const { first_name, last_name, email, current_password, emergency_contact_name, emergency_contact_phone } = req.body;
   const user_id = req.user.id;
 
   try {
@@ -306,9 +306,11 @@ const updateProfile = async (req, res) => {
       `UPDATE users SET
         first_name = COALESCE($1, first_name),
         last_name = COALESCE($2, last_name),
-        email = COALESCE($3, email)
-       WHERE id = $4 RETURNING id, first_name, last_name, email, phone_number, role`,
-      [first_name, last_name, email, user_id]
+        email = COALESCE($3, email),
+        emergency_contact_name = COALESCE($4, emergency_contact_name),
+        emergency_contact_phone = COALESCE($5, emergency_contact_phone)
+       WHERE id = $6 RETURNING id, first_name, last_name, email, phone_number, role, emergency_contact_name, emergency_contact_phone`,
+      [first_name, last_name, email, emergency_contact_name, emergency_contact_phone, user_id]
     );
 
     if (emailChanging && oldEmail) {

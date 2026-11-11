@@ -242,6 +242,7 @@ export default function RideMatchingScreen({ route, navigation }: any) {
         <DriverFoundScreen
           trip={currentTrip}
           onCancelled={() => navigation.goBack()}
+          onSafetyPress={() => navigation.navigate('Safety', { trip: currentTrip })}
         />
       )}
 
@@ -250,6 +251,7 @@ export default function RideMatchingScreen({ route, navigation }: any) {
           trip={currentTrip}
           onTripStarted={() => updatePhase('in_progress')}
           onCancelled={() => navigation.goBack()}
+          onSafetyPress={() => navigation.navigate('Safety', { trip: currentTrip })}
         />
       )}
 
@@ -258,7 +260,7 @@ export default function RideMatchingScreen({ route, navigation }: any) {
       )}
 
       {phase === 'in_progress' && (
-        <ActiveRideScreen trip={currentTrip} />
+        <ActiveRideScreen trip={currentTrip} onSafetyPress={() => navigation.navigate('Safety', { trip: currentTrip })} />
       )}
     </View>
   );

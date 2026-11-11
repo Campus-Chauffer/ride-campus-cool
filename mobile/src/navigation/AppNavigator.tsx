@@ -16,6 +16,7 @@ import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import StudentHomeScreen from '../screens/student/HomeScreen';
 import RideMatchingScreen from '../screens/student/RideMatchingScreen';
 import RideRatingScreen from '../screens/student/RideRatingScreen';
+import SafetyScreen from '../screens/student/SafetyScreen';
 import DriverHomeScreen from '../screens/driver/DriverHomeScreen';
 import DriverRegistrationScreen from '../screens/driver/DriverRegistrationScreen';
 import DriverVehicleScreen from '../screens/driver/DriverVehicleScreen';
@@ -92,6 +93,7 @@ function StudentScreens() {
           cancel action instead of an accidental edge-swipe. */}
       <Stack.Screen name="RideMatching" component={RideMatchingScreen} options={{ gestureEnabled: false }} />
       <Stack.Screen name="RideRating" component={RideRatingScreen} />
+      <Stack.Screen name="Safety" component={SafetyScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />

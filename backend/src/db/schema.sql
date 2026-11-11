@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS users (
   push_token TEXT,
   profile_photo TEXT,
   deletion_requested_at TIMESTAMP,
+  emergency_contact_name VARCHAR(100),
+  emergency_contact_phone VARCHAR(20),
   created_at TIMESTAMP DEFAULT NOW()
 );
 
