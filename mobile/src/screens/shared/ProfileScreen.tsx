@@ -9,7 +9,7 @@ import {
   ArrowLeft, Star, Car, Phone, Mail,
   Edit, ChevronRight, SlidersHorizontal, GraduationCap, Gift, Check
 } from 'lucide-react-native';
-import { profileAPI } from '../../services/api';
+import { profileAPI, referralsAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
 import {
@@ -25,6 +25,7 @@ export default function ProfileScreen({ navigation }: any) {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [referralProgress, setReferralProgress] = useState<{ threshold: number; cycle_progress: number; has_unredeemed_reward: boolean } | null>(null);
   const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
     if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
@@ -39,6 +40,7 @@ export default function ProfileScreen({ navigation }: any) {
 
   useEffect(() => {
     loadProfile();
+    if (user?.referral_code) loadReferralProgress();
   }, []);
 
   const loadProfile = async () => {
@@ -49,6 +51,15 @@ export default function ProfileScreen({ navigation }: any) {
       console.log('Profile error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadReferralProgress = async () => {
+    try {
+      const res = await referralsAPI.getProgress();
+      setReferralProgress(res.data);
+    } catch (err) {
+      console.log('Referral progress error:', err);
     }
   };
 
@@ -161,19 +172,35 @@ export default function ProfileScreen({ navigation }: any) {
         {/* Referral code */}
         {user?.referral_code && (
           <View style={styles.referralCard}>
-            <View style={styles.referralIcon}>
-              <Gift size={18} color={colors.primaryDark} />
+            <View style={styles.referralTopRow}>
+              <View style={styles.referralIcon}>
+                <Gift size={18} color={colors.primaryDark} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.referralLabel}>Your referral code</Text>
+                <Text style={styles.referralCode}>{user.referral_code}</Text>
+              </View>
+              <TouchableOpacity style={styles.referralCopyBtn} onPress={copyReferralCode} activeOpacity={0.7}>
+                {codeCopied
+                  ? <Check size={16} color={colors.primaryDark} />
+                  : <Text style={styles.referralCopyText}>Copy</Text>
+                }
+              </TouchableOpacity>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.referralLabel}>Your referral code</Text>
-              <Text style={styles.referralCode}>{user.referral_code}</Text>
-            </View>
-            <TouchableOpacity style={styles.referralCopyBtn} onPress={copyReferralCode} activeOpacity={0.7}>
-              {codeCopied
-                ? <Check size={16} color={colors.primaryDark} />
-                : <Text style={styles.referralCopyText}>Copy</Text>
-              }
-            </TouchableOpacity>
+
+            {referralProgress && (
+              <View style={styles.referralProgressRow}>
+                {referralProgress.has_unredeemed_reward ? (
+                  <Text style={styles.referralProgressTextReady}>
+                    🎁 Free ride ready — it'll auto-apply on your next ride!
+                  </Text>
+                ) : (
+                  <Text style={styles.referralProgressText}>
+                    Free ride every {referralProgress.threshold} referrals: {referralProgress.cycle_progress} of {referralProgress.threshold} referral rides completed
+                  </Text>
+                )}
+              </View>
+            )}
           </View>
         )}
 
@@ -307,15 +334,13 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     ...shadows.sm,
   },
   referralCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
     backgroundColor: colors.white,
     borderRadius: radius.xl,
     padding: spacing.md,
     marginBottom: spacing.md,
     ...shadows.sm,
   },
+  referralTopRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   referralIcon: {
     width: 36, height: 36, borderRadius: radius.md,
     backgroundColor: colors.primary + '1F',
@@ -330,6 +355,14 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     minWidth: 48, alignItems: 'center', justifyContent: 'center',
   },
   referralCopyText: { fontSize: fontSizes.xs, color: colors.primaryDark, fontWeight: '700' },
+  referralProgressRow: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray,
+  },
+  referralProgressText: { fontSize: fontSizes.xs, color: colors.textMuted, fontWeight: '600' },
+  referralProgressTextReady: { fontSize: fontSizes.xs, color: colors.primaryDark, fontWeight: '700' },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
   infoIcon: {
     width: 36, height: 36, borderRadius: radius.md,
