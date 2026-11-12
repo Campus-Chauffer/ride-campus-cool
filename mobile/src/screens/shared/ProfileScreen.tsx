@@ -226,9 +226,10 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   hero: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
-    paddingBottom: spacing.xxl + spacing.lg,
-    borderBottomLeftRadius: radius.xl + 8,
-    borderBottomRightRadius: radius.xl + 8,
+    paddingBottom: spacing.xl + spacing.sm,
+    borderBottomLeftRadius: radius.md,
+    borderBottomRightRadius: radius.md,
+    overflow: 'hidden',
   },
   heroTopRow: {
     flexDirection: 'row',
