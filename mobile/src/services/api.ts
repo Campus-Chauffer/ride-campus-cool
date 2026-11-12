@@ -232,6 +232,10 @@ export const discountAPI = {
   getAvailable: () => api.get('/discounts/available'),
 };
 
+export const referralsAPI = {
+  getProgress: () => api.get('/referrals/progress'),
+};
+
 export const reportsAPI = {
   submit: (data: { reported_id: number; trip_id?: number; type: string; description: string }) =>
     api.post('/reports', data),

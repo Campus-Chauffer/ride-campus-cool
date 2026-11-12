@@ -4,7 +4,7 @@ import {
   SafeAreaView, StatusBar, ScrollView, TextInput, Alert, Modal
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Flag, CheckCircle, Star } from 'lucide-react-native';
+import { Flag, CheckCircle, Star, Info } from 'lucide-react-native';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, bottomPadding, androidTopPadding, navy, white, mutedOnDark, gradients, tintedShadow } from '../../utils/theme';
 
@@ -28,7 +28,17 @@ export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: P
 
  const fare = parseFloat(trip.fare) || 0;
   const commission = parseFloat(trip.commission) || 0;
-  const earned = (fare - commission).toFixed(2);
+  // An ordinary discount eats into the platform's own commission first —
+  // free for the company — so most of the time there's nothing extra owed
+  // to the driver at all. Only the leftover that would otherwise cut into
+  // the driver's own earnings (a free ride, or a flat discount bigger than
+  // commission on this fare) gets reimbursed in cash — that real figure
+  // comes from the backend (driver_reimbursement), not from
+  // original_fare - fare, which is the passenger's discount and is often
+  // larger than what's actually owed to the driver.
+  const reimbursement = parseFloat(trip.driver_reimbursement) || 0;
+  const isDiscounted = reimbursement > 0;
+  const earned = (fare - commission + reimbursement).toFixed(2);
 
   const submitRating = () => {
     if (rating === 0) return Alert.alert('Rate passenger', 'Please select a star rating');
@@ -98,6 +108,18 @@ export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: P
             </View>
           </View>
         </View>
+
+        {isDiscounted && (
+          <View style={styles.discountBanner}>
+            <Info size={16} color={colors.info} />
+            <Text style={styles.discountBannerText}>
+              {fare === 0
+                ? `This was a free ride — don't collect anything from your passenger. Campus Chauffeur owes you GH₵${reimbursement.toFixed(2)} for this trip. Contact support after your shift to receive it.`
+                : `This ride was discounted — collect GH₵${fare.toFixed(2)} in cash from your passenger. Campus Chauffeur owes you an extra GH₵${reimbursement.toFixed(2)}. Contact support after your shift to receive it.`
+              }
+            </Text>
+          </View>
+        )}
 
         {/* Rating */}
         {!submitted ? (
@@ -246,6 +268,22 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     fontSize: fontSizes.md,
     fontWeight: '800',
     color: colors.white,
+  },
+  discountBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(33,150,243,0.1)',
+    padding: spacing.md,
+    borderRadius: radius.xl,
+    marginBottom: spacing.sm,
+  },
+  discountBannerText: {
+    flex: 1,
+    fontSize: fontSizes.xs,
+    fontWeight: '600',
+    color: colors.info,
+    lineHeight: 18,
   },
   ratingCard: {
     backgroundColor: colors.white,

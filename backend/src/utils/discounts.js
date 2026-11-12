@@ -104,38 +104,44 @@ async function claimDiscount(client, { code, passenger_id, trip_id, originalFare
     // means this count is accurate even under concurrent requests.
   }
 
-  const normalCommission = Math.round(originalFare * commissionRate * 100) / 100;
+  // 'free_ride' (the referral-program reward) is a deliberate, bounded
+  // giveaway — fare and commission both go to zero, and Campus Chauffeur
+  // reimburses the driver's entire fare out of pocket. It's rare by design
+  // (once per referral_reward_threshold qualifying referrals), so a full
+  // cash payout is acceptable here specifically.
+  if (claimedCode.type === 'free_ride') {
+    const actualDiscount = originalFare;
+    await client.query(
+      'INSERT INTO discount_redemptions (discount_code_id, user_id, trip_id, amount_discounted) VALUES ($1, $2, $3, $4)',
+      [code.id, passenger_id, trip_id, actualDiscount]
+    );
+    return { fare: 0, commission: 0, amountDiscounted: actualDiscount };
+  }
 
-  // 'free_ride' (the referral-program reward) is the one deliberate
-  // exception to "a promo never reduces what the driver gets paid out of
-  // their own fare" below — the whole point is the passenger pays the
-  // driver nothing, with Campus Chauffeur reimbursing the driver manually
-  // using the admin Redemptions view as its worklist (amount_discounted
-  // here is the full original_fare, so "owed to driver" is exactly that
-  // number with no extra bookkeeping). Every other discount type keeps the
-  // existing, narrower guarantee.
-  const actualDiscount = claimedCode.type === 'free_ride'
-    ? originalFare
-    // Never let an ordinary promo reduce what the driver actually gets
-    // paid — the discount comes out of the platform's own commission,
-    // capped at the full commission amount. If that means the passenger
-    // gets less than the code's nominal value on a very cheap ride, that's
-    // the honest number shown to them, not a silent mismatch.
-    : Math.min(computeNominalDiscount(claimedCode, originalFare), normalCommission);
+  // Every other discount (the welcome discount, any admin promo code) eats
+  // into the platform's own commission first — free for the company, and
+  // keeps the driver's net pay unaffected on its own, same as before today.
+  // Only the portion that would still cut into the driver's own take-home
+  // beyond that — a flat discount bigger than what commission on this fare
+  // alone can cover — gets reimbursed in cash, so the driver's net never
+  // actually drops below what they'd have earned on the same ride at full
+  // price. amount_discounted here is exactly that cash reimbursement (what
+  // the admin Redemptions view tracks as "owed to driver"), not the
+  // passenger's total discount — those two can now differ, by design.
+  const normalCommission = Math.round(originalFare * commissionRate * 100) / 100;
+  const nominalDiscount = Math.min(computeNominalDiscount(claimedCode, originalFare), originalFare);
+  const commissionAbsorbed = Math.min(nominalDiscount, normalCommission);
+  const reimbursed = Math.round((nominalDiscount - commissionAbsorbed) * 100) / 100;
 
   await client.query(
     'INSERT INTO discount_redemptions (discount_code_id, user_id, trip_id, amount_discounted) VALUES ($1, $2, $3, $4)',
-    [code.id, passenger_id, trip_id, actualDiscount]
+    [code.id, passenger_id, trip_id, reimbursed]
   );
 
   return {
-    fare: Math.round((originalFare - actualDiscount) * 100) / 100,
-    // A free ride waives the platform's commission too, not just the
-    // fare — there's nothing left to take a cut of.
-    commission: claimedCode.type === 'free_ride'
-      ? 0
-      : Math.round((normalCommission - actualDiscount) * 100) / 100,
-    amountDiscounted: actualDiscount,
+    fare: Math.round((originalFare - nominalDiscount) * 100) / 100,
+    commission: Math.round((normalCommission - commissionAbsorbed) * 100) / 100,
+    amountDiscounted: reimbursed,
   };
 }
 

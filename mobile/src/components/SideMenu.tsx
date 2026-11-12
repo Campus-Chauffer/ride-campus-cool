@@ -10,7 +10,7 @@ import {
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { getColors, spacing, fontSizes, radius, navy, androidTopPadding, bottomPadding, tintedShadow } from '../utils/theme';
-import { authAPI, driverRegistrationAPI } from '../services/api';
+import { authAPI, driverRegistrationAPI, discountAPI } from '../services/api';
 
 interface Props {
   visible: boolean;
@@ -28,6 +28,15 @@ export default function SideMenu({ visible, onClose, navigation }: Props) {
   const slideAnim = useRef(new Animated.Value(-menuWidth)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [switchingRole, setSwitchingRole] = useState(false);
+  const [hasAvailableDiscount, setHasAvailableDiscount] = useState(false);
+
+  useEffect(() => {
+    if (visible && user?.role !== 'driver') {
+      discountAPI.getAvailable()
+        .then((res) => setHasAvailableDiscount((res.data?.active || []).length > 0))
+        .catch(() => {});
+    }
+  }, [visible]);
 
   useEffect(() => {
     if (visible) {
@@ -149,7 +158,7 @@ export default function SideMenu({ visible, onClose, navigation }: Props) {
             ...(isDriver ? [{ icon: <Wallet size={20} color={textColor} />, label: 'Earnings', screen: 'Earnings' }] : []),
             ...(isDriver ? [{ icon: <Repeat size={20} color={textColor} />, label: 'Switch to Student Mode', onPress: handleSwitchToStudent }] : []),
             ...(!isDriver ? [{ icon: <Car size={20} color={textColor} />, label: 'Become a Driver', onPress: handleBecomeDriver }] : []),
-            ...(!isDriver ? [{ icon: <Tag size={20} color={textColor} />, label: 'Discounts', screen: 'Discounts' }] : []),
+            ...(!isDriver ? [{ icon: <Tag size={20} color={textColor} />, label: 'Discounts', screen: 'Discounts', showDot: hasAvailableDiscount }] : []),
             { icon: <Megaphone size={20} color={textColor} />, label: 'Announcements', screen: 'Announcements' },
             { icon: <Settings size={20} color={textColor} />, label: 'Settings', screen: 'Settings' },
           ].map((item) => (
@@ -159,7 +168,10 @@ export default function SideMenu({ visible, onClose, navigation }: Props) {
               onPress={() => item.onPress ? item.onPress() : navigate(item.screen!)}
               activeOpacity={0.7}
             >
-              <View style={[styles.menuItemIcon, { backgroundColor: iconBg }]}>{item.icon}</View>
+              <View style={styles.menuItemIconWrap}>
+                <View style={[styles.menuItemIcon, { backgroundColor: iconBg }]}>{item.icon}</View>
+                {item.showDot && <View style={[styles.menuItemDot, { backgroundColor: c.error, borderColor: menuBg }]} />}
+              </View>
               <Text style={[styles.menuItemLabel, { color: textColor }]}>{item.label}</Text>
               <ChevronRight size={16} color={mutedColor} />
             </TouchableOpacity>
@@ -241,11 +253,19 @@ const getStyles = (menuWidth: number, isDark: boolean) => StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radius.lg,
   },
+  menuItemIconWrap: { position: 'relative' },
   menuItemIcon: {
     width: 36, height: 36,
     borderRadius: radius.md,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  menuItemDot: {
+    position: 'absolute',
+    top: -2, right: -2,
+    width: 11, height: 11,
+    borderRadius: radius.full,
+    borderWidth: 2,
   },
   menuItemLabel: {
     flex: 1,

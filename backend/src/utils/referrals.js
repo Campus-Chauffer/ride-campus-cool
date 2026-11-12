@@ -44,8 +44,8 @@ async function issueWelcomeDiscount(client, newUserId) {
 
   await client.query(
     `INSERT INTO discount_codes
-      (code, type, value, scope, target_user_id, max_uses, max_uses_per_user, auto_apply, visible, description)
-     VALUES ($1, 'flat', $2, 'user_specific', $3, 1, 1, TRUE, FALSE, 'Referral welcome discount')`,
+      (code, type, value, scope, target_user_id, max_uses, max_uses_per_user, auto_apply, visible, description, expires_at)
+     VALUES ($1, 'flat', $2, 'user_specific', $3, 1, 1, TRUE, FALSE, 'Referral welcome discount', NOW() + INTERVAL '7 days')`,
     [code, value, newUserId]
   );
 }
@@ -109,8 +109,8 @@ async function recordReferralProgress(passengerId) {
         const code = await generateUniqueCode(client, 'discount_codes', 'code', 8);
         await client.query(
           `INSERT INTO discount_codes
-            (code, type, value, scope, target_user_id, max_uses, max_uses_per_user, auto_apply, visible, description)
-           VALUES ($1, 'free_ride', 0, 'user_specific', $2, 1, 1, TRUE, TRUE, 'Referral reward: free ride')`,
+            (code, type, value, scope, target_user_id, max_uses, max_uses_per_user, auto_apply, visible, description, expires_at)
+           VALUES ($1, 'free_ride', 0, 'user_specific', $2, 1, 1, TRUE, TRUE, 'Referral reward: free ride', NOW() + INTERVAL '7 days')`,
           [code, referredBy]
         );
 
@@ -118,7 +118,7 @@ async function recordReferralProgress(passengerId) {
         sendPushNotification(
           referrerResult.rows[0]?.push_token,
           "You've earned a free ride!",
-          `${referralCount} friends you referred have taken their first ride. Your next ride is on us.`,
+          `${referralCount} friends you referred have taken their first ride. Your next ride is on us — valid for 7 days.`,
           { type: 'referral_reward_earned' }
         ).catch(() => {});
       }
