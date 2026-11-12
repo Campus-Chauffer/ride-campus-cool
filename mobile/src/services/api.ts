@@ -102,6 +102,7 @@ export const authAPI = {
     email: string;
     password: string;
     role: string;
+    referral_code?: string;
   }) => api.post('/auth/register', data),
 
   login: (identifier: string, password: string) =>
@@ -133,6 +134,7 @@ export const ridesAPI = {
     pickup_address: string;
     dropoff_address: string;
     discount_code?: string;
+    share_opted_in?: boolean;
   }) => api.post('/rides/request', data),
 
   getHistory: () => api.get('/rides/history'),
@@ -141,6 +143,9 @@ export const ridesAPI = {
 
   cancelRide: (trip_id: number) =>
     api.delete(`/rides/cancel/${trip_id}`),
+
+  sendSafetyAlert: (trip_id: number) =>
+    api.post(`/rides/${trip_id}/safety-alert`),
 
   getPricing: () => api.get('/rides/pricing'),
 
@@ -184,6 +189,7 @@ export const driverAPI = {
     api.patch(`/drivers/complete/${trip_id}`),
   
   getTripStatus: (tripId: number) => api.get(`/drivers/trip/${tripId}`),
+  getSharedGroup: (groupId: number) => api.get(`/drivers/shared-group/${groupId}`),
   getHistory: () => api.get('/drivers/history'),
 };
 
@@ -201,7 +207,14 @@ export const driverRegistrationAPI = {
 
 export const profileAPI = {
   getProfile: (user_id: number) => api.get(`/ratings/profile/${user_id}`),
-  updateProfile: (data: any) => api.patch('/auth/profile', data),
+  updateProfile: (data: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    current_password?: string;
+    emergency_contact_name?: string;
+    emergency_contact_phone?: string;
+  }) => api.patch('/auth/profile', data),
 };
 
 export const ratingsAPI = {

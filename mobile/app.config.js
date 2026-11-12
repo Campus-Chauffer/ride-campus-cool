@@ -1,6 +1,6 @@
-import 'dotenv/config';
+require('dotenv').config();
 
-export default {
+module.exports = {
   expo: {
     name: "Campus Chauffeur",
     slug: "campus-chauffeur",
@@ -86,6 +86,7 @@ export default {
         }
       ],
       "expo-task-manager",
+      "expo-video",
       [
         "expo-build-properties",
         {

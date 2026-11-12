@@ -1,68 +1,92 @@
-import React, { useEffect, useState } from 'react';
-import { View, Image, Text, StyleSheet } from 'react-native';
-import * as Font from 'expo-font';
+import React, { useEffect, useRef } from 'react';
+import { StyleSheet } from 'react-native';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import * as SplashScreenNative from 'expo-splash-screen';
 
-// Prevent the native splash from auto-hiding until our fonts are ready —
-// otherwise there's a flash of unstyled text before Dancing Script loads.
+// Prevent the native splash from auto-hiding until the animation is
+// actually ready to paint its first frame — otherwise there's a blank
+// navy gap between the native splash disappearing and the video starting.
 SplashScreenNative.preventAutoHideAsync();
 
-export default function SplashScreen() {
-  const [fontsLoaded, setFontsLoaded] = useState(false);
+// The exact reference recording — logo, wordmark, and "For Yos" tribute
+// are all baked into the video itself, so this component is just a player.
+const SOURCE = require('../../assets/splash/splash-animation.mp4');
+
+// If the player never reports readyToPlay within this window (corrupt
+// file, a device that fails to init the decoder, anything), bail out
+// rather than leave the native splash stuck on screen forever.
+const READY_TIMEOUT_MS = 2000;
+
+interface Props {
+  onFinished: () => void;
+}
+
+export default function SplashScreen({ onFinished }: Props) {
+  const player = useVideoPlayer(SOURCE, (p) => {
+    p.loop = false;
+    p.muted = true;
+  });
+
+  const settledRef = useRef(false); // native splash has been told to hide
+  const finishedRef = useRef(false); // onFinished has fired
+
+  const hideNativeSplash = () => {
+    if (settledRef.current) return;
+    settledRef.current = true;
+    SplashScreenNative.hideAsync();
+  };
+
+  const finish = () => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    onFinished();
+  };
 
   useEffect(() => {
-    async function loadFonts() {
-      await Font.loadAsync({
-        'DancingScript-Regular': require('../../assets/fonts/DancingScript-Regular.ttf'),
-      });
-      setFontsLoaded(true);
-      await SplashScreenNative.hideAsync();
-    }
-    loadFonts();
-  }, []);
+    const statusSub = player.addListener('statusChange', ({ status }) => {
+      if (status === 'readyToPlay') {
+        hideNativeSplash();
+        player.play();
+      } else if (status === 'error') {
+        // Couldn't load the video at all — don't block the app on it.
+        hideNativeSplash();
+        finish();
+      }
+    });
 
-  if (!fontsLoaded) {
-    // Render a plain black view while the font loads — avoids a flash of
-    // Georgia/system-default text before Dancing Script is ready.
-    return <View style={styles.container} />;
-  }
+    const endSub = player.addListener('playToEnd', () => {
+      finish();
+    });
+
+    const readyTimeout = setTimeout(() => {
+      hideNativeSplash();
+      // Give it a little longer to actually finish playing if it did
+      // become ready right at the timeout boundary; otherwise just move on.
+      if (!finishedRef.current) finish();
+    }, READY_TIMEOUT_MS);
+
+    return () => {
+      statusSub.remove();
+      endSub.remove();
+      clearTimeout(readyTimeout);
+    };
+  }, [player]);
 
   return (
-    <View style={styles.container}>
-      <Image
-        source={require('../../assets/cc-logo.jpg')}
-        style={styles.logo}
-        resizeMode="contain"
-      />
-      <Text style={styles.brandName}>Campus Chauffeur</Text>
-      <Text style={styles.tribute}>For Yos</Text>
-    </View>
+    <VideoView
+      player={player}
+      style={styles.video}
+      contentFit="contain"
+      nativeControls={false}
+      allowsFullscreen={false}
+      allowsPictureInPicture={false}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  video: {
     flex: 1,
-    backgroundColor: '#000000',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logo: {
-    width: 140,
-    height: 140,
-  },
-  brandName: {
-    marginTop: 16,
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FBBF24',
-    letterSpacing: 0.5,
-  },
-  tribute: {
-    position: 'absolute',
-    bottom: 60,
-    fontFamily: 'DancingScript-Regular',
-    fontSize: 28,
-    color: '#FBBF24',
+    backgroundColor: '#1A1A2E',
   },
 });

@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { MapPin, X, Phone, Check } from 'lucide-react-native';
+import { MapPin, X, Phone, Check, ShieldAlert } from 'lucide-react-native';
 import { ridesAPI } from '../../services/api';
 import socketService from '../../services/socket';
 import { useThemeStore } from '../../store/themeStore';
@@ -31,9 +31,10 @@ const ROUTE_BROADCAST_STALE_MS = 15000;
 interface Props {
   trip: any;
   onCancelled: () => void;
+  onSafetyPress: () => void;
 }
 
-export default function DriverFoundScreen({ trip, onCancelled }: Props) {
+export default function DriverFoundScreen({ trip, onCancelled, onSafetyPress }: Props) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
   const styles = getStyles(colors, isDark);
@@ -363,6 +364,11 @@ export default function DriverFoundScreen({ trip, onCancelled }: Props) {
             <Text style={styles.driverName}>{trip.driver_first_name} {trip.driver_last_name}</Text>
           </View>
 
+          {/* Safety button */}
+          <TouchableOpacity style={styles.safetyBtn} onPress={onSafetyPress}>
+            <ShieldAlert size={18} color={colors.error} />
+          </TouchableOpacity>
+
           {/* Call button */}
           {trip.driver_phone && (
             <TouchableOpacity style={styles.callBtn} onPress={callDriver}>
@@ -370,7 +376,7 @@ export default function DriverFoundScreen({ trip, onCancelled }: Props) {
             </TouchableOpacity>
           )}
 
-          {trip.discount_code && parseFloat(trip.original_fare) !== parseFloat(trip.fare) ? (
+          {parseFloat(trip.original_fare) !== parseFloat(trip.fare) ? (
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={styles.fareStrike}>GH₵{Math.round(parseFloat(trip.original_fare))}</Text>
               <Text style={styles.fareText}>GH₵{Math.round(parseFloat(trip.fare))}</Text>
@@ -499,6 +505,14 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   },
   driverMeta: { flex: 1 },
   driverName: { fontSize: fontSizes.md, fontWeight: '700', color: colors.dark },
+  safetyBtn: {
+    width: 44, height: 44,
+    borderRadius: radius.full,
+    backgroundColor: colors.error + '18',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+  },
   callBtn: {
     width: 44, height: 44,
     borderRadius: radius.full,

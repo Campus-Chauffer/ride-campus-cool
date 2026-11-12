@@ -12,6 +12,13 @@ const STATUS_STYLES = {
 const TYPE_STYLES = {
   passenger: "bg-gray-500/10 text-gray-400",
   driver: "bg-blue-500/10 text-blue-400",
+  safety_alert: "bg-red-500/10 text-red-400",
+};
+
+const TYPE_LABELS = {
+  passenger: "Passenger",
+  driver: "Driver",
+  safety_alert: "Safety Alert",
 };
 
 function capitalize(s) {
@@ -113,6 +120,7 @@ export default function Reports() {
           <option value="all">All types</option>
           <option value="passenger">Passenger reports</option>
           <option value="driver">Driver reports</option>
+          <option value="safety_alert">Safety alerts</option>
         </select>
         <button onClick={fetchReports}
           className="flex items-center gap-2 bg-gray-900 border border-gray-800 text-gray-400 hover:text-white hover:border-gray-700 px-3 py-2 rounded-lg text-sm transition">
@@ -152,7 +160,7 @@ export default function Reports() {
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${TYPE_STYLES[report.type] || "bg-gray-500/10 text-gray-400"}`}>
-                          {capitalize(report.type)}
+                          {TYPE_LABELS[report.type] || capitalize(report.type)}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -178,7 +186,7 @@ export default function Reports() {
               </button>
             </div>
             <div className="flex gap-2 mb-4">
-              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${TYPE_STYLES[selected.type] || "bg-gray-500/10 text-gray-400"}`}>{capitalize(selected.type)}</span>
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${TYPE_STYLES[selected.type] || "bg-gray-500/10 text-gray-400"}`}>{TYPE_LABELS[selected.type] || capitalize(selected.type)}</span>
               <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_STYLES[selected.status] || "bg-gray-500/10 text-gray-400"}`}>{capitalize(selected.status)}</span>
             </div>
             <div className="space-y-2 text-sm mb-4">

@@ -44,7 +44,16 @@ const UPDATE_FIELDS = [
   { key: "android_update_url", label: "Android update link", description: "Where the update button sends Android users — the Play Store listing URL", type: "text" },
 ];
 
-const ALL_FIELDS = [...CONFIG_FIELDS({}), ...NIGHT_WINDOW_FIELDS, ...UPDATE_FIELDS];
+// Powers the dismissible "what's new" popup (ChangelogModal.tsx in the
+// app). Bump changelog_version whenever changelog_items is updated — the
+// app shows the popup once per version, tracked locally per device, and
+// never again until this number goes up again.
+const CHANGELOG_FIELDS = [
+  { key: "changelog_version", label: "Changelog version", description: "Bump this number whenever you update the bullets below — that's what makes the popup show again.", type: "number" },
+  { key: "changelog_items", label: "What's new (one bullet per line)", description: "Each line becomes one bullet point in the popup.", type: "textarea" },
+];
+
+const ALL_FIELDS = [...CONFIG_FIELDS({}), ...NIGHT_WINDOW_FIELDS, ...UPDATE_FIELDS, ...CHANGELOG_FIELDS];
 
 export default function Config() {
   const [values, setValues] = useState({});
@@ -208,6 +217,52 @@ export default function Config() {
                     placeholder={field.type === "text" ? "https://…" : ""}
                     onChange={(e) => { setValues((prev) => ({ ...prev, [field.key]: e.target.value })); setSuccessMsg(null); }}
                     className={`${field.type === "number" ? "w-24 text-right" : "w-64"} bg-gray-800/60 border rounded-lg px-3 py-2 text-white text-sm focus:outline-none transition ${changed ? "border-yellow-400/60" : "border-gray-800 focus:border-yellow-400/50"}`}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-gray-800 bg-gray-800/40">
+              <p className="text-white font-medium text-sm">What's New popup</p>
+            </div>
+            {CHANGELOG_FIELDS.map((field, i) => {
+              const changed = String(values[field.key] ?? "") !== String(original[field.key] ?? "");
+              if (field.type === "textarea") {
+                return (
+                  <div
+                    key={field.key}
+                    className={`px-5 py-4 ${i < CHANGELOG_FIELDS.length - 1 ? "border-b border-gray-800" : ""}`}
+                  >
+                    <p className="text-white text-sm font-medium">{field.label}</p>
+                    <p className="text-gray-500 text-xs mt-0.5 mb-2">{field.description}</p>
+                    <textarea
+                      value={values[field.key] ?? ""}
+                      rows={4}
+                      placeholder={"New: ride-sharing\nNew: safety alerts\nImproved: faster driver matching"}
+                      onChange={(e) => { setValues((prev) => ({ ...prev, [field.key]: e.target.value })); setSuccessMsg(null); }}
+                      className={`w-full bg-gray-800/60 border rounded-lg px-3 py-2 text-white text-sm focus:outline-none transition resize-y ${changed ? "border-yellow-400/60" : "border-gray-800 focus:border-yellow-400/50"}`}
+                    />
+                  </div>
+                );
+              }
+              return (
+                <div
+                  key={field.key}
+                  className={`flex items-center justify-between px-5 py-4 gap-4 flex-wrap ${i < CHANGELOG_FIELDS.length - 1 ? "border-b border-gray-800" : ""}`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-medium">{field.label}</p>
+                    <p className="text-gray-500 text-xs mt-0.5">{field.description}</p>
+                  </div>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={values[field.key] ?? ""}
+                    onChange={(e) => { setValues((prev) => ({ ...prev, [field.key]: e.target.value })); setSuccessMsg(null); }}
+                    className={`w-24 text-right bg-gray-800/60 border rounded-lg px-3 py-2 text-white text-sm focus:outline-none transition ${changed ? "border-yellow-400/60" : "border-gray-800 focus:border-yellow-400/50"}`}
                   />
                 </div>
               );

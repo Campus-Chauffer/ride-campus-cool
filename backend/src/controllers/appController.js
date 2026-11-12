@@ -1,10 +1,12 @@
 const pool = require('../db/pool');
 
 // Public, unauthenticated — the app calls this before login is even
-// guaranteed (e.g. from the login screen) to know whether it's outdated.
+// guaranteed (e.g. from the login screen) to know whether it's outdated,
+// and to check for a new "what's new" changelog to show.
 const VERSION_CONFIG_KEYS = [
   'ios_latest_build', 'ios_update_url',
   'android_latest_build', 'android_update_url',
+  'changelog_version', 'changelog_items',
 ];
 
 const checkVersion = async (req, res) => {
@@ -24,6 +26,10 @@ const checkVersion = async (req, res) => {
       android: {
         latestBuild: parseInt(config.android_latest_build, 10) || 0,
         updateUrl: config.android_update_url || null,
+      },
+      changelog: {
+        version: parseInt(config.changelog_version, 10) || 0,
+        items: (config.changelog_items || '').split('\n').map((s) => s.trim()).filter(Boolean),
       },
     });
   } catch (err) {

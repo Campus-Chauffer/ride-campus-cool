@@ -111,8 +111,14 @@ const dispatchRide = async (trip_id) => {
     // sitting with a live offer out for some OTHER ride — without the
     // latter, a driver deciding on one ride could get handed a second one
     // at the same time.
+    // 'arrived' belongs in this list too — a driver who's reached pickup
+    // and is waiting on the passenger is still fully busy, not available
+    // for a new offer. This was a real gap even for solo trips, and is now
+    // load-bearing for ride-sharing: a shared trip's whole "stay out of
+    // dispatch until every leg is done" guarantee depends on this query
+    // being correct for every status a leg can sit in while still active.
     const busyResult = await pool.query(
-      `SELECT driver_id FROM trips WHERE status IN ('accepted', 'in_progress') AND driver_id IS NOT NULL
+      `SELECT driver_id FROM trips WHERE status IN ('accepted', 'arrived', 'in_progress') AND driver_id IS NOT NULL
        UNION
        SELECT driver_id FROM trip_offers`
     );

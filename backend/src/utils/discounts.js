@@ -105,13 +105,23 @@ async function claimDiscount(client, { code, passenger_id, trip_id, originalFare
   }
 
   const normalCommission = Math.round(originalFare * commissionRate * 100) / 100;
-  const nominalDiscount = computeNominalDiscount(claimedCode, originalFare);
-  // Never let a promo reduce what the driver actually gets paid — the
-  // discount comes out of the platform's own commission, capped at the
-  // full commission amount. If that means the passenger gets less than the
-  // code's nominal value on a very cheap ride, that's the honest number
-  // shown to them, not a silent mismatch.
-  const actualDiscount = Math.min(nominalDiscount, normalCommission);
+
+  // 'free_ride' (the referral-program reward) is the one deliberate
+  // exception to "a promo never reduces what the driver gets paid out of
+  // their own fare" below — the whole point is the passenger pays the
+  // driver nothing, with Campus Chauffeur reimbursing the driver manually
+  // using the admin Redemptions view as its worklist (amount_discounted
+  // here is the full original_fare, so "owed to driver" is exactly that
+  // number with no extra bookkeeping). Every other discount type keeps the
+  // existing, narrower guarantee.
+  const actualDiscount = claimedCode.type === 'free_ride'
+    ? originalFare
+    // Never let an ordinary promo reduce what the driver actually gets
+    // paid — the discount comes out of the platform's own commission,
+    // capped at the full commission amount. If that means the passenger
+    // gets less than the code's nominal value on a very cheap ride, that's
+    // the honest number shown to them, not a silent mismatch.
+    : Math.min(computeNominalDiscount(claimedCode, originalFare), normalCommission);
 
   await client.query(
     'INSERT INTO discount_redemptions (discount_code_id, user_id, trip_id, amount_discounted) VALUES ($1, $2, $3, $4)',
@@ -120,7 +130,11 @@ async function claimDiscount(client, { code, passenger_id, trip_id, originalFare
 
   return {
     fare: Math.round((originalFare - actualDiscount) * 100) / 100,
-    commission: Math.round((normalCommission - actualDiscount) * 100) / 100,
+    // A free ride waives the platform's commission too, not just the
+    // fare — there's nothing left to take a cut of.
+    commission: claimedCode.type === 'free_ride'
+      ? 0
+      : Math.round((normalCommission - actualDiscount) * 100) / 100,
     amountDiscounted: actualDiscount,
   };
 }

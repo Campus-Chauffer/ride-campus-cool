@@ -242,7 +242,7 @@ export default function Discounts() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-800 text-gray-500 text-xs">
-                  {["Rider", "Code", "Original Fare", "Discounted Fare", "Saved", "Route", "Date"].map((h) => (
+                  {["Rider", "Driver", "Code", "Original Fare", "Discounted Fare", "Owed to Driver", "Route", "Date"].map((h) => (
                     <th key={h} className="text-left px-4 py-3 font-medium">{h}</th>
                   ))}
                 </tr>
@@ -254,7 +254,22 @@ export default function Discounts() {
                       <p className="text-white font-medium">{r.first_name} {r.last_name}</p>
                       <p className="text-gray-500 text-xs">{r.phone_number}</p>
                     </td>
-                    <td className="px-4 py-3 text-gray-300 font-mono">{r.code}</td>
+                    <td className="px-4 py-3">
+                      {r.driver_first_name ? (
+                        <>
+                          <p className="text-white font-medium">{r.driver_first_name} {r.driver_last_name}</p>
+                          <p className="text-gray-500 text-xs">{r.driver_phone_number}</p>
+                        </>
+                      ) : (
+                        <span className="text-gray-500">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-gray-300 font-mono">{r.code}</span>
+                      {r.discount_type === "free_ride" && (
+                        <span className="ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">Free ride</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-gray-400 line-through">₵{parseFloat(r.original_fare).toFixed(2)}</td>
                     <td className="px-4 py-3 text-white font-medium">₵{parseFloat(r.discounted_fare).toFixed(2)}</td>
                     <td className="px-4 py-3 text-green-400 font-medium">₵{parseFloat(r.amount_discounted).toFixed(2)}</td>

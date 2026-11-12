@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import RNMapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MapPin, Phone, Clock, AlertTriangle } from 'lucide-react-native';
+import { MapPin, Phone, Clock, AlertTriangle, ShieldAlert } from 'lucide-react-native';
 import { driverAPI, ridesAPI } from '../../services/api';
 import socketService from '../../services/socket';
 import { useThemeStore } from '../../store/themeStore';
@@ -32,9 +32,10 @@ interface Props {
   trip: any;
   onTripStarted: () => void;
   onCancelled: () => void;
+  onSafetyPress: () => void;
 }
 
-export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }: Props) {
+export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled, onSafetyPress }: Props) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
   // This screen re-renders every second for its wait timer plus every few
@@ -283,6 +284,9 @@ export default function DriverArrivedScreen({ trip, onTripStarted, onCancelled }
               </Text>
               <Text style={styles.driverPlate}>{trip.plate_number}</Text>
             </View>
+            <TouchableOpacity style={styles.safetyBtn} onPress={onSafetyPress}>
+              <ShieldAlert size={16} color={colors.error} />
+            </TouchableOpacity>
             {trip.driver_phone && (
               <TouchableOpacity style={styles.callBtn} onPress={callDriver}>
                 <Phone size={16} color={navy} />
@@ -370,6 +374,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   // Card background is light gray — brand yellow text there is ~1.9:1
   // contrast, so use navy instead.
   driverPlate: { fontSize: fontSizes.xs, color: colors.dark, fontWeight: '600', marginTop: 2 },
+  safetyBtn: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.error + '18', justifyContent: 'center', alignItems: 'center' },
   callBtn: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3) },
   fareRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md, padding: spacing.md, borderRadius: radius.lg, ...tintedShadow(navy, isDark ? 0 : 0.2) },
   fareLabel: { fontSize: fontSizes.xs, color: 'rgba(255,255,255,0.55)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },

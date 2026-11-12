@@ -11,6 +11,9 @@ interface User {
   email: string;
   role: 'passenger' | 'driver' | 'admin';
   status: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  referral_code?: string;
 }
 
 interface AuthStore {

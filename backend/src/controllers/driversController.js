@@ -1,6 +1,7 @@
 const pool = require('../db/pool');
 const { sendPushNotification } = require('../utils/notifications');
 const { sendRatingReminder, sendRideReceipt } = require('../utils/email');
+const { recordReferralProgress } = require('../utils/referrals');
 
 
 // Driver goes online
@@ -223,6 +224,19 @@ const acceptOffer = async (req, res) => {
 
     const trip = result.rows[0];
 
+    // Ride-sharing: a second passenger can join this group before a driver
+    // is found for it, in which case their leg never went through
+    // trip_offers/broadcast at all — it's just been sitting at 'requested'
+    // waiting for the anchor's own dispatch to land a driver. Propagate
+    // that assignment to any such sibling now.
+    if (trip.shared_group_id) {
+      await pool.query(
+        `UPDATE trips SET driver_id = $1, status = 'accepted', accepted_at = NOW()
+         WHERE shared_group_id = $2 AND id != $3 AND status = 'requested'`,
+        [driver.id, trip.shared_group_id, trip.id]
+      );
+    }
+
     const passengerResult = await pool.query(
       `SELECT first_name, last_name, phone_number FROM users WHERE id = $1`,
       [trip.passenger_id]
@@ -271,6 +285,26 @@ const startTrip = async (req, res) => {
     }
 
     const trip = tripResult.rows[0];
+
+    // Ride-sharing: a match can land while the driver is already sitting on
+    // the solo ArrivedAtPickupScreen (the normal "I've arrived" flow for a
+    // trip that wasn't shared yet) — a tap on that screen's own Start Trip
+    // button in the brief window before the client notices and switches to
+    // the multi-stop flow would otherwise start this leg alone while a
+    // just-matched co-rider is still waiting to be picked up, desyncing
+    // the group's unified start. Block it here; the client's own poll will
+    // catch up and move the driver into the correct multi-stop screen,
+    // where this leg auto-starts normally once everyone's confirmed.
+    if (trip.shared_group_id) {
+      const groupResult = await pool.query(
+        `SELECT status FROM trips WHERE shared_group_id = $1 AND status != 'cancelled'`,
+        [trip.shared_group_id]
+      );
+      const allOnboard = groupResult.rows.every((t) => ['arrived', 'in_progress', 'completed'].includes(t.status));
+      if (!allOnboard) {
+        return res.status(400).json({ error: 'Waiting for the other passenger to be picked up first.' });
+      }
+    }
 
     // Calculate wait penalty
     let waitPenalty = 0;
@@ -366,6 +400,12 @@ const completeTrip = async (req, res) => {
     }
 
     const trip = result.rows[0];
+
+    // Referral program: if this was the passenger's first completed trip
+    // and they were referred by someone, this may push the referrer over
+    // another reward threshold. Never blocks trip completion on failure —
+    // recordReferralProgress handles/logs its own errors internally.
+    recordReferralProgress(trip.passenger_id).catch(() => {});
 
     // Record commission in ledger
     await pool.query(
@@ -471,6 +511,30 @@ const arrivedAtPickup = async (req, res) => {
       `Your driver is waiting at ${trip.pickup_address}. You have 5 free minutes before a wait fee applies.`,
       { type: 'driver_arrived', trip_id: trip.id }
     );
+
+    // Ride-sharing: once every active member of this group has reached
+    // 'arrived' (confirmed onboard), the trip starts for all of them at
+    // once — no separate "Start Trip" tap. A no-op for a solo trip or a
+    // shared trip that never matched a second passenger (group size < 2),
+    // which keeps today's explicit Start Trip flow completely unchanged
+    // for the common case.
+    if (trip.shared_group_id) {
+      const { tryAutoStartGroup } = require('../utils/sharedRides');
+      const startedLegs = await tryAutoStartGroup(pool, trip.shared_group_id);
+      if (startedLegs) {
+        for (const leg of startedLegs) {
+          const legPassenger = await pool.query('SELECT push_token FROM users WHERE id = $1', [leg.passenger_id]);
+          sendPushNotification(
+            legPassenger.rows[0]?.push_token,
+            '🚀 Trip started!',
+            leg.wait_penalty > 0
+              ? `Your trip has started! A wait fee of GH₵${leg.wait_penalty} was added. Total fare: GH₵${parseFloat(leg.fare).toFixed(2)}`
+              : `Your trip has started! You're on your way to ${leg.dropoff_address}.`,
+            { type: 'trip_started', trip_id: leg.id }
+          ).catch(() => {});
+        }
+      }
+    }
 
     res.json(trip);
   } catch (err) {

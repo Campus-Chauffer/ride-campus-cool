@@ -96,7 +96,7 @@ export default function RideRatingScreen({ route, navigation }: any) {
           <View style={styles.fareRow}>
             <View>
               <Text style={styles.fareLabel}>Total fare</Text>
-              {trip.discount_code && parseFloat(trip.original_fare) !== parseFloat(trip.fare) ? (
+              {parseFloat(trip.original_fare) !== parseFloat(trip.fare) ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={styles.fareStrike}>GH₵{Math.round(parseFloat(trip.original_fare))}</Text>
                   <Text style={styles.fareValue}>GH₵{Math.round(parseFloat(trip.fare))}</Text>
@@ -104,9 +104,11 @@ export default function RideRatingScreen({ route, navigation }: any) {
               ) : (
                 <Text style={styles.fareValue}>GH₵{Math.round(parseFloat(trip.fare))}</Text>
               )}
-              {trip.discount_code && (
+              {trip.discount_code ? (
                 <Text style={styles.fareDiscountNote}>Code {trip.discount_code} applied</Text>
-              )}
+              ) : trip.ride_type === 'shared' ? (
+                <Text style={styles.fareDiscountNote}>Shared fare applied</Text>
+              ) : null}
             </View>
             <View style={styles.fareDivider} />
             <View>

@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS users (
   push_token TEXT,
   profile_photo TEXT,
   deletion_requested_at TIMESTAMP,
+  emergency_contact_name VARCHAR(100),
+  emergency_contact_phone VARCHAR(20),
+  referral_code VARCHAR(6) UNIQUE,
+  referred_by INTEGER REFERENCES users(id),
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -77,6 +81,13 @@ CREATE TABLE IF NOT EXISTS trips (
   distance_km DECIMAL(6,2),
   wait_penalty DECIMAL(10,2) DEFAULT 0,
   ride_type VARCHAR(20) DEFAULT 'standard',
+  -- Shared-ride grouping: NULL for a normal solo trip. For a shared trip,
+  -- every leg (including the first/anchor passenger) points at the anchor
+  -- leg's own id, itself included — so group size is just
+  -- COUNT(*) WHERE shared_group_id = $anchorId, and the anchor row is the
+  -- natural lock target (SELECT ... FOR UPDATE WHERE id = shared_group_id)
+  -- for serializing concurrent joins onto the same open seat.
+  shared_group_id INTEGER REFERENCES trips(id),
   status VARCHAR(20) DEFAULT 'requested',
   -- Set only when status = 'no_driver_found', to tell apart "nobody was
   -- even online nearby" from "drivers are online but every one of them is
@@ -265,6 +276,20 @@ INSERT INTO config (key, value) VALUES
   -- reproduce that silently. Must stay <= the lowest of day_lower_flat/
   -- night_lower_flat, or it would override a deliberately-set low tier.
   ('minimum_fare', '12'),
+  -- Ride-sharing (v1): flat cedis off each matched passenger's own
+  -- normally-computed fare (not a percentage, not a flat shared price —
+  -- two co-riders can have different distances/fares). Matching window is
+  -- how long a request stays open to a match before falling back to a
+  -- normal solo dispatch at full price. Radius/bearing are the hard
+  -- route-proximity filter (straight-line, no routing-API call needed at
+  -- this stage). shared_max_passengers is enforced in code, not a DB
+  -- constraint, so raising it later (the discussed future 4-passenger
+  -- scale) is a config change, not a migration.
+  ('shared_fare_discount', '3'),
+  ('shared_match_window_seconds', '120'),
+  ('shared_match_radius_km', '1.5'),
+  ('shared_match_bearing_deg', '45'),
+  ('shared_max_passengers', '2'),
   -- Read by checkVersion() in appController.js to power the in-app "update
   -- available" prompt. latestBuild starts at 1 (below any real build number
   -- EAS will produce) so a fresh database never nags anyone until these are
@@ -272,5 +297,19 @@ INSERT INTO config (key, value) VALUES
   ('ios_latest_build', '1'),
   ('ios_update_url', ''),
   ('android_latest_build', '1'),
-  ('android_update_url', 'https://play.google.com/store/apps/details?id=com.campuschauffeur.app')
+  ('android_update_url', 'https://play.google.com/store/apps/details?id=com.campuschauffeur.app'),
+  -- Referral program: every referral_reward_threshold qualifying referrals
+  -- (a referred user's first completed trip) earns the referrer a genuinely
+  -- free ride — see claimDiscount's 'free_ride' branch in discounts.js.
+  -- referral_welcome_discount is a flat discount off a NEW signup's first
+  -- ride when they entered someone else's code, same ordinary 'flat'
+  -- discount type as any other promo code.
+  ('referral_reward_threshold', '5'),
+  ('referral_welcome_discount', '3'),
+  -- "What's new" popup (ChangelogModal.tsx): bump changelog_version and
+  -- update changelog_items (one bullet per line) via the admin Config page
+  -- whenever there's something worth telling existing users about. The app
+  -- shows it once per version, tracked locally per device.
+  ('changelog_version', '0'),
+  ('changelog_items', '')
 ON CONFLICT (key) DO NOTHING;

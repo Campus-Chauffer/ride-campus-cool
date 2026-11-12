@@ -5,6 +5,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import SplashScreen from './src/components/SplashScreen';
 import CrashFallbackScreen from './src/components/CrashFallbackScreen';
 import UpdateModal from './src/components/UpdateModal';
+import ChangelogModal from './src/components/ChangelogModal';
 import './src/utils/backgroundLocation'; // register background task on app start
 import { fetchRemoteBackendConfig } from './src/utils/remoteConfig';
 import { applyRemoteApiBaseUrl } from './src/services/api';
@@ -25,16 +26,23 @@ fetchRemoteBackendConfig().then((config) => {
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const splashOpacity = useRef(new Animated.Value(1)).current;
+  const fadedRef = useRef(false);
+
+  const fadeOutSplash = () => {
+    if (fadedRef.current) return;
+    fadedRef.current = true;
+    Animated.timing(splashOpacity, {
+      toValue: 0,
+      duration: 400,
+      useNativeDriver: true,
+    }).start(() => setShowSplash(false));
+  };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      Animated.timing(splashOpacity, {
-        toValue: 0,
-        duration: 400,
-        useNativeDriver: true,
-      }).start(() => setShowSplash(false));
-    }, 3000);
-
+    // Primary trigger is the video's own onFinished callback. This is only
+    // a last-resort fallback in case that callback chain never fires for
+    // some unforeseen reason — the app must never be stuck behind the splash.
+    const timer = setTimeout(fadeOutSplash, 6000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -44,6 +52,7 @@ export default function App() {
     >
       <AppNavigator />
       <UpdateModal />
+      <ChangelogModal />
       {showSplash && (
         <Animated.View
           style={{
@@ -52,7 +61,7 @@ export default function App() {
             opacity: splashOpacity,
           }}
         >
-          <SplashScreen />
+          <SplashScreen onFinished={fadeOutSplash} />
         </Animated.View>
       )}
     </Sentry.ErrorBoundary>

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const pool = require('../db/pool');
+const { getGroupSiblings, getFullGroup } = require('../utils/sharedRides');
 
 const {
   goOnline, goOffline, updateLocation,
@@ -22,12 +23,45 @@ router.get('/trip/:trip_id', authenticate, async (req, res) => {
   const { trip_id } = req.params;
   try {
     const result = await pool.query(
-      'SELECT id, status FROM trips WHERE id = $1',
+      'SELECT * FROM trips WHERE id = $1',
       [trip_id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Trip not found' });
-    res.json(result.rows[0]);
+    const trip = result.rows[0];
+    // co_riders lets DriverHomeScreen's existing 5s poll (today only used
+    // to catch passenger cancellation) also notice a shared group growing
+    // to 2 and switch into the multi-stop pickup flow.
+    const co_riders = await getGroupSiblings(pool, trip);
+    res.json({ ...trip, co_riders });
   } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Full leg details for every active member of a shared-ride group, for the
+// driver app's multi-stop pickup/drop-off screens — richer than the
+// co_riders field on /trip/:id (which is just enough for the lightweight
+// "did my group just grow" poll), with map coordinates, fare, and who to
+// call for each passenger.
+router.get('/shared-group/:group_id', authenticate, async (req, res) => {
+  const { group_id } = req.params;
+  const user_id = req.user.id;
+  try {
+    const driverResult = await pool.query('SELECT id FROM drivers WHERE user_id = $1', [user_id]);
+    const driver_id = driverResult.rows[0]?.id;
+    if (!driver_id) return res.status(404).json({ error: 'Driver not found' });
+
+    const anchorCheck = await pool.query(
+      'SELECT id FROM trips WHERE id = $1 AND driver_id = $2', [group_id, driver_id]
+    );
+    if (anchorCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Not your trip group' });
+    }
+
+    const group = await getFullGroup(pool, group_id);
+    res.json({ group });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Server error' });
   }
 });

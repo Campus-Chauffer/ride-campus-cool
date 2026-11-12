@@ -4,7 +4,7 @@ import {
   Linking, StatusBar, Image
 } from 'react-native';
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import { Phone, Flag } from 'lucide-react-native';
+import { Phone, Flag, ShieldAlert } from 'lucide-react-native';
 import socketService from '../../services/socket';
 import { ridesAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
@@ -26,9 +26,10 @@ const ROUTE_BROADCAST_STALE_MS = 15000;
 
 interface Props {
   trip: any;
+  onSafetyPress: () => void;
 }
 
-export default function ActiveRideScreen({ trip }: Props) {
+export default function ActiveRideScreen({ trip, onSafetyPress }: Props) {
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
   const styles = getStyles(colors, isDark);
@@ -260,6 +261,9 @@ export default function ActiveRideScreen({ trip }: Props) {
             </Text>
             <Text style={styles.tripStatus}>En route to your destination</Text>
           </View>
+          <TouchableOpacity style={styles.safetyBtn} onPress={onSafetyPress}>
+            <ShieldAlert size={16} color={colors.error} />
+          </TouchableOpacity>
           {trip.driver_phone && (
             <TouchableOpacity style={styles.callBtn} onPress={callDriver}>
               <Phone size={16} color={navy} />
@@ -312,6 +316,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   driverAvatarText: { fontSize: fontSizes.lg, fontWeight: '800', color: navy },
   driverName: { fontSize: fontSizes.md, fontWeight: '700', color: colors.dark },
   tripStatus: { fontSize: fontSizes.xs, color: colors.textMuted, marginTop: 2 },
+  safetyBtn: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.error + '18', justifyContent: 'center', alignItems: 'center' },
   callBtn: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3) },
   destinationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.offWhite, padding: spacing.md, borderRadius: radius.lg },
   destinationText: { flex: 1, fontSize: fontSizes.sm, color: colors.dark, fontWeight: '500' },

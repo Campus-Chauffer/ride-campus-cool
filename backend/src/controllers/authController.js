@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const { sendRatingReminder, sendEmailChangedAlert, sendPasswordResetOTP } = require('../utils/email');
 const { sendSMS } = require('../utils/sms');
 const { takeDriverOffline } = require('./driversController');
+const { generateUniqueCode, issueWelcomeDiscount } = require('../utils/referrals');
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -72,7 +73,7 @@ const verifyOTP = async (req, res) => {
 
 // Register new user
 const register = async (req, res) => {
-  const { phone_number, first_name, last_name, email, password, role } = req.body;
+  const { phone_number, first_name, last_name, email, password, role, referral_code } = req.body;
 
   if (!phone_number || !first_name || !last_name || !password) {
     return res.status(400).json({ error: 'All fields are required' });
@@ -93,14 +94,31 @@ const register = async (req, res) => {
     }
 
     const password_hash = await bcrypt.hash(password, 10);
+    const newReferralCode = await generateUniqueCode(pool, 'users', 'referral_code', 6);
+
+    // An invalid/unknown referral code is silently ignored rather than
+    // blocking signup — it's an optional field, so a typo shouldn't become
+    // a hard failure point.
+    let referredBy = null;
+    if (referral_code) {
+      const referrerResult = await pool.query(
+        'SELECT id FROM users WHERE referral_code = $1',
+        [referral_code.toUpperCase()]
+      );
+      referredBy = referrerResult.rows[0]?.id || null;
+    }
 
     const result = await pool.query(
-      `INSERT INTO users (phone_number, first_name, last_name, email, role, password_hash)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [phone_number, first_name, last_name, email, requestedRole, password_hash]
+      `INSERT INTO users (phone_number, first_name, last_name, email, role, password_hash, referral_code, referred_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [phone_number, first_name, last_name, email, requestedRole, password_hash, newReferralCode, referredBy]
     );
 
     const user = result.rows[0];
+
+    if (referredBy) {
+      await issueWelcomeDiscount(pool, user.id).catch((err) => console.error('Welcome discount error:', err));
+    }
 
     if (requestedRole === 'driver') {
       const driverResult = await pool.query(
@@ -157,6 +175,15 @@ const login = async (req, res) => {
     }
     if (user.status === 'pending_deletion' || user.status === 'deleted') {
       return res.status(403).json({ error: 'This account has been deleted.' });
+    }
+
+    // Accounts created before the referral program existed have no
+    // referral_code (the migration only added the column, it didn't backfill
+    // existing rows) — generate one lazily here, on a successful login,
+    // rather than requiring a manual one-time script against production.
+    if (!user.referral_code) {
+      user.referral_code = await generateUniqueCode(pool, 'users', 'referral_code', 6);
+      await pool.query('UPDATE users SET referral_code = $1 WHERE id = $2', [user.referral_code, user.id]);
     }
 
     const token = jwt.sign(
@@ -246,10 +273,15 @@ const resetPassword = async (req, res) => {
 const getProfile = async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, phone_number, email, first_name, last_name, role, status FROM users WHERE id = $1',
+      'SELECT id, phone_number, email, first_name, last_name, role, status, referral_code FROM users WHERE id = $1',
       [req.user.id]
     );
-    res.json(result.rows[0]);
+    const user = result.rows[0];
+    if (user && !user.referral_code) {
+      user.referral_code = await generateUniqueCode(pool, 'users', 'referral_code', 6);
+      await pool.query('UPDATE users SET referral_code = $1 WHERE id = $2', [user.referral_code, user.id]);
+    }
+    res.json(user);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
@@ -271,7 +303,7 @@ const savePushToken = async (req, res) => {
 
 // Update profile
 const updateProfile = async (req, res) => {
-  const { first_name, last_name, email, current_password } = req.body;
+  const { first_name, last_name, email, current_password, emergency_contact_name, emergency_contact_phone } = req.body;
   const user_id = req.user.id;
 
   try {
@@ -306,9 +338,11 @@ const updateProfile = async (req, res) => {
       `UPDATE users SET
         first_name = COALESCE($1, first_name),
         last_name = COALESCE($2, last_name),
-        email = COALESCE($3, email)
-       WHERE id = $4 RETURNING id, first_name, last_name, email, phone_number, role`,
-      [first_name, last_name, email, user_id]
+        email = COALESCE($3, email),
+        emergency_contact_name = COALESCE($4, emergency_contact_name),
+        emergency_contact_phone = COALESCE($5, emergency_contact_phone)
+       WHERE id = $6 RETURNING id, first_name, last_name, email, phone_number, role, emergency_contact_name, emergency_contact_phone`,
+      [first_name, last_name, email, emergency_contact_name, emergency_contact_phone, user_id]
     );
 
     if (emailChanging && oldEmail) {
