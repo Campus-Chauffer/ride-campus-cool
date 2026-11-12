@@ -448,13 +448,21 @@ const completeTrip = async (req, res) => {
     const passenger = passengerData.rows[0];
     const driverUser = driverData.rows[0];
 
-    // Notify driver — amount to collect plus a rating nudge
+    // Notify driver — amount to collect plus a rating nudge. A discounted
+    // or free-ride trip still pays the driver their normal fare — Campus
+    // Chauffeur covers the gap, not the driver — so flag it explicitly
+    // here rather than leaving the driver to notice a lower cash amount
+    // and wonder why.
     if (driverUser) {
+      const isDiscounted = !!trip.discount_code && parseFloat(trip.original_fare) > parseFloat(trip.fare);
+      const owed = isDiscounted ? (parseFloat(trip.original_fare) - parseFloat(trip.fare)).toFixed(2) : null;
       await sendPushNotification(
         driverUser.push_token,
         'Trip Complete!',
-        `Collect GH₵${trip.fare} from your passenger, and remember to rate them.`,
-        { type: 'trip_completed_driver', trip_id: trip.id }
+        isDiscounted
+          ? `Collect GH₵${trip.fare} from your passenger. This ride was discounted — Campus Chauffeur covers the GH₵${owed} difference. Contact support after the ride to receive it.`
+          : `Collect GH₵${trip.fare} from your passenger, and remember to rate them.`,
+        { type: 'trip_completed_driver', trip_id: trip.id, discounted: isDiscounted }
       );
     }
 

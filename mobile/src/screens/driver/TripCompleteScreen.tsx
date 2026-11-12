@@ -4,7 +4,7 @@ import {
   SafeAreaView, StatusBar, ScrollView, TextInput, Alert, Modal
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Flag, CheckCircle, Star } from 'lucide-react-native';
+import { Flag, CheckCircle, Star, Info } from 'lucide-react-native';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, bottomPadding, androidTopPadding, navy, white, mutedOnDark, gradients, tintedShadow } from '../../utils/theme';
 
@@ -29,6 +29,9 @@ export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: P
  const fare = parseFloat(trip.fare) || 0;
   const commission = parseFloat(trip.commission) || 0;
   const earned = (fare - commission).toFixed(2);
+  const originalFare = parseFloat(trip.original_fare) || fare;
+  const isDiscounted = !!trip.discount_code && originalFare > fare;
+  const owedByCompany = isDiscounted ? (originalFare - fare).toFixed(2) : null;
 
   const submitRating = () => {
     if (rating === 0) return Alert.alert('Rate passenger', 'Please select a star rating');
@@ -98,6 +101,15 @@ export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: P
             </View>
           </View>
         </View>
+
+        {isDiscounted && (
+          <View style={styles.discountBanner}>
+            <Info size={16} color={colors.info} />
+            <Text style={styles.discountBannerText}>
+              This ride was discounted — Campus Chauffeur covers the GH₵{owedByCompany} difference. Contact support after your shift to receive it.
+            </Text>
+          </View>
+        )}
 
         {/* Rating */}
         {!submitted ? (
@@ -246,6 +258,22 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     fontSize: fontSizes.md,
     fontWeight: '800',
     color: colors.white,
+  },
+  discountBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(33,150,243,0.1)',
+    padding: spacing.md,
+    borderRadius: radius.xl,
+    marginBottom: spacing.sm,
+  },
+  discountBannerText: {
+    flex: 1,
+    fontSize: fontSizes.xs,
+    fontWeight: '600',
+    color: colors.info,
+    lineHeight: 18,
   },
   ratingCard: {
     backgroundColor: colors.white,
