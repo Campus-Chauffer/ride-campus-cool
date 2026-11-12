@@ -14,7 +14,7 @@ const EMERGENCY_SERVICES_NUMBER = '191';
 
 export default function SafetyScreen({ route, navigation }: any) {
   const { trip } = route.params;
-  const { user, setAuth } = useAuthStore();
+  const { user, token, setAuth } = useAuthStore();
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
   const styles = getStyles(colors, isDark);
@@ -36,9 +36,7 @@ export default function SafetyScreen({ route, navigation }: any) {
         emergency_contact_name: contactName,
         emergency_contact_phone: contactPhone,
       });
-      const currentToken = await import('@react-native-async-storage/async-storage')
-        .then(m => m.default.getItem('token'));
-      await setAuth(currentToken || '', { ...user!, ...res.data });
+      await setAuth(token || '', { ...user!, ...res.data });
       Alert.alert('Saved', 'Your emergency contact has been saved.');
     } catch (err: any) {
       Alert.alert('Error', err.response?.data?.error || 'Could not save emergency contact');

@@ -12,7 +12,7 @@ import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, navy, androidTopPadding, gradients, tintedShadow } from '../../utils/theme';
 
 export default function EditProfileScreen({ navigation }: any) {
-  const { user, setAuth } = useAuthStore();
+  const { user, token, setAuth } = useAuthStore();
   const { isDark } = useThemeStore();
   const colors = getColors(isDark);
   const styles = getStyles(colors, isDark);
@@ -47,9 +47,7 @@ export default function EditProfileScreen({ navigation }: any) {
         emergency_contact_phone: emergencyContactPhone,
         ...(emailChanging ? { current_password: currentPassword } : {}),
       });
-      const currentToken = await import('@react-native-async-storage/async-storage')
-  .then(m => m.default.getItem('token'));
-await setAuth(currentToken || '', { ...user!, ...res.data });
+      await setAuth(token || '', { ...user!, ...res.data });
       Alert.alert('Success', 'Profile updated', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
