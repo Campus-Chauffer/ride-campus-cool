@@ -165,15 +165,6 @@ const login = async (req, res) => {
       return res.status(400).json({ error: 'Please register with a password first' });
     }
 
-    // Accounts created before the referral program existed have no
-    // referral_code (the migration only added the column, it didn't backfill
-    // existing rows) — generate one lazily here rather than requiring a
-    // manual one-time script against production.
-    if (!user.referral_code) {
-      user.referral_code = await generateUniqueCode(pool, 'users', 'referral_code', 6);
-      await pool.query('UPDATE users SET referral_code = $1 WHERE id = $2', [user.referral_code, user.id]);
-    }
-
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
       return res.status(400).json({ error: 'Incorrect password' });
@@ -184,6 +175,15 @@ const login = async (req, res) => {
     }
     if (user.status === 'pending_deletion' || user.status === 'deleted') {
       return res.status(403).json({ error: 'This account has been deleted.' });
+    }
+
+    // Accounts created before the referral program existed have no
+    // referral_code (the migration only added the column, it didn't backfill
+    // existing rows) — generate one lazily here, on a successful login,
+    // rather than requiring a manual one-time script against production.
+    if (!user.referral_code) {
+      user.referral_code = await generateUniqueCode(pool, 'users', 'referral_code', 6);
+      await pool.query('UPDATE users SET referral_code = $1 WHERE id = $2', [user.referral_code, user.id]);
     }
 
     const token = jwt.sign(
