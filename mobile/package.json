@@ -16,7 +16,7 @@
     "@sentry/react-native": "^8.22.0",
     "axios": "^1.16.1",
     "babel-preset-expo": "^54.0.10",
-    "dotenv": "^17.4.2",
+    "dotenv": "^16.6.1",
     "expo": "~54.0.33",
     "expo-application": "~7.0.8",
     "expo-audio": "~1.1.1",
