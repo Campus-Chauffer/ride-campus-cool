@@ -28,10 +28,15 @@ export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: P
 
  const fare = parseFloat(trip.fare) || 0;
   const commission = parseFloat(trip.commission) || 0;
-  const earned = (fare - commission).toFixed(2);
   const originalFare = parseFloat(trip.original_fare) || fare;
   const isDiscounted = !!trip.discount_code && originalFare > fare;
   const owedByCompany = isDiscounted ? (originalFare - fare).toFixed(2) : null;
+  // A discounted ride still pays the driver the full normal fare — just
+  // split between cash collected from the passenger and what Campus
+  // Chauffeur reimburses afterward — so the headline numbers here show
+  // that full total, not only the cash half.
+  const displayFare = isDiscounted ? originalFare : fare;
+  const earned = (displayFare - commission).toFixed(2);
 
   const submitRating = () => {
     if (rating === 0) return Alert.alert('Rate passenger', 'Please select a star rating');
@@ -83,7 +88,7 @@ export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: P
           <View style={styles.earningsRow}>
             <View style={styles.earningsItem}>
               <Text style={styles.earningsLabel}>Fare</Text>
-              <Text style={styles.earningsValue}>GH₵{fare.toFixed(2)}</Text>
+              <Text style={styles.earningsValue}>GH₵{displayFare.toFixed(2)}</Text>
             </View>
             <View style={styles.earningsDivider} />
             <View style={styles.earningsItem}>
@@ -106,7 +111,10 @@ export default function TripCompleteScreen({ trip, onDone, onRate, onReport }: P
           <View style={styles.discountBanner}>
             <Info size={16} color={colors.info} />
             <Text style={styles.discountBannerText}>
-              This ride was discounted — Campus Chauffeur covers the GH₵{owedByCompany} difference. Contact support after your shift to receive it.
+              {fare === 0
+                ? `This was a free ride — don't collect anything from your passenger. Campus Chauffeur covers the full GH₵${originalFare.toFixed(2)}. Contact support after your shift to receive it.`
+                : `This ride was discounted — collect GH₵${fare.toFixed(2)} in cash from your passenger. Campus Chauffeur covers the remaining GH₵${owedByCompany}. Contact support after your shift to receive it.`
+              }
             </Text>
           </View>
         )}

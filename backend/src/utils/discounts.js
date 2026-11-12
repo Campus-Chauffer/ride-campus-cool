@@ -77,7 +77,7 @@ async function findBestAutoApplyCode(client, { passenger_id, originalFare, isNig
 // trip should actually be inserted with. Returns null (not an error) if the
 // claim fails — callers decide whether that should block the ride (manual
 // code) or just mean "no discount, proceed anyway" (auto-apply).
-async function claimDiscount(client, { code, passenger_id, trip_id, originalFare, commissionRate }) {
+async function claimDiscount(client, { code, passenger_id, trip_id, originalFare }) {
   // Row lock on discount_codes serializes every concurrent claim attempt
   // for this exact code — including two requests from the same user at the
   // same instant — so the per-user count check below is never racing
@@ -104,24 +104,21 @@ async function claimDiscount(client, { code, passenger_id, trip_id, originalFare
     // means this count is accurate even under concurrent requests.
   }
 
-  const normalCommission = Math.round(originalFare * commissionRate * 100) / 100;
-
-  // 'free_ride' (the referral-program reward) is the one deliberate
-  // exception to "a promo never reduces what the driver gets paid out of
-  // their own fare" below — the whole point is the passenger pays the
-  // driver nothing, with Campus Chauffeur reimbursing the driver manually
-  // using the admin Redemptions view as its worklist (amount_discounted
-  // here is the full original_fare, so "owed to driver" is exactly that
-  // number with no extra bookkeeping). Every other discount type keeps the
-  // existing, narrower guarantee.
+  // Campus Chauffeur reimburses the driver out of pocket for the full gap
+  // between what the passenger actually paid and the normal fare — a
+  // partial discount gets the discount amount reimbursed, a free_ride gets
+  // the whole fare reimbursed — using the admin Redemptions view as its
+  // worklist ("owed to driver" there is just original_fare - fare, no
+  // extra bookkeeping). Since the company is covering the driver's side
+  // regardless of size, there's no longer a reason to cap the discount at
+  // the commission amount the way an ordinary promo used to: the discount
+  // applies at its full nominal value (only floored so a flat discount
+  // can't push the fare negative), and the platform takes no commission at
+  // all on a discounted ride — nothing to take a cut of when it's the one
+  // funding the difference.
   const actualDiscount = claimedCode.type === 'free_ride'
     ? originalFare
-    // Never let an ordinary promo reduce what the driver actually gets
-    // paid — the discount comes out of the platform's own commission,
-    // capped at the full commission amount. If that means the passenger
-    // gets less than the code's nominal value on a very cheap ride, that's
-    // the honest number shown to them, not a silent mismatch.
-    : Math.min(computeNominalDiscount(claimedCode, originalFare), normalCommission);
+    : Math.min(computeNominalDiscount(claimedCode, originalFare), originalFare);
 
   await client.query(
     'INSERT INTO discount_redemptions (discount_code_id, user_id, trip_id, amount_discounted) VALUES ($1, $2, $3, $4)',
@@ -130,11 +127,7 @@ async function claimDiscount(client, { code, passenger_id, trip_id, originalFare
 
   return {
     fare: Math.round((originalFare - actualDiscount) * 100) / 100,
-    // A free ride waives the platform's commission too, not just the
-    // fare — there's nothing left to take a cut of.
-    commission: claimedCode.type === 'free_ride'
-      ? 0
-      : Math.round((normalCommission - actualDiscount) * 100) / 100,
+    commission: 0,
     amountDiscounted: actualDiscount,
   };
 }

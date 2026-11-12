@@ -454,14 +454,21 @@ const completeTrip = async (req, res) => {
     // here rather than leaving the driver to notice a lower cash amount
     // and wonder why.
     if (driverUser) {
-      const isDiscounted = !!trip.discount_code && parseFloat(trip.original_fare) > parseFloat(trip.fare);
-      const owed = isDiscounted ? (parseFloat(trip.original_fare) - parseFloat(trip.fare)).toFixed(2) : null;
+      const fareAmount = parseFloat(trip.fare);
+      const isDiscounted = !!trip.discount_code && parseFloat(trip.original_fare) > fareAmount;
+      const owed = isDiscounted ? (parseFloat(trip.original_fare) - fareAmount).toFixed(2) : null;
+      let driverMessage;
+      if (!isDiscounted) {
+        driverMessage = `Collect GH₵${trip.fare} from your passenger, and remember to rate them.`;
+      } else if (fareAmount === 0) {
+        driverMessage = `This was a free ride — don't collect anything from your passenger. Campus Chauffeur covers the full GH₵${trip.original_fare}. Contact support after the ride to receive it.`;
+      } else {
+        driverMessage = `Collect GH₵${trip.fare} from your passenger. This ride was discounted — Campus Chauffeur covers the remaining GH₵${owed}. Contact support after the ride to receive it.`;
+      }
       await sendPushNotification(
         driverUser.push_token,
         'Trip Complete!',
-        isDiscounted
-          ? `Collect GH₵${trip.fare} from your passenger. This ride was discounted — Campus Chauffeur covers the GH₵${owed} difference. Contact support after the ride to receive it.`
-          : `Collect GH₵${trip.fare} from your passenger, and remember to rate them.`,
+        driverMessage,
         { type: 'trip_completed_driver', trip_id: trip.id, discounted: isDiscounted }
       );
     }
