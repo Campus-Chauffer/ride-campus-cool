@@ -51,10 +51,5 @@
     "@types/react": "~19.1.0",
     "typescript": "~5.9.2"
   },
-  "private": true,
-  "overrides": {
-    "@expo/cli": {
-      "expo": "$expo"
-    }
-  }
+  "private": true
 }
