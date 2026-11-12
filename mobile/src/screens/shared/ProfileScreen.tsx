@@ -105,9 +105,7 @@ export default function ProfileScreen({ navigation }: any) {
       </LinearGradient>
 
       <ScrollView style={styles.scrollBg} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Stats — deliberately overlaps the hero's bottom edge, the one
-            place this screen borrows the "card floats over the header"
-            move from the passenger/driver home screens, for continuity. */}
+        {/* Stats */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{profile?.total_trips || 0}</Text>
@@ -291,7 +289,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: radius.xl,
     paddingVertical: spacing.lg,
-    marginTop: -spacing.xl,
+    marginTop: spacing.md,
     marginBottom: spacing.md,
     ...tintedShadow(navy, isDark ? 0 : 0.1),
     ...(isDark ? shadows.md : null),
