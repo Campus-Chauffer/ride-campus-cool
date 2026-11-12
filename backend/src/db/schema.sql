@@ -304,7 +304,7 @@ INSERT INTO config (key, value) VALUES
   -- referral_welcome_discount is a flat discount off a NEW signup's first
   -- ride when they entered someone else's code, same ordinary 'flat'
   -- discount type as any other promo code.
-  ('referral_reward_threshold', '5'),
+  ('referral_reward_threshold', '10'),
   ('referral_welcome_discount', '3'),
   -- "What's new" popup (ChangelogModal.tsx): bump changelog_version and
   -- update changelog_items (one bullet per line) via the admin Config page
