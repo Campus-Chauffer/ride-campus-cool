@@ -448,28 +448,43 @@ const completeTrip = async (req, res) => {
     const passenger = passengerData.rows[0];
     const driverUser = driverData.rows[0];
 
-    // Notify driver — amount to collect plus a rating nudge. A discounted
-    // or free-ride trip still pays the driver their normal fare — Campus
-    // Chauffeur covers the gap, not the driver — so flag it explicitly
-    // here rather than leaving the driver to notice a lower cash amount
-    // and wonder why.
+    // An ordinary discount eats into the platform's own commission first —
+    // free for the company — and only the leftover that would otherwise
+    // cut into the driver's own earnings is reimbursed in cash (a free_ride
+    // reimburses the whole fare). That real reimbursement figure lives on
+    // discount_redemptions, not on the trip row itself — original_fare -
+    // fare is the passenger's total discount, which is often larger than
+    // what's actually owed to the driver, so it can't be used here.
+    let driverReimbursement = 0;
+    if (trip.discount_code) {
+      const redemptionResult = await pool.query(
+        'SELECT amount_discounted FROM discount_redemptions WHERE trip_id = $1',
+        [trip.id]
+      );
+      driverReimbursement = parseFloat(redemptionResult.rows[0]?.amount_discounted) || 0;
+    }
+    trip.driver_reimbursement = driverReimbursement;
+
+    // Notify driver — amount to collect plus a rating nudge. Only flag the
+    // reimbursement when there actually is one (most ordinary discounts are
+    // fully absorbed by commission, with nothing owed) rather than leaving
+    // the driver to notice a lower cash amount and wonder why on the ones
+    // where there is.
     if (driverUser) {
       const fareAmount = parseFloat(trip.fare);
-      const isDiscounted = !!trip.discount_code && parseFloat(trip.original_fare) > fareAmount;
-      const owed = isDiscounted ? (parseFloat(trip.original_fare) - fareAmount).toFixed(2) : null;
       let driverMessage;
-      if (!isDiscounted) {
+      if (driverReimbursement <= 0) {
         driverMessage = `Collect GH₵${trip.fare} from your passenger, and remember to rate them.`;
       } else if (fareAmount === 0) {
-        driverMessage = `This was a free ride — don't collect anything from your passenger. Campus Chauffeur covers the full GH₵${trip.original_fare}. Contact support after the ride to receive it.`;
+        driverMessage = `This was a free ride — don't collect anything from your passenger. Campus Chauffeur owes you GH₵${driverReimbursement.toFixed(2)} for this trip. Contact support after the ride to receive it.`;
       } else {
-        driverMessage = `Collect GH₵${trip.fare} from your passenger. This ride was discounted — Campus Chauffeur covers the remaining GH₵${owed}. Contact support after the ride to receive it.`;
+        driverMessage = `Collect GH₵${trip.fare} from your passenger. This ride was discounted — Campus Chauffeur owes you an extra GH₵${driverReimbursement.toFixed(2)}. Contact support after the ride to receive it.`;
       }
       await sendPushNotification(
         driverUser.push_token,
         'Trip Complete!',
         driverMessage,
-        { type: 'trip_completed_driver', trip_id: trip.id, discounted: isDiscounted }
+        { type: 'trip_completed_driver', trip_id: trip.id, discounted: driverReimbursement > 0 }
       );
     }
 

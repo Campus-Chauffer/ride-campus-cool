@@ -69,7 +69,7 @@ const requestRide = async (req, res) => {
 
     if (resolvedCode) {
       const claimResult = await claimDiscount(client, {
-        code: resolvedCode, passenger_id, trip_id: trip.id, originalFare,
+        code: resolvedCode, passenger_id, trip_id: trip.id, originalFare, commissionRate: config.commission_rate,
       });
 
       if (claimResult) {
