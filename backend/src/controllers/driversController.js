@@ -2,6 +2,18 @@ const pool = require('../db/pool');
 const { sendPushNotification } = require('../utils/notifications');
 const { sendRatingReminder, sendRideReceipt } = require('../utils/email');
 const { recordReferralProgress } = require('../utils/referrals');
+const { getIO } = require('../socket');
+
+// Signals the passenger's open app to re-check trip status right away
+// instead of waiting for its own ~3s poll — the poll stays as the fallback
+// (covers a dropped socket, a missed event), this just makes the common
+// case near-instant. Deliberately payload-less: the client re-fetches
+// through the exact same endpoint/logic the poll already uses, so there's
+// only ever one place deriving the passenger-facing phase from a trip's
+// status, not two that could drift apart.
+function notifyRideStatusChanged(tripId) {
+  getIO()?.to(`ride:${tripId}`).emit('ride:status_changed');
+}
 
 
 // Driver goes online
@@ -223,6 +235,7 @@ const acceptOffer = async (req, res) => {
     }
 
     const trip = result.rows[0];
+    notifyRideStatusChanged(trip.id);
 
     // Ride-sharing: a second passenger can join this group before a driver
     // is found for it, in which case their leg never went through
@@ -230,11 +243,13 @@ const acceptOffer = async (req, res) => {
     // waiting for the anchor's own dispatch to land a driver. Propagate
     // that assignment to any such sibling now.
     if (trip.shared_group_id) {
-      await pool.query(
+      const siblingsResult = await pool.query(
         `UPDATE trips SET driver_id = $1, status = 'accepted', accepted_at = NOW()
-         WHERE shared_group_id = $2 AND id != $3 AND status = 'requested'`,
+         WHERE shared_group_id = $2 AND id != $3 AND status = 'requested'
+         RETURNING id`,
         [driver.id, trip.shared_group_id, trip.id]
       );
+      siblingsResult.rows.forEach((sibling) => notifyRideStatusChanged(sibling.id));
     }
 
     const passengerResult = await pool.query(
@@ -343,6 +358,7 @@ const startTrip = async (req, res) => {
     }  
 
     const updatedTrip = result.rows[0];
+    notifyRideStatusChanged(updatedTrip.id);
 
     // Notify passenger trip has started
     const passengerResult = await pool.query(
@@ -400,6 +416,7 @@ const completeTrip = async (req, res) => {
     }
 
     const trip = result.rows[0];
+    notifyRideStatusChanged(trip.id);
 
     // Referral program: if this was the passenger's first completed trip
     // and they were referred by someone, this may push the referrer over
@@ -526,6 +543,7 @@ const arrivedAtPickup = async (req, res) => {
     }
 
     const trip = result.rows[0];
+    notifyRideStatusChanged(trip.id);
 
     // Get passenger push token
     const passengerResult = await pool.query(
@@ -553,6 +571,7 @@ const arrivedAtPickup = async (req, res) => {
       const startedLegs = await tryAutoStartGroup(pool, trip.shared_group_id);
       if (startedLegs) {
         for (const leg of startedLegs) {
+          notifyRideStatusChanged(leg.id);
           const legPassenger = await pool.query('SELECT push_token FROM users WHERE id = $1', [leg.passenger_id]);
           sendPushNotification(
             legPassenger.rows[0]?.push_token,
