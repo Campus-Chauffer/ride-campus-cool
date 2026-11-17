@@ -41,8 +41,16 @@ export default function RideMatchingScreen({ route, navigation }: any) {
     startPulse();
     socketService.connect();
     socketService.joinRide(trip.id);
+    // Instant path: the backend emits this the moment a driver action
+    // changes the trip's status. The poll below keeps running regardless —
+    // it's the fallback for a dropped socket or a missed event, not
+    // replaced by this.
+    socketService.onStatusChanged(checkStatus);
     startPolling();
-    return () => clearInterval(pollInterval.current);
+    return () => {
+      clearInterval(pollInterval.current);
+      socketService.offStatusChanged();
+    };
   }, []);
 
   // Android hardware back button — paired with gestureEnabled: false on
@@ -79,65 +87,72 @@ export default function RideMatchingScreen({ route, navigation }: any) {
     pulse(pulseAnim3, 1000);
   };
 
-  const startPolling = () => {
-    pollInterval.current = setInterval(async () => {
-      try {
-        const res = await ridesAPI.getTripStatus(trip.id);
-        const updated = res.data;
-        if (!updated) return;
-        // The poll fires every 3s for the whole ride regardless of whether
-        // anything actually changed — bailing out on an identical payload
-        // (returning the same reference from the updater) skips re-rendering
-        // whichever ride sub-screen is mounted instead of forcing its whole
-        // tree (map, bottom sheet, avatar image) through a reconcile pass
-        // for no visible reason.
-        setCurrentTrip(prev => JSON.stringify(updated) === JSON.stringify(prev) ? prev : updated);
+  // Pulled out of the poll interval so the socket listener below can call
+  // the exact same status-derivation logic the instant the backend signals
+  // a change, instead of a parallel copy that could drift from it — there
+  // should only ever be one place deciding what a given trip.status means
+  // for this screen's phase.
+  const checkStatus = async () => {
+    try {
+      const res = await ridesAPI.getTripStatus(trip.id);
+      const updated = res.data;
+      if (!updated) return;
+      // The poll fires every 3s for the whole ride regardless of whether
+      // anything actually changed — bailing out on an identical payload
+      // (returning the same reference from the updater) skips re-rendering
+      // whichever ride sub-screen is mounted instead of forcing its whole
+      // tree (map, bottom sheet, avatar image) through a reconcile pass
+      // for no visible reason.
+      setCurrentTrip(prev => JSON.stringify(updated) === JSON.stringify(prev) ? prev : updated);
 
-        const currentPhase = phaseRef.current;
+      const currentPhase = phaseRef.current;
 
-        // Ride-sharing: a co-rider not yet picked up means the driver still
-        // has another stop before the trip actually gets moving — this
-        // passenger is already onboard, so driver_arrived's "waiting on
-        // you" copy no longer fits; picking_up_partner takes over for that
-        // gap until the group's own auto-start flips everyone to
-        // in_progress at once.
-        const pendingPartner = (updated.co_riders || []).some(
-          (c: any) => !['arrived', 'in_progress', 'completed'].includes(c.status)
+      // Ride-sharing: a co-rider not yet picked up means the driver still
+      // has another stop before the trip actually gets moving — this
+      // passenger is already onboard, so driver_arrived's "waiting on
+      // you" copy no longer fits; picking_up_partner takes over for that
+      // gap until the group's own auto-start flips everyone to
+      // in_progress at once.
+      const pendingPartner = (updated.co_riders || []).some(
+        (c: any) => !['arrived', 'in_progress', 'completed'].includes(c.status)
+      );
+
+      if (updated.status === 'accepted' && currentPhase === 'searching') {
+        updatePhase('driver_found');
+      } else if (updated.status === 'arrived' && pendingPartner) {
+        updatePhase('picking_up_partner');
+      } else if (updated.status === 'arrived' && (currentPhase === 'searching' || currentPhase === 'driver_found' || currentPhase === 'picking_up_partner')) {
+        // The last branch also covers a matched partner cancelling before
+        // pickup — pendingPartner just went false, so this passenger
+        // falls back to the ordinary "waiting to start" screen.
+        updatePhase('driver_arrived');
+      } else if (updated.status === 'in_progress' && (currentPhase === 'driver_found' || currentPhase === 'driver_arrived' || currentPhase === 'picking_up_partner')) {
+        updatePhase('in_progress');
+      } else if (updated.status === 'completed') {
+        clearInterval(pollInterval.current);
+        updatePhase('completed');
+        navigation.replace('RideRating', { trip: updated });
+      } else if (updated.status === 'no_driver_found' || updated.status === 'cancelled') {
+        clearInterval(pollInterval.current);
+        // Drivers being online but all already on a trip is a different,
+        // more honest message than "no drivers available" — the latter
+        // reads like there's nobody out there at all.
+        const allBusy = updated.status === 'no_driver_found' && updated.no_driver_reason === 'all_drivers_busy';
+        Alert.alert(
+          allBusy ? 'All drivers are busy' : 'No drivers available',
+          allBusy
+            ? 'All nearby drivers are currently on trips. Please wait a few minutes and try again.'
+            : 'Sorry, no drivers are available right now. Please try again.',
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
         );
-
-        if (updated.status === 'accepted' && currentPhase === 'searching') {
-          updatePhase('driver_found');
-        } else if (updated.status === 'arrived' && pendingPartner) {
-          updatePhase('picking_up_partner');
-        } else if (updated.status === 'arrived' && (currentPhase === 'searching' || currentPhase === 'driver_found' || currentPhase === 'picking_up_partner')) {
-          // The last branch also covers a matched partner cancelling before
-          // pickup — pendingPartner just went false, so this passenger
-          // falls back to the ordinary "waiting to start" screen.
-          updatePhase('driver_arrived');
-        } else if (updated.status === 'in_progress' && (currentPhase === 'driver_found' || currentPhase === 'driver_arrived' || currentPhase === 'picking_up_partner')) {
-          updatePhase('in_progress');
-        } else if (updated.status === 'completed') {
-          clearInterval(pollInterval.current);
-          updatePhase('completed');
-          navigation.replace('RideRating', { trip: updated });
-        } else if (updated.status === 'no_driver_found' || updated.status === 'cancelled') {
-          clearInterval(pollInterval.current);
-          // Drivers being online but all already on a trip is a different,
-          // more honest message than "no drivers available" — the latter
-          // reads like there's nobody out there at all.
-          const allBusy = updated.status === 'no_driver_found' && updated.no_driver_reason === 'all_drivers_busy';
-          Alert.alert(
-            allBusy ? 'All drivers are busy' : 'No drivers available',
-            allBusy
-              ? 'All nearby drivers are currently on trips. Please wait a few minutes and try again.'
-              : 'Sorry, no drivers are available right now. Please try again.',
-            [{ text: 'OK', onPress: () => navigation.goBack() }]
-          );
-        }
-      } catch (err) {
-        console.log('Poll error:', err);
       }
-    }, 3000);
+    } catch (err) {
+      console.log('Status check error:', err);
+    }
+  };
+
+  const startPolling = () => {
+    pollInterval.current = setInterval(checkStatus, 3000);
   };
 
   const cancelRide = async () => {

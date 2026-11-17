@@ -68,6 +68,21 @@ class SocketService {
   offDriverRoute() {
     this.socket?.off('ride:driver_route');
   }
+
+  // Fired by the backend the instant a driver action changes this trip's
+  // status (accepted, arrived, started, completed) — payload-less by
+  // design, it's just a "go re-check now" signal. The 3s poll that already
+  // does that re-check stays running as a fallback (a dropped socket or a
+  // missed event shouldn't mean the screen never catches up), this just
+  // lets the common case react immediately instead of waiting for the next
+  // tick.
+  onStatusChanged(callback: () => void) {
+    this.socket?.on('ride:status_changed', callback);
+  }
+
+  offStatusChanged() {
+    this.socket?.off('ride:status_changed');
+  }
 }
 
 export default new SocketService();

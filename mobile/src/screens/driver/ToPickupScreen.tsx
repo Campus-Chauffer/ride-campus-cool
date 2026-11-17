@@ -5,14 +5,15 @@ import {
 } from 'react-native';
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { LinearGradient } from 'expo-linear-gradient';
-import { CheckCircle, MapPin, Phone } from 'lucide-react-native';
+import { CheckCircle, MapPin, Phone, Navigation } from 'lucide-react-native';
 import socketService from '../../services/socket';
 import { ridesAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, navy, gradients, tintedShadow } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, navy, tintedShadow } from '../../utils/theme';
 import { shouldRefreshRoute, haversineMeters } from '../../utils/geo';
 import { useAnimatedRoute } from '../../hooks/useAnimatedRoute';
+import SlideToConfirm from '../../components/SlideToConfirm';
+import { openNavigation } from '../../utils/openNavigation';
 
 // Below this, GPS-derived heading is a known-unreliable reading (it's
 // largely Doppler-derived and gets noisy near-stationary) rather than
@@ -254,22 +255,24 @@ export default function ToPickupScreen({ trip, onArrived, onCancelled }: Props) 
         </View>
 
         <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={styles.callBtn}
+            onPress={() => openNavigation(parseFloat(trip.pickup_lat), parseFloat(trip.pickup_lng))}
+          >
+            <Navigation size={18} color={colors.dark} />
+          </TouchableOpacity>
           {trip.passenger_phone && (
             <TouchableOpacity style={styles.callBtn} onPress={callPassenger}>
               <Phone size={18} color={colors.dark} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.arrivedBtnShadowWrap} onPress={confirmArrival} activeOpacity={0.88}>
-            <LinearGradient
-              colors={gradients.primaryCta}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.arrivedBtn}
-            >
-              <CheckCircle size={20} color={navy} />
-              <Text style={styles.arrivedBtnText}>I've Arrived at Pickup</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <SlideToConfirm
+              label="Slide: I've Arrived →"
+              onConfirm={confirmArrival}
+              icon={<CheckCircle size={24} color={colors.white} />}
+            />
+          </View>
         </View>
       </View>
     </View>
@@ -327,11 +330,4 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     width: 52, height: 52, borderRadius: radius.full,
     backgroundColor: colors.offWhite, justifyContent: 'center', alignItems: 'center',
   },
-  arrivedBtnShadowWrap: { flex: 1, borderRadius: radius.full, ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3) },
-  arrivedBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, padding: spacing.md,
-    borderRadius: radius.full,
-  },
-  arrivedBtnText: { fontSize: fontSizes.sm, fontWeight: '700', color: navy },
 });

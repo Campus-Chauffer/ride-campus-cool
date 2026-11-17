@@ -5,14 +5,15 @@ import {
 } from 'react-native';
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { LinearGradient } from 'expo-linear-gradient';
-import { CheckCircle, MapPin, Phone, Users } from 'lucide-react-native';
+import { CheckCircle, MapPin, Phone, Users, Navigation } from 'lucide-react-native';
 import socketService from '../../services/socket';
 import { ridesAPI, driverAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, navy, gradients, tintedShadow } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, bottomPadding, navy, tintedShadow } from '../../utils/theme';
 import { shouldRefreshRoute, haversineMeters } from '../../utils/geo';
 import { useAnimatedRoute } from '../../hooks/useAnimatedRoute';
+import SlideToConfirm from '../../components/SlideToConfirm';
+import { openNavigation } from '../../utils/openNavigation';
 
 // Same threshold as the solo ToPickupScreen's own arrival check — a driver
 // confirming a pickup while genuinely far from that passenger's point is
@@ -231,25 +232,25 @@ export default function SharedPickupScreen({ group, onPickupConfirmed }: Props) 
         </View>
 
         <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={styles.callBtn}
+            onPress={() => openNavigation(parseFloat(nextStop.pickup_lat), parseFloat(nextStop.pickup_lng))}
+          >
+            <Navigation size={18} color={colors.dark} />
+          </TouchableOpacity>
           {nextStop.passenger_phone && (
             <TouchableOpacity style={styles.callBtn} onPress={callPassenger}>
               <Phone size={18} color={colors.dark} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.arrivedBtnShadowWrap} onPress={confirmPickup} activeOpacity={0.88} disabled={confirming}>
-            <LinearGradient colors={gradients.primaryCta} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.arrivedBtn}>
-              {confirming ? (
-                <ActivityIndicator color={navy} />
-              ) : (
-                <>
-                  <CheckCircle size={20} color={navy} />
-                  <Text style={styles.arrivedBtnText}>
-                    Confirm Pickup — {nextStop.passenger_first_name}
-                  </Text>
-                </>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <SlideToConfirm
+              label={confirming ? 'Confirming...' : `Slide: Confirm Pickup — ${nextStop.passenger_first_name} →`}
+              onConfirm={confirmPickup}
+              disabled={confirming}
+              icon={<CheckCircle size={24} color={colors.white} />}
+            />
+          </View>
         </View>
       </View>
     </View>
@@ -310,10 +311,4 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     width: 52, height: 52, borderRadius: radius.lg,
     backgroundColor: colors.offWhite, justifyContent: 'center', alignItems: 'center',
   },
-  arrivedBtnShadowWrap: { flex: 1, borderRadius: radius.lg, ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3) },
-  arrivedBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    height: 52, borderRadius: radius.lg,
-  },
-  arrivedBtnText: { fontSize: fontSizes.sm, fontWeight: '700', color: navy },
 });

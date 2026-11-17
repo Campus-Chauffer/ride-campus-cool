@@ -50,6 +50,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] }
 });
+require('./socket').setIO(io);
 
 // Security middleware first
 app.use(helmet());

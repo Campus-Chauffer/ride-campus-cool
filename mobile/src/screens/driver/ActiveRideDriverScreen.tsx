@@ -5,14 +5,15 @@ import {
 } from 'react-native';
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Phone, CheckCircle, Flag } from 'lucide-react-native';
+import { Phone, CheckCircle, Flag, Navigation } from 'lucide-react-native';
 import socketService from '../../services/socket';
 import { ridesAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, bottomPadding, gradients, tintedShadow } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, bottomPadding, tintedShadow } from '../../utils/theme';
 import { shouldRefreshRoute } from '../../utils/geo';
 import { useAnimatedRoute } from '../../hooks/useAnimatedRoute';
+import SlideToConfirm from '../../components/SlideToConfirm';
+import { openNavigation } from '../../utils/openNavigation';
 
 // Below this, GPS-derived heading is a known-unreliable reading (it's
 // largely Doppler-derived and gets noisy near-stationary) rather than
@@ -197,20 +198,20 @@ export default function ActiveRideDriverScreen({ trip, onCompleteTrip }: Props) 
             <Text style={styles.destinationText} numberOfLines={1}>
               {trip.dropoff_address}
             </Text>
+            <TouchableOpacity
+              style={styles.navigateBtn}
+              onPress={() => openNavigation(parseFloat(trip.dropoff_lat), parseFloat(trip.dropoff_lng))}
+            >
+              <Navigation size={16} color={colors.primary} />
+            </TouchableOpacity>
           </View>
         </View>
 
-        <TouchableOpacity style={styles.completeBtnShadowWrap} onPress={onCompleteTrip} activeOpacity={0.88}>
-          <LinearGradient
-            colors={gradients.primaryCta}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.completeBtn}
-          >
-            <CheckCircle size={20} color={navy} />
-            <Text style={styles.completeBtnText}>Complete Trip</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+        <SlideToConfirm
+          label="Slide: Complete Trip →"
+          onConfirm={onCompleteTrip}
+          icon={<CheckCircle size={24} color={colors.white} />}
+        />
       </View>
     </View>
   );
@@ -251,7 +252,8 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   callBtn: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
   destinationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.offWhite, padding: spacing.md, borderRadius: radius.lg },
   destinationText: { flex: 1, fontSize: fontSizes.sm, color: colors.dark },
-  completeBtnShadowWrap: { borderRadius: radius.full, ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3) },
-  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: spacing.md, borderRadius: radius.full },
-  completeBtnText: { fontSize: fontSizes.sm, fontWeight: '700', color: navy },
+  navigateBtn: {
+    width: 32, height: 32, borderRadius: radius.full,
+    backgroundColor: colors.primary + '1F', justifyContent: 'center', alignItems: 'center',
+  },
 });

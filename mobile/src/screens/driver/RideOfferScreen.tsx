@@ -1,23 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  View, Text, StyleSheet, Animated, PanResponder,
-  Dimensions, Alert, StatusBar
-} from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MapPin, Navigation, Clock } from 'lucide-react-native';
+import { MapPin } from 'lucide-react-native';
 import { driverAPI } from '../../services/api';
 import { useRideStore } from '../../store/rideStore';
 import { useThemeStore } from '../../store/themeStore';
 import { getColors, spacing, fontSizes, radius, navy, white, androidTopPadding, gradients, tintedShadow } from '../../utils/theme';
-
-const { width } = Dimensions.get('window');
-// Fallback estimate used only until the track's real width is measured —
-// the previous fixed SLIDER_WIDTH guessed the track's width instead of
-// measuring it, and was off by enough that the thumb visibly stopped short
-// of the track's right edge instead of reaching it.
-const FALLBACK_SLIDER_WIDTH = width - spacing.lg * 2;
-const THUMB_SIZE = 56;
-const TRACK_PADDING = 4;
+import SlideToConfirm from '../../components/SlideToConfirm';
 
 interface Props {
   trip: any;
@@ -33,51 +22,12 @@ export default function RideOfferScreen({ trip, onAccepted, onDeclined, timer }:
   // memoizing, getStyles(colors) reruns StyleSheet.create on every one of
   // those ticks for no reason, since colors itself hasn't changed.
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
-  const slideX = useRef(new Animated.Value(0)).current;
   const [accepted, setAccepted] = useState(false);
-  const [trackWidth, setTrackWidth] = useState(FALLBACK_SLIDER_WIDTH);
-  const maxSlide = Math.max(trackWidth - THUMB_SIZE - TRACK_PADDING * 2, 0);
-  const maxSlideRef = useRef(maxSlide);
-  maxSlideRef.current = maxSlide;
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, gs) => {
-        const newX = Math.max(0, Math.min(gs.dx, maxSlideRef.current));
-        slideX.setValue(newX);
-      },
-      onPanResponderRelease: (_, gs) => {
-        const max = maxSlideRef.current;
-        if (gs.dx >= max * 0.85) {
-          Animated.spring(slideX, {
-            toValue: max,
-            useNativeDriver: false,
-          }).start(() => {
-            setAccepted(true);
-            onAccepted();
-          });
-        } else {
-          Animated.spring(slideX, {
-            toValue: 0,
-            useNativeDriver: false,
-            bounciness: 8,
-          }).start();
-        }
-      },
-    })
-  ).current;
-
-  const sliderColor = slideX.interpolate({
-    inputRange: [0, Math.max(maxSlide, 1)],
-    outputRange: [colors.gray2, colors.success],
-  });
-
-  const textOpacity = slideX.interpolate({
-    inputRange: [0, Math.max(maxSlide, 1) * 0.5],
-    outputRange: [1, 0],
-  });
+  const handleAccept = () => {
+    setAccepted(true);
+    onAccepted();
+  };
 
   const timerColor = timer <= 5 ? colors.error : timer <= 10 ? '#FF9800' : colors.primary;
 
@@ -153,20 +103,7 @@ export default function RideOfferScreen({ trip, onAccepted, onDeclined, timer }:
 
       {/* Slide to accept */}
       <View style={styles.sliderContainer}>
-        <Animated.View
-          style={[styles.sliderTrack, { backgroundColor: sliderColor }]}
-          onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}
-        >
-          <Animated.Text style={[styles.sliderText, { opacity: textOpacity }]}>
-            Slide to accept →
-          </Animated.Text>
-          <Animated.View
-            style={[styles.sliderThumb, { transform: [{ translateX: slideX }] }]}
-            {...panResponder.panHandlers}
-          >
-            <Navigation size={24} color={colors.white} />
-          </Animated.View>
-        </Animated.View>
+        <SlideToConfirm label="Slide to accept →" onConfirm={handleAccept} disabled={accepted} />
       </View>
 
       {/* Decline */}
@@ -297,30 +234,6 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   sliderContainer: {
     width: '100%',
     marginBottom: spacing.lg,
-  },
-  sliderTrack: {
-    height: THUMB_SIZE + 8,
-    borderRadius: radius.full,
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-    overflow: 'hidden',
-  },
-  sliderText: {
-    position: 'absolute',
-    width: '100%',
-    textAlign: 'center',
-    fontSize: fontSizes.md,
-    fontWeight: '700',
-    color: colors.dark,
-  },
-  sliderThumb: {
-    width: THUMB_SIZE,
-    height: THUMB_SIZE,
-    borderRadius: radius.full,
-    backgroundColor: colors.dark,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...tintedShadow(navy, isDark ? 0 : 0.2),
   },
   declineText: {
     fontSize: fontSizes.md,

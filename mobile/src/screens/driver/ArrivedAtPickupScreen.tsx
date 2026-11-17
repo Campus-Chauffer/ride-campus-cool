@@ -4,12 +4,12 @@ import {
   StatusBar, Alert, Linking,
 } from 'react-native';
 import * as Location from 'expo-location';
-import { LinearGradient } from 'expo-linear-gradient';
 import { CheckCircle, MapPin, Phone, Clock, AlertTriangle } from 'lucide-react-native';
 import { driverAPI } from '../../services/api';
 import socketService from '../../services/socket';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, bottomPadding, androidTopPadding, navy, white, mutedOnDark, gradients, tintedShadow } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, bottomPadding, androidTopPadding, navy, mutedOnDark, tintedShadow } from '../../utils/theme';
+import SlideToConfirm from '../../components/SlideToConfirm';
 
 // Below this, GPS-derived heading is a known-unreliable reading — better to
 // keep transmitting the last reliable heading than forward jitter.
@@ -212,26 +212,14 @@ export default function ArrivedAtPickupScreen({ trip, onStartTrip, onCancelled }
         </Text>
       </View>
 
-      {/* Start trip button */}
+      {/* Start trip */}
       <View style={styles.actionContainer}>
-        <TouchableOpacity
-          style={[styles.startBtnShadowWrap, isStarting && { opacity: 0.6 }]}
-          onPress={handleStartTrip}
+        <SlideToConfirm
+          label={isStarting ? 'Starting...' : 'Slide: Passenger Onboard →'}
+          onConfirm={handleStartTrip}
           disabled={isStarting}
-          activeOpacity={0.88}
-        >
-          <LinearGradient
-            colors={gradients.successCta}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.startBtn}
-          >
-            <CheckCircle size={20} color={white} />
-            <Text style={styles.startBtnText}>
-              {isStarting ? 'Starting...' : 'Passenger Onboard — Start Trip'}
-            </Text>
-          </LinearGradient>
-        </TouchableOpacity>
+          icon={<CheckCircle size={24} color={colors.white} />}
+        />
       </View>
     </View>
   );
@@ -308,7 +296,4 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   warningRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginHorizontal: spacing.lg, marginBottom: spacing.sm },
   warningText: { flex: 1, fontSize: fontSizes.xs, color: colors.textMuted },
   actionContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: spacing.lg, paddingBottom: bottomPadding, backgroundColor: colors.white },
-  startBtnShadowWrap: { borderRadius: radius.full, ...tintedShadow('#27AE60', isDark ? 0 : 0.3) },
-  startBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: spacing.md, borderRadius: radius.full },
-  startBtnText: { fontSize: fontSizes.sm, fontWeight: '700', color: white },
 });

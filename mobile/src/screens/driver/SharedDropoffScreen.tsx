@@ -5,14 +5,15 @@ import {
 } from 'react-native';
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Phone, CheckCircle, Flag, Users } from 'lucide-react-native';
+import { Phone, CheckCircle, Flag, Users, Navigation } from 'lucide-react-native';
 import socketService from '../../services/socket';
 import { ridesAPI, driverAPI } from '../../services/api';
 import { useThemeStore } from '../../store/themeStore';
-import { getColors, spacing, fontSizes, radius, shadows, navy, bottomPadding, gradients, tintedShadow } from '../../utils/theme';
+import { getColors, spacing, fontSizes, radius, shadows, navy, bottomPadding, tintedShadow } from '../../utils/theme';
 import { shouldRefreshRoute, haversineMeters } from '../../utils/geo';
 import { useAnimatedRoute } from '../../hooks/useAnimatedRoute';
+import SlideToConfirm from '../../components/SlideToConfirm';
+import { openNavigation } from '../../utils/openNavigation';
 
 const MIN_HEADING_SPEED_MPS = 1;
 const CAR_ICON = require('../../../assets/car-top.png');
@@ -206,21 +207,21 @@ export default function SharedDropoffScreen({ group, onDropoffConfirmed }: Props
           <View style={styles.destinationRow}>
             <Flag size={14} color={colors.primary} />
             <Text style={styles.destinationText} numberOfLines={1}>{nextStop.dropoff_address}</Text>
+            <TouchableOpacity
+              style={styles.navigateBtn}
+              onPress={() => openNavigation(parseFloat(nextStop.dropoff_lat), parseFloat(nextStop.dropoff_lng))}
+            >
+              <Navigation size={16} color={colors.primary} />
+            </TouchableOpacity>
           </View>
         </View>
 
-        <TouchableOpacity style={styles.completeBtnShadowWrap} onPress={completeStop} activeOpacity={0.88} disabled={completing}>
-          <LinearGradient colors={gradients.primaryCta} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.completeBtn}>
-            {completing ? (
-              <ActivityIndicator color={navy} />
-            ) : (
-              <>
-                <CheckCircle size={20} color={navy} />
-                <Text style={styles.completeBtnText}>Complete — {nextStop.passenger_first_name}</Text>
-              </>
-            )}
-          </LinearGradient>
-        </TouchableOpacity>
+        <SlideToConfirm
+          label={completing ? 'Completing...' : `Slide: Complete — ${nextStop.passenger_first_name} →`}
+          onConfirm={completeStop}
+          disabled={completing}
+          icon={<CheckCircle size={24} color={colors.white} />}
+        />
       </View>
     </View>
   );
@@ -272,10 +273,8 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     backgroundColor: colors.offWhite, borderRadius: radius.md, padding: spacing.sm,
   },
   destinationText: { flex: 1, fontSize: fontSizes.sm, color: colors.textDark, fontWeight: '600' },
-  completeBtnShadowWrap: { borderRadius: radius.lg, ...tintedShadow(colors.primaryDark, isDark ? 0 : 0.3) },
-  completeBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    height: 56, borderRadius: radius.lg,
+  navigateBtn: {
+    width: 32, height: 32, borderRadius: radius.full,
+    backgroundColor: colors.primary + '1F', justifyContent: 'center', alignItems: 'center',
   },
-  completeBtnText: { fontSize: fontSizes.md, fontWeight: '700', color: navy },
 });
